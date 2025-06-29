@@ -1691,10 +1691,6 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                 )}
               </FilterContainer>
               <ConversationGrid id="conversation-grid">
-                <BackButton onClick={() => setShowLoad(false)}>
-                  <ArrowLeft size={16} />
-                  Back to Menu
-                </BackButton>
                 {conversations.map((conv, index) => {
                   if (!conv) return null;
                   return (

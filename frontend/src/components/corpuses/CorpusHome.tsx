@@ -49,7 +49,6 @@ import {
 } from "../../graphql/queries";
 import { SafeMarkdown } from "../knowledge_base/markdown/SafeMarkdown";
 import { CorpusType } from "../../types/graphql-api";
-import { showQueryViewState } from "../../graphql/cache";
 import { PermissionTypes } from "../types";
 import { getPermissions } from "../../utils/transform";
 

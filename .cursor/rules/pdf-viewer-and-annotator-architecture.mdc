@@ -127,10 +127,14 @@ The annotation visibility system works through several interconnected components
 
 ### Scroll-to-Annotation System
 
-The system uses a two-phase approach for scrolling to annotations:
+The system uses a two-phase approach for scrolling to annotations, triggered by:
+- URL parameters (`?ann=id1,id2`)
+- Direct props (`initialAnnotationIds`)
+- Programmatic selection
 
 1. **Phase 1 (PDF.tsx)**: Scroll to make the page visible
    - Calculate which page contains the annotation
+   - Expand virtualization range to include the page
    - Scroll container so page is in viewport
    - Set pendingScrollAnnotationIdAtom
 
@@ -138,6 +142,9 @@ The system uses a two-phase approach for scrolling to annotations:
    - Check if page owns the pending annotation
    - Find the annotation element once rendered
    - Scroll it into view with centering
+   - Retry with requestAnimationFrame if element not yet rendered
+
+See [scroll-to-annotation-flow.md](docs/architecture/components/annotator/scroll-to-annotation-flow.md) for complete details.
 
 ### Data Flow for Annotation Updates
 

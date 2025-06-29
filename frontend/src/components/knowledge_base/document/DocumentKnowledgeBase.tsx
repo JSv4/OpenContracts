@@ -5,7 +5,6 @@ import {
   MessageSquare,
   FileText,
   Notebook,
-  Database,
   User,
   Calendar,
   X,
@@ -15,6 +14,20 @@ import {
   Search,
   BarChart3,
   Edit3,
+  BookOpen,
+  Database,
+  Eye,
+  EyeOff,
+  Settings,
+  Maximize2,
+  GitBranch,
+  Clock,
+  User as UserIcon,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  EditIcon,
 } from "lucide-react";
 import {
   GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
@@ -62,15 +75,12 @@ import {
 } from "../../annotator/context/CorpusAtom";
 import { useAtom } from "jotai";
 import { useInitialAnnotations } from "../../annotator/hooks/AnnotationHooks";
-import { LabelSelector } from "../../annotator/labels/label_selector/LabelSelector";
+import { UnifiedLabelSelector } from "../../annotator/labels/UnifiedLabelSelector";
 import { PDF } from "../../annotator/renderers/pdf/PDF";
 import TxtAnnotatorWrapper from "../../annotator/components/wrappers/TxtAnnotatorWrapper";
-import { DocTypeLabelDisplay } from "../../annotator/labels/doc_types/DocTypeLabelDisplay";
 import { useAnnotationControls } from "../../annotator/context/UISettingsAtom";
 import { RelationshipList } from "../../annotator/display/components/RelationshipList";
 import { AnnotationList } from "../../annotator/display/components/AnnotationList";
-import LayerSwitcher from "../../widgets/buttons/LayerSelector";
-import DocNavigation from "../../widgets/buttons/DocNavigation";
 import {
   ContentArea,
   ControlButton,
@@ -88,6 +98,17 @@ import {
   TabButton,
   TabsColumn,
   EmptyState,
+  KnowledgeLayerContainer,
+  VersionHistorySidebar,
+  VersionHistoryHeader,
+  VersionList,
+  VersionItem,
+  KnowledgeContent,
+  KnowledgeHeader,
+  KnowledgeBody,
+  EditModeToolbar,
+  MarkdownEditor,
+  CollapseSidebarButton,
 } from "./StyledContainers";
 import { NoteModal, NotesGrid, PostItNote, NotesHeader } from "./StickyNotes";
 import { SearchSidebarWidget } from "../../annotator/search_widget/SearchSidebarWidget";
@@ -120,16 +141,30 @@ import {
   MenuDivider,
   ChatIndicator,
 } from "./StyledContainers";
-import { Eye, EyeOff, Settings, Maximize2 } from "lucide-react";
+import { format } from "date-fns";
 import { NoteEditor } from "./NoteEditor";
 import { NewNoteModal } from "./NewNoteModal";
 import { useUrlAnnotationSync } from "../../../hooks/useUrlAnnotationSync";
+import { FloatingSummaryPreview } from "./floating_summary_preview/FloatingSummaryPreview";
+import { ZoomControls } from "./ZoomControls";
+import { useSummaryVersions } from "./floating_summary_preview/hooks/useSummaryVersions";
 
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { openedDocument, openedCorpus } from "../../../graphql/cache";
 import { selectedAnnotationIds } from "../../../graphql/cache";
 import { useAuthReady } from "../../../hooks/useAuthReady";
+
+// New imports for unified feed
+import {
+  UnifiedContentFeed,
+  SidebarControlBar,
+  ContentFilters,
+  SortOption,
+  SidebarViewMode,
+} from "./unified_feed";
+import { FloatingDocumentControls } from "./FloatingDocumentControls";
+import { FloatingDocumentInput } from "./FloatingDocumentInput";
 
 // Setting worker path to worker bundle.
 GlobalWorkerOptions.workerSrc = workerSrc;
@@ -329,12 +364,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [showWidthMenu, setShowWidthMenu] = useState(false);
 
   const [showGraph, setShowGraph] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("summary");
+  const [activeTab, setActiveTab] = useState<string>("");
   const [showAnalyzerModal, setShowAnalyzerModal] = useState(false);
 
   // This layer state still determines whether to show the knowledge base layout vs document layout
   const [activeLayer, setActiveLayer] = useState<"knowledge" | "document">(
-    "knowledge"
+    "document"
   );
 
   const [viewState, setViewState] = useState<ViewState>(ViewState.LOADING);
@@ -353,11 +388,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [, setStructuralAnnotations] = useAtom(structuralAnnotationsAtom);
   const { setCorpus } = useCorpusState();
   const { setInitialAnnotations } = useInitialAnnotations();
-  const { setSearchText } = useSearchText();
+  const { searchText, setSearchText } = useSearchText();
   const { setPermissions } = useDocumentPermissions();
   const { setTextSearchState } = useTextSearchState();
   const { activeSpanLabel, setActiveSpanLabel } = useAnnotationControls();
   const { setChatSourceState } = useChatSourceState();
+  const { setPdfDoc } = usePdfDoc();
 
   // Call the hook ONCE here
   const createAnnotationHandler = useCreateAnnotation();
@@ -809,7 +845,110 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     created: new Date().toISOString(),
   };
 
+  const notes = combinedData?.document?.allNotes ?? [];
   const docRelationships = combinedData?.document?.allDocRelationships ?? [];
+
+  // Resize handlers
+  const handleResizeStart = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStartX(e.clientX);
+    setDragStartWidth(getPanelWidthPercentage());
+    e.preventDefault();
+  };
+
+  const handleResizeMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging) return;
+
+      const deltaX = dragStartX - e.clientX;
+      const windowWidth = window.innerWidth;
+      const deltaPercentage = (deltaX / windowWidth) * 100;
+      const newWidth = Math.max(
+        15,
+        Math.min(95, dragStartWidth + deltaPercentage)
+      );
+
+      // Snap to preset widths if close
+      const snapThreshold = 3;
+      if (Math.abs(newWidth - 25) < snapThreshold) {
+        setMode("quarter");
+      } else if (Math.abs(newWidth - 50) < snapThreshold) {
+        setMode("half");
+      } else if (Math.abs(newWidth - 90) < snapThreshold) {
+        setMode("full");
+      } else {
+        setCustomWidth(newWidth);
+      }
+    },
+    [isDragging, dragStartX, dragStartWidth, setMode, setCustomWidth]
+  );
+
+  const handleResizeEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Add resize event listeners
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handleResizeMove);
+      document.addEventListener("mouseup", handleResizeEnd);
+      return () => {
+        document.removeEventListener("mousemove", handleResizeMove);
+        document.removeEventListener("mouseup", handleResizeEnd);
+      };
+    }
+  }, [isDragging, handleResizeMove, handleResizeEnd]);
+
+  // Auto-minimize logic
+  const handleDocumentMouseEnter = useCallback(() => {
+    if (
+      autoMinimize &&
+      showRightPanel &&
+      activeTab === "chat" &&
+      !isDragging &&
+      !isMinimized
+    ) {
+      minimize();
+      setIsMinimized(true);
+    }
+  }, [
+    autoMinimize,
+    showRightPanel,
+    activeTab,
+    isDragging,
+    isMinimized,
+    minimize,
+  ]);
+
+  const handlePanelMouseEnter = useCallback(() => {
+    if (isMinimized) {
+      restore();
+      setIsMinimized(false);
+    }
+  }, [isMinimized, restore]);
+
+  // Reset minimized state when tab changes or panel closes
+  useEffect(() => {
+    if (!showRightPanel || activeTab !== "chat") {
+      setIsMinimized(false);
+    }
+  }, [showRightPanel, activeTab]);
+
+  // Close width menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (showWidthMenu && !target.closest("[data-width-menu]")) {
+        setShowWidthMenu(false);
+      }
+    };
+
+    if (showWidthMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showWidthMenu]);
 
   // Load MD summary if available
   useEffect(() => {
@@ -839,9 +978,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
 
-  /* doc viewer (pdf or text snippet) */
-  const { setPdfDoc } = usePdfDoc();
-
   // Minimal arrays are replaced by a single unified array of tabs:
   // Each tab includes which layer it wants by default ("knowledge", "document", or "both").
   // If tab.layer === "document", we switch activeLayer to "document".
@@ -857,8 +993,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const allTabs: NavTab[] = [
     {
       key: "summary",
-      label: "Summary",
-      icon: <FileText size={18} />,
+      label: "Summary View",
+      icon: <BookOpen size={18} />,
       layer: "knowledge",
     },
     {
@@ -875,7 +1011,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     },
     {
       key: "relationships",
-      label: "Doc Relationships",
+      label: "Doc Links",
       icon: <ChartNetwork size={18} />,
       layer: "both",
     },
@@ -887,7 +1023,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     },
     {
       key: "relations",
-      label: "Annotation Relationships",
+      label: "Ann. Links",
       icon: <ChartNetwork size={18} />,
       layer: "document",
     },
@@ -906,7 +1042,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     {
       key: "extracts",
       label: "Extracts",
-      icon: <FileText size={18} />,
+      icon: <Database size={18} />,
       layer: "document",
     },
   ];
@@ -914,16 +1050,16 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   // We no longer base tabs on the layer. Instead, we always show allTabs.
   const visibleTabs = allTabs;
 
-  const notes = combinedData?.document?.allNotes ?? [];
-
   // Decide if we show the right panel based on whether or not a tab is selected
   useEffect(() => {
     if (!activeTab) {
       // If no tab is selected, always hide the panel
       setShowRightPanel(false);
+    } else if (activeTab === "summary") {
+      // Don't show right panel for summary tab
+      setShowRightPanel(false);
     } else {
-      // In practice, we do want to show the right panel for all selected tabs
-      // The existing code already handles which content to show. We'll keep it that way.
+      // Show the right panel for all other tabs
       setShowRightPanel(true);
     }
   }, [activeTab]);
@@ -936,6 +1072,262 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
   const [isExiting, setIsExiting] = useState(false);
 
+  // Add state for selected summary version content
+  const [selectedSummaryContent, setSelectedSummaryContent] = useState<
+    string | null
+  >(null);
+  const [selectedSummaryVersion, setSelectedSummaryVersion] = useState<
+    number | null
+  >(null);
+  const [isEditingSummary, setIsEditingSummary] = useState(false);
+  const [editedSummaryContent, setEditedSummaryContent] = useState<string>("");
+
+  // Get summary versions data
+  const {
+    versions: summaryVersions,
+    currentVersion: currentSummaryVersion,
+    currentContent: currentSummaryContentFromHook,
+    loading: summaryLoading,
+    updateSummary,
+    refetch: refetchSummary,
+  } = useSummaryVersions(documentId, corpusId);
+
+  // Unified feed state
+  const [sidebarViewMode, setSidebarViewMode] =
+    useState<SidebarViewMode["mode"]>("chat");
+  const [feedFilters, setFeedFilters] = useState<ContentFilters>({
+    contentTypes: new Set(["note", "annotation", "relationship", "search"]),
+    annotationFilters: {
+      showStructural: false,
+    },
+    relationshipFilters: {
+      showStructural: false,
+    },
+  });
+  const [feedSortBy, setFeedSortBy] = useState<SortOption>("page");
+
+  // Define UnifiedKnowledgeLayer component inside DocumentKnowledgeBase to access state
+  const UnifiedKnowledgeLayer: React.FC = () => {
+    const [versionSidebarCollapsed, setVersionSidebarCollapsed] =
+      useState(false);
+    const [savingContent, setSavingContent] = useState(false);
+
+    const displayContent =
+      selectedSummaryContent ??
+      currentSummaryContentFromHook ??
+      (summaryVersions && summaryVersions.length > 0
+        ? summaryVersions[0].snapshot
+        : undefined) ??
+      markdownContent ??
+      "";
+
+    const combinedLoading = loading || summaryLoading;
+    const isViewingCurrent =
+      !selectedSummaryVersion ||
+      selectedSummaryVersion === currentSummaryVersion;
+
+    const handleEdit = () => {
+      setIsEditingSummary(true);
+      setEditedSummaryContent(displayContent);
+    };
+
+    const handleCancelEdit = () => {
+      setIsEditingSummary(false);
+      setEditedSummaryContent("");
+    };
+
+    const handleSaveEdit = async () => {
+      if (!editedSummaryContent.trim()) {
+        toast.error("Summary content cannot be empty");
+        return;
+      }
+
+      setSavingContent(true);
+      try {
+        await updateSummary(editedSummaryContent);
+        setIsEditingSummary(false);
+        setEditedSummaryContent("");
+        toast.success("Summary saved successfully!");
+        // Reset to show the new current version
+        setSelectedSummaryVersion(null);
+        setSelectedSummaryContent(null);
+        await refetchSummary();
+      } catch (error) {
+        toast.error("Failed to save summary");
+      } finally {
+        setSavingContent(false);
+      }
+    };
+
+    const sortedVersions = summaryVersions
+      ? [...summaryVersions].sort((a, b) => b.version - a.version)
+      : [];
+
+    return (
+      <KnowledgeLayerContainer>
+        <VersionHistorySidebar collapsed={versionSidebarCollapsed}>
+          <CollapseSidebarButton
+            onClick={() => setVersionSidebarCollapsed(!versionSidebarCollapsed)}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {versionSidebarCollapsed ? <ChevronRight /> : <ChevronLeft />}
+          </CollapseSidebarButton>
+
+          {!versionSidebarCollapsed && (
+            <>
+              <VersionHistoryHeader>
+                <h3>
+                  <GitBranch size={18} />
+                  Version History
+                </h3>
+                <div className="version-count">
+                  {sortedVersions.length} version
+                  {sortedVersions.length !== 1 ? "s" : ""} total
+                </div>
+              </VersionHistoryHeader>
+
+              <VersionList>
+                {sortedVersions.map((version) => {
+                  const isCurrent = version.version === currentSummaryVersion;
+                  const isActive = selectedSummaryVersion === version.version;
+
+                  return (
+                    <VersionItem
+                      key={version.id}
+                      $isActive={isActive}
+                      $isCurrent={isCurrent}
+                      onClick={() => {
+                        setSelectedSummaryVersion(version.version);
+                        setSelectedSummaryContent(version.snapshot || "");
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div className="version-header">
+                        <div className="version-number">
+                          Version {version.version}
+                        </div>
+                        {isCurrent && (
+                          <span className="version-badge">Current</span>
+                        )}
+                      </div>
+                      <div className="version-meta">
+                        <div className="meta-row">
+                          <UserIcon />
+                          {version.author?.email || "Unknown"}
+                        </div>
+                        <div className="meta-row">
+                          <Clock />
+                          {format(
+                            new Date(version.created),
+                            "MMM d, yyyy 'at' h:mm a"
+                          )}
+                        </div>
+                      </div>
+                    </VersionItem>
+                  );
+                })}
+              </VersionList>
+            </>
+          )}
+        </VersionHistorySidebar>
+
+        <KnowledgeContent>
+          <KnowledgeHeader>
+            <div className="header-content">
+              <h2>
+                <BookOpen />
+                {metadata.title || "Untitled Document"} - Summary
+              </h2>
+              <div className="header-actions">
+                {!isEditingSummary && isViewingCurrent && (
+                  <Button primary onClick={handleEdit}>
+                    <Icon name="edit" />
+                    Edit Summary
+                  </Button>
+                )}
+                {isEditingSummary && (
+                  <>
+                    <Button
+                      positive
+                      onClick={handleSaveEdit}
+                      loading={savingContent}
+                      disabled={savingContent}
+                    >
+                      <Icon name="save" />
+                      Save as New Version
+                    </Button>
+                    <Button onClick={handleCancelEdit}>
+                      <Icon name="cancel" />
+                      Cancel
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="version-info">
+              <div className="info-item">
+                <GitBranch />
+                Viewing: Version{" "}
+                {selectedSummaryVersion || currentSummaryVersion || 1}
+              </div>
+              {!isViewingCurrent && (
+                <div className="info-item" style={{ color: "#d97706" }}>
+                  <AlertCircle />
+                  Viewing historical version - changes will create a new version
+                </div>
+              )}
+            </div>
+          </KnowledgeHeader>
+
+          <KnowledgeBody $isEditing={isEditingSummary}>
+            {isEditingSummary && (
+              <EditModeToolbar
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+              >
+                <div className="toolbar-left">
+                  <div className="edit-indicator">
+                    <EditIcon />
+                    Editing Mode
+                  </div>
+                </div>
+                <div className="toolbar-actions">
+                  <span style={{ fontSize: "0.875rem", color: "#64748b" }}>
+                    {editedSummaryContent.length} characters
+                  </span>
+                </div>
+              </EditModeToolbar>
+            )}
+
+            {combinedLoading ? (
+              <LoadingPlaceholders type="summary" />
+            ) : isEditingSummary ? (
+              <MarkdownEditor
+                value={editedSummaryContent}
+                onChange={(e) => setEditedSummaryContent(e.target.value)}
+                placeholder="Enter your summary content in Markdown format..."
+                autoFocus
+              />
+            ) : displayContent ? (
+              <div className="prose max-w-none">
+                <SafeMarkdown>{displayContent}</SafeMarkdown>
+              </div>
+            ) : (
+              <EmptyState
+                icon={<FileText size={40} />}
+                title="No summary available"
+                description="This document doesn't have a summary yet"
+              />
+            )}
+          </KnowledgeBody>
+        </KnowledgeContent>
+      </KnowledgeLayerContainer>
+    );
+  };
+
   const handleBack = () => {
     setIsExiting(true);
     setTimeout(() => {
@@ -945,9 +1337,54 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   };
 
   const rightPanelContent = (() => {
-    switch (activeTab) {
-      case "chat":
-        return (
+    // First, add the control bar for switching between chat and feed modes
+    const controlBar = (
+      <SidebarControlBar
+        viewMode={sidebarViewMode}
+        onViewModeChange={setSidebarViewMode}
+        filters={feedFilters}
+        onFiltersChange={setFeedFilters}
+        sortBy={feedSortBy}
+        onSortChange={setFeedSortBy}
+        hasActiveSearch={!!searchText}
+      />
+    );
+
+    // Handle unified feed mode
+    if (sidebarViewMode === "feed") {
+      return (
+        <div
+          style={{ display: "flex", flexDirection: "column", height: "100%" }}
+        >
+          {controlBar}
+          <UnifiedContentFeed
+            notes={notes}
+            filters={feedFilters}
+            sortBy={feedSortBy}
+            isLoading={loading}
+            onItemSelect={(item) => {
+              // Handle item selection based on type
+              if (item.type === "annotation" || item.type === "relationship") {
+                setActiveLayer("document");
+              }
+              // For annotations and relationships, selection is handled within the component
+              // For notes, we could open the note modal
+              if (item.type === "note" && "creator" in item.data) {
+                setSelectedNote(item.data as (typeof notes)[0]);
+              }
+            }}
+          />
+        </div>
+      );
+    }
+
+    // Handle chat mode (default behavior)
+    if (activeTab === "chat") {
+      return (
+        <div
+          style={{ display: "flex", flexDirection: "column", height: "100%" }}
+        >
+          {controlBar}
           <ChatTray
             setShowLoad={setShowLoad}
             showLoad={showLoad}
@@ -957,7 +1394,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             }}
             corpusId={corpusId}
           />
-        );
+        </div>
+      );
+    }
+
+    // Legacy tab-based content (will be removed in next phase)
+    switch (activeTab) {
       case "notes":
         return (
           <div
@@ -1207,108 +1649,6 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     }
   })();
 
-  // Resize handlers
-  const handleResizeStart = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStartX(e.clientX);
-    setDragStartWidth(getPanelWidthPercentage());
-    e.preventDefault();
-  };
-
-  const handleResizeMove = useCallback(
-    (e: MouseEvent) => {
-      if (!isDragging) return;
-
-      const deltaX = dragStartX - e.clientX;
-      const windowWidth = window.innerWidth;
-      const deltaPercentage = (deltaX / windowWidth) * 100;
-      const newWidth = Math.max(
-        15,
-        Math.min(95, dragStartWidth + deltaPercentage)
-      );
-
-      // Snap to preset widths if close
-      const snapThreshold = 3;
-      if (Math.abs(newWidth - 25) < snapThreshold) {
-        setMode("quarter");
-      } else if (Math.abs(newWidth - 50) < snapThreshold) {
-        setMode("half");
-      } else if (Math.abs(newWidth - 90) < snapThreshold) {
-        setMode("full");
-      } else {
-        setCustomWidth(newWidth);
-      }
-    },
-    [isDragging, dragStartX, dragStartWidth, setMode, setCustomWidth]
-  );
-
-  const handleResizeEnd = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  // Add resize event listeners
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener("mousemove", handleResizeMove);
-      document.addEventListener("mouseup", handleResizeEnd);
-      return () => {
-        document.removeEventListener("mousemove", handleResizeMove);
-        document.removeEventListener("mouseup", handleResizeEnd);
-      };
-    }
-  }, [isDragging, handleResizeMove, handleResizeEnd]);
-
-  // Auto-minimize logic
-  const handleDocumentMouseEnter = useCallback(() => {
-    if (
-      autoMinimize &&
-      showRightPanel &&
-      activeTab === "chat" &&
-      !isDragging &&
-      !isMinimized
-    ) {
-      minimize();
-      setIsMinimized(true);
-    }
-  }, [
-    autoMinimize,
-    showRightPanel,
-    activeTab,
-    isDragging,
-    isMinimized,
-    minimize,
-  ]);
-
-  const handlePanelMouseEnter = useCallback(() => {
-    if (isMinimized) {
-      restore();
-      setIsMinimized(false);
-    }
-  }, [isMinimized, restore]);
-
-  // Reset minimized state when tab changes or panel closes
-  useEffect(() => {
-    if (!showRightPanel || activeTab !== "chat") {
-      setIsMinimized(false);
-    }
-  }, [showRightPanel, activeTab]);
-
-  // Close width menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (showWidthMenu && !target.closest("[data-width-menu]")) {
-        setShowWidthMenu(false);
-      }
-    };
-
-    if (showWidthMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [showWidthMenu]);
-
   // The main viewer content:
   let viewerContent: JSX.Element = <></>;
   if (metadata.fileType === "application/pdf") {
@@ -1377,25 +1717,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   // Decide which content is in the center based on activeLayer
   const mainLayerContent =
     activeLayer === "knowledge" ? (
-      <SummaryContent className={showRightPanel ? "dimmed" : ""}>
-        {loading ? (
-          <LoadingPlaceholders type="summary" />
-        ) : markdownContent ? (
-          <div className="prose max-w-none">
-            <SafeMarkdown>{markdownContent}</SafeMarkdown>
-          </div>
-        ) : (
-          <EmptyState
-            icon={<FileText size={40} />}
-            title="No summary available"
-            description={
-              markdownError
-                ? "Failed to load the document summary"
-                : "This document doesn't have a summary yet"
-            }
-          />
-        )}
-      </SummaryContent>
+      <UnifiedKnowledgeLayer />
     ) : (
       <div
         id="document-layer"
@@ -1444,9 +1766,9 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
   // Set initial state
   useEffect(() => {
-    setActiveTab("summary");
+    setActiveTab("");
     setShowRightPanel(false);
-    setActiveLayer("knowledge");
+    setActiveLayer("document");
   }, []);
 
   /* ------------------------------------------------------------------ */
@@ -1508,10 +1830,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           {visibleTabs.map((t) => (
             <TabButton
               key={t.key}
-              tabKey={t.key}
-              active={activeTab === t.key}
+              $tabKey={t.key}
+              $active={activeTab === t.key}
               onClick={() => handleTabClick(t.key)}
-              collapsed={sidebarCollapsed}
+              $collapsed={sidebarCollapsed}
             >
               {t.icon}
               <span>{t.label}</span>
@@ -1521,65 +1843,84 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
         <MainContentArea id="main-content-area">
           {mainLayerContent}
-          <LabelSelector
+          <UnifiedLabelSelector
             sidebarWidth="0px"
             activeSpanLabel={activeSpanLabel ?? null}
             setActiveLabel={setActiveSpanLabel}
-            showRightPanel={showRightPanel}
-          />
-          <DocTypeLabelDisplay showRightPanel={showRightPanel} />
-          <LayerSwitcher
-            layers={[
-              {
-                id: "knowledge",
-                label: "Knowledge Base",
-                icon: <Database size={16} />,
-                isActive: activeLayer === "knowledge",
-                onClick: () => {
-                  setActiveLayer("knowledge");
-                  setActiveTab("summary");
-                  // Clear chat selections when switching to knowledge layer
-                  setChatSourceState((prev) => ({
-                    ...prev,
-                    selectedMessageId: null,
-                    selectedSourceIndex: null,
-                  }));
-                },
-              },
-              {
-                id: "document",
-                label: "Document",
-                icon: <FileText size={16} />,
-                isActive: activeLayer === "document",
-                onClick: () => {
-                  setActiveLayer("document");
-                  // If we had no active tab or knowledge tab, default to e.g. "chat" in doc
-                  if (
-                    ![
-                      "chat",
-                      "notes",
-                      "relationships",
-                      "annotations",
-                      "relations",
-                      "search",
-                      "analyses",
-                      "extracts",
-                    ].includes(activeTab)
-                  ) {
-                    setActiveTab("chat");
-                  }
-                },
-              },
-            ]}
           />
 
+          {/* Floating Summary Preview - always visible, acts as picture-in-picture for knowledge layer */}
+          <FloatingSummaryPreview
+            documentId={documentId}
+            corpusId={corpusId}
+            documentTitle={metadata.title || "Untitled Document"}
+            isVisible={true}
+            isInKnowledgeLayer={activeLayer === "knowledge"}
+            onSwitchToKnowledge={(content?: string) => {
+              setActiveLayer("knowledge");
+              setActiveTab("summary");
+              setShowRightPanel(false);
+              if (content) {
+                setSelectedSummaryContent(content);
+              } else {
+                setSelectedSummaryContent(null);
+              }
+              setChatSourceState((prev) => ({
+                ...prev,
+                selectedMessageId: null,
+                selectedSourceIndex: null,
+              }));
+            }}
+            onBackToDocument={() => {
+              setActiveLayer("document");
+              setSelectedSummaryContent(null);
+              if (
+                ![
+                  "chat",
+                  "notes",
+                  "relationships",
+                  "annotations",
+                  "relations",
+                  "search",
+                  "analyses",
+                  "extracts",
+                ].includes(activeTab)
+              ) {
+                setActiveTab("chat");
+                setShowRightPanel(true);
+              }
+            }}
+          />
+
+          {/* Zoom Controls - only in document layer */}
           {activeLayer === "document" && (
-            <DocNavigation
+            <ZoomControls
               zoomLevel={zoomLevel}
               onZoomIn={() => setZoomLevel(Math.min(zoomLevel + 0.1, 4))}
-              onZoomOut={() => setZoomLevel(Math.min(zoomLevel - 0.1, 4))}
+              onZoomOut={() => setZoomLevel(Math.max(zoomLevel - 0.1, 0.5))}
             />
           )}
+
+          {/* Unified Search/Chat Input - only in document layer */}
+          <FloatingDocumentInput
+            visible={activeLayer === "document"}
+            onChatSubmit={(message) => {
+              // Switch to chat mode and submit message
+              setActiveTab("chat");
+              setSidebarViewMode("chat");
+              setShowRightPanel(true);
+              // TODO: Pass message to ChatTray to start new chat
+            }}
+            onToggleChat={() => {
+              setActiveTab("chat");
+              setSidebarViewMode("chat");
+              setShowRightPanel(true);
+            }}
+          />
+
+          {/* Floating Document Controls - only in document layer */}
+          <FloatingDocumentControls visible={activeLayer === "document"} />
+
           {/* Right Panel, if needed */}
           <AnimatePresence>
             {showRightPanel && activeTab && (

@@ -448,6 +448,121 @@ class UpdateDocument(DRFMutation):
         custom_meta = GenericScalar(required=False)
 
 
+class UpdateDocumentSummary(graphene.Mutation):
+    """
+    Mutation to update a document's markdown summary for a specific corpus, creating a new version in the process.
+    Users can create/update summaries if:
+    - No summary exists yet and they have permission on the corpus (public or their corpus)
+    - A summary exists and they are the original author
+    """
+
+    class Arguments:
+        document_id = graphene.ID(required=True, description="ID of the document to update")
+        corpus_id = graphene.ID(required=True, description="ID of the corpus this summary is for")
+        new_content = graphene.String(
+            required=True, description="New markdown content for the document summary"
+        )
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    obj = graphene.Field(DocumentType)
+    version = graphene.Int(description="The new version number after update")
+
+    @login_required
+    def mutate(root, info, document_id, corpus_id, new_content):
+        try:
+            from opencontractserver.corpuses.models import Corpus
+            from opencontractserver.documents.models import DocumentSummaryRevision
+            
+            # Extract pks from graphene ids
+            _, doc_pk = from_global_id(document_id)
+            _, corpus_pk = from_global_id(corpus_id)
+            
+            document = Document.objects.get(pk=doc_pk)
+            corpus = Corpus.objects.get(pk=corpus_pk)
+            
+            # Check if user has any existing summary for this document-corpus combination
+            existing_summary = DocumentSummaryRevision.objects.filter(
+                document_id=doc_pk,
+                corpus_id=corpus_pk
+            ).order_by('version').first()
+            
+            # Permission logic
+            if existing_summary:
+                # If summary exists, only the original author can update
+                if existing_summary.author != info.context.user:
+                    return UpdateDocumentSummary(
+                        ok=False,
+                        message="You can only edit summaries you created.",
+                        obj=None,
+                        version=None,
+                    )
+            else:
+                # If no summary exists, check corpus permissions
+                # User can create if: corpus is public OR user has update permission on corpus
+                is_public_corpus = corpus.is_public
+                user_has_corpus_perm = info.context.user.has_perm("update_corpus", corpus)
+                user_is_creator = corpus.creator == info.context.user
+                
+                if not (is_public_corpus or user_has_corpus_perm or user_is_creator):
+                    return UpdateDocumentSummary(
+                        ok=False,
+                        message="You don't have permission to create summaries for this corpus.",
+                        obj=None,
+                        version=None,
+                    )
+
+            # Update the summary using the new method
+            revision = document.update_summary(
+                new_content=new_content, 
+                author=info.context.user,
+                corpus=corpus
+            )
+
+            # If no change, revision will be None
+            if revision is None:
+                latest_version = DocumentSummaryRevision.objects.filter(
+                    document_id=doc_pk,
+                    corpus_id=corpus_pk
+                ).aggregate(max_version=django.db.models.Max('version'))['max_version'] or 0
+                
+                return UpdateDocumentSummary(
+                    ok=True,
+                    message="No changes detected in summary content.",
+                    obj=document,
+                    version=latest_version,
+                )
+
+            return UpdateDocumentSummary(
+                ok=True,
+                message=f"Summary updated successfully. New version: {revision.version}",
+                obj=document,
+                version=revision.version,
+            )
+
+        except Document.DoesNotExist:
+            return UpdateDocumentSummary(
+                ok=False,
+                message="Document not found.",
+                obj=None,
+                version=None,
+            )
+        except Corpus.DoesNotExist:
+            return UpdateDocumentSummary(
+                ok=False,
+                message="Corpus not found.",
+                obj=None,
+                version=None,
+            )
+        except Exception as e:
+            return UpdateDocumentSummary(
+                ok=False,
+                message=f"Error updating document summary: {str(e)}",
+                obj=None,
+                version=None,
+            )
+
+
 class StartCorpusFork(graphene.Mutation):
     class Arguments:
         corpus_id = graphene.String(
@@ -828,7 +943,7 @@ class UploadCorpusImportZip(graphene.Mutation):
 
             # Store our corpus in a temporary file handler which lets us rely on
             # django-wide selection of S3 or local storage in django container
-            base64_img_bytes = base_64_file_string.encode("utf-8")
+            base64_img_bytes = base64_file_string.encode("utf-8")
             decoded_file_data = base64.decodebytes(base64_img_bytes)
 
             with transaction.atomic():
@@ -2870,6 +2985,7 @@ class Mutation(graphene.ObjectType):
     # DOCUMENT MUTATIONS #######################################################
     upload_document = UploadDocument.Field()  # Limited by user.is_usage_capped
     update_document = UpdateDocument.Field()
+    update_document_summary = UpdateDocumentSummary.Field()
     delete_document = DeleteDocument.Field()
     delete_multiple_documents = DeleteMultipleDocuments.Field()
     upload_documents_zip = UploadDocumentsZip.Field()  # Bulk document upload via zip

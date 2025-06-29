@@ -621,10 +621,10 @@ export const DocumentViewer: React.FC<DocumentViewerBaseProps> = ({
           {visibleTabs.map((t) => (
             <TabButton
               key={t.key}
-              tabKey={t.key}
-              active={activeTab === t.key}
+              $tabKey={t.key}
+              $active={activeTab === t.key}
               onClick={() => handleTabClick(t.key)}
-              collapsed={sidebarCollapsed}
+              $collapsed={sidebarCollapsed}
             >
               {t.icon}
               <span>{t.label}</span>

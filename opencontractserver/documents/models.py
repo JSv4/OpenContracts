@@ -1,7 +1,14 @@
 import functools
+import difflib
+import hashlib
+import uuid
 
 import django
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
+from django.db import transaction
+from django.utils import timezone
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from pgvector.django import VectorField
 
@@ -90,6 +97,107 @@ class Document(BaseOCModel, HasEmbeddingMixin):
             django.db.models.Index(fields=["created"]),
             django.db.models.Index(fields=["modified"]),
         ]
+
+    # ------ Revision mechanics ------ #
+    REVISION_SNAPSHOT_INTERVAL = 10
+
+    def get_summary_for_corpus(self, corpus):
+        """Get the latest summary content for this document in a specific corpus.
+        
+        Args:
+            corpus: The corpus to get the summary for.
+        Returns:
+            str: The latest summary content, or empty string if none exists.
+        """
+        from opencontractserver.documents.models import DocumentSummaryRevision
+        
+        latest_rev = (
+            DocumentSummaryRevision.objects.filter(
+                document_id=self.pk,
+                corpus_id=corpus.pk
+            )
+            .order_by("-version")
+            .first()
+        )
+        
+        if not latest_rev:
+            return ""
+            
+        if latest_rev.snapshot:
+            return latest_rev.snapshot
+        else:
+            # TODO: Implement diff reconstruction if needed
+            return ""
+
+    def update_summary(self, *, new_content: str, author, corpus):
+        """Create a new revision and update md_summary_file for a specific corpus.
+
+        Args:
+            new_content (str): Markdown content.
+            author (User | int): Responsible user.
+            corpus: The corpus this summary is for.
+        Returns:
+            DocumentSummaryRevision | None: the stored revision or None if no content change.
+        """
+
+        if isinstance(author, int):
+            author_obj = get_user_model().objects.get(pk=author)
+        else:
+            author_obj = author
+
+        # Get the original content for this document-corpus combination
+        from opencontractserver.documents.models import (  # avoid circular
+            DocumentSummaryRevision,
+        )
+        
+        latest_rev = (
+            DocumentSummaryRevision.objects.filter(
+                document_id=self.pk, 
+                corpus_id=corpus.pk
+            )
+            .order_by("-version")
+            .first()
+        )
+        
+        if latest_rev and latest_rev.snapshot:
+            original_content = latest_rev.snapshot
+        elif latest_rev:
+            # Reconstruct from diffs if no snapshot
+            original_content = ""
+            # TODO: Implement diff reconstruction if needed
+        else:
+            original_content = ""
+
+        if original_content == (new_content or ""):
+            return None  # No change
+
+        with transaction.atomic():
+            # Compute next version for this document-corpus combination
+            next_version = 1 if latest_rev is None else latest_rev.version + 1
+
+            diff_text = "\n".join(
+                difflib.unified_diff(
+                    original_content.splitlines(),
+                    new_content.splitlines(),
+                    lineterm="",
+                )
+            )
+
+            # Store a full snapshot for every revision for simplicity; can revert back later
+            snapshot_text = new_content  # always persist full content
+
+            revision = DocumentSummaryRevision.objects.create(
+                document=self,
+                corpus=corpus,
+                author=author_obj,
+                version=next_version,
+                diff=diff_text,
+                snapshot=snapshot_text,
+                checksum_base=hashlib.sha256(original_content.encode()).hexdigest(),
+                checksum_full=hashlib.sha256(new_content.encode()).hexdigest(),
+            )
+
+        return revision
 
     def get_embedding_reference_kwargs(self) -> dict:
         return {"document_id": self.pk}
@@ -310,4 +418,51 @@ class DocumentRelationshipUserObjectPermission(UserObjectPermissionBase):
 class DocumentRelationshipGroupObjectPermission(GroupObjectPermissionBase):
     content_object = django.db.models.ForeignKey(
         "DocumentRelationship", on_delete=django.db.models.CASCADE
+    )
+
+
+# -------------------- DocumentSummaryRevision -------------------- #
+
+
+class DocumentSummaryRevision(django.db.models.Model):
+    """Append-only history for Document markdown summaries, scoped to corpus."""
+
+    document = django.db.models.ForeignKey(
+        "documents.Document",
+        on_delete=django.db.models.CASCADE,
+        related_name="summary_revisions",
+    )
+    
+    corpus = django.db.models.ForeignKey(
+        "corpuses.Corpus",
+        on_delete=django.db.models.CASCADE,
+        related_name="document_summary_revisions",
+    )
+
+    author = django.db.models.ForeignKey(
+        get_user_model(),
+        on_delete=django.db.models.SET_NULL,
+        null=True,
+        related_name="document_summary_revisions",
+    )
+
+    version = django.db.models.PositiveIntegerField()
+    diff = django.db.models.TextField(blank=True)
+    snapshot = django.db.models.TextField(null=True, blank=True)
+    checksum_base = django.db.models.CharField(max_length=64, blank=True)
+    checksum_full = django.db.models.CharField(max_length=64, blank=True)
+    created = django.db.models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        unique_together = ("document", "corpus", "version")
+        ordering = ("document_id", "corpus_id", "version")
+        indexes = [
+            django.db.models.Index(fields=["document", "corpus"]),
+            django.db.models.Index(fields=["author"]),
+            django.db.models.Index(fields=["created"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"DocumentSummaryRevision(document_id={self.document_id}, v={self.version})"
     )

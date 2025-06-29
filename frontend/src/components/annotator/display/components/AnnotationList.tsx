@@ -17,8 +17,6 @@ import {
 } from "../../context/UISettingsAtom";
 import { useDeleteAnnotation } from "../../hooks/AnnotationHooks";
 import { HighlightItem } from "../../sidebar/HighlightItem";
-import { ViewSettingsPopup } from "../../../widgets/popups/ViewSettingsPopup";
-import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import { FetchMoreOnVisible } from "../../../widgets/infinite_scroll/FetchMoreOnVisible";
 import { PlaceholderCard } from "../../../placeholders/PlaceholderCard";
 import { useVisibleAnnotations } from "../../hooks/useVisibleAnnotations";
@@ -206,27 +204,6 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
   /* ------------------------------------------------------------------ */
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* ①  View settings are now always visible */}
-      <ViewSettingsPopup
-        label_display_options={[
-          {
-            key: LabelDisplayBehavior.ALWAYS,
-            text: "Always",
-            value: LabelDisplayBehavior.ALWAYS,
-          },
-          {
-            key: LabelDisplayBehavior.ON_HOVER,
-            text: "On Hover",
-            value: LabelDisplayBehavior.ON_HOVER,
-          },
-          {
-            key: LabelDisplayBehavior.HIDE,
-            text: "Never",
-            value: LabelDisplayBehavior.HIDE,
-          },
-        ]}
-      />
-
       <ListViewport ref={viewportRef}>
         {/* ---------------- case: no matching annotations --------------- */}
         {visibleAnnotations.length === 0 ? (

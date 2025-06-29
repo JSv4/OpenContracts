@@ -36,6 +36,7 @@ from opencontractserver.documents.models import (
     Document,
     DocumentAnalysisRow,
     DocumentRelationship,
+    DocumentSummaryRevision,
 )
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.feedback.models import UserFeedback
@@ -726,6 +727,54 @@ class DocumentType(AnnotatePermissionsForReadMixin, DjangoObjectType):
                 id__in=self.notes.values_list("id", flat=True), corpus_id=corpus_pk
             )
 
+    # Summary version history (corpus-specific)
+    summary_revisions = graphene.List(
+        lambda: DocumentSummaryRevisionType,
+        corpus_id=graphene.ID(required=True),
+        description="List of all summary revisions/versions for a specific corpus, ordered by version.",
+    )
+    current_summary_version = graphene.Int(
+        corpus_id=graphene.ID(required=True),
+        description="Current version number of the summary for a specific corpus"
+    )
+    summary_content = graphene.String(
+        corpus_id=graphene.ID(required=True),
+        description="Current summary content for a specific corpus"
+    )
+
+    def resolve_summary_revisions(self, info, corpus_id):
+        """Returns all revisions for this document's summary in a specific corpus, ordered by version."""
+        from opencontractserver.documents.models import DocumentSummaryRevision
+        
+        _, corpus_pk = from_global_id(corpus_id)
+        return DocumentSummaryRevision.objects.filter(
+            document_id=self.pk,
+            corpus_id=corpus_pk
+        ).order_by('version')
+
+    def resolve_current_summary_version(self, info, corpus_id):
+        """Returns the current summary version number for a specific corpus."""
+        from opencontractserver.documents.models import DocumentSummaryRevision
+        
+        _, corpus_pk = from_global_id(corpus_id)
+        latest_revision = DocumentSummaryRevision.objects.filter(
+            document_id=self.pk,
+            corpus_id=corpus_pk
+        ).order_by("-version").first()
+        
+        return latest_revision.version if latest_revision else 0
+
+    def resolve_summary_content(self, info, corpus_id):
+        """Returns the current summary content for a specific corpus."""
+        from opencontractserver.corpuses.models import Corpus
+        
+        _, corpus_pk = from_global_id(corpus_id)
+        try:
+            corpus = Corpus.objects.get(pk=corpus_pk)
+            return self.get_summary_for_corpus(corpus)
+        except Corpus.DoesNotExist:
+            return ""
+
     class Meta:
         model = Document
         interfaces = [relay.Node]
@@ -1136,9 +1185,18 @@ def resolve_pipeline_components(self, info, mimetype=None):
 
 
 class CorpusDescriptionRevisionType(AnnotatePermissionsForReadMixin, DjangoObjectType):
-    """GraphQL type for CorpusDescriptionRevision model."""
+    """GraphQL type for corpus description revisions."""
 
     class Meta:
         model = CorpusDescriptionRevision
+        interfaces = [relay.Node]
+        connection_class = CountableConnection
+
+
+class DocumentSummaryRevisionType(AnnotatePermissionsForReadMixin, DjangoObjectType):
+    """GraphQL type for document summary revisions."""
+
+    class Meta:
+        model = DocumentSummaryRevision
         interfaces = [relay.Node]
         connection_class = CountableConnection

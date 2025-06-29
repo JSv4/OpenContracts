@@ -1553,6 +1553,7 @@ export const Corpuses = () => {
             )}
             {!use_mobile_layout && (
               <NavigationToggle
+                data-testid="sidebar-toggle"
                 onClick={() => setSidebarExpanded(!sidebarExpanded)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

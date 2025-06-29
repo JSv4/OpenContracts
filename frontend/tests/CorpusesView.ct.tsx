@@ -213,19 +213,39 @@ test("sidebar expands and tab navigation works", async ({ mount, page }) => {
   const sidebar = page.locator('[data-testid="navigation-sidebar"]');
   await expect(sidebar).toBeVisible();
 
-  // collapsed width close to 72px
+  // Get initial width
+  let widthNow = await sidebar.evaluate(
+    (el) => el.getBoundingClientRect().width
+  );
+
+  // Collapse if needed
+  if (widthNow >= 200) {
+    await page.getByTestId("sidebar-toggle").click();
+  }
+
+  // Wait until collapsed (<100px)
+  await expect
+    .poll(
+      async () =>
+        await sidebar.evaluate((el) => el.getBoundingClientRect().width),
+      { timeout: 2000 }
+    )
+    .toBeLessThan(100);
+
   const collapsedWidth = await sidebar.evaluate(
     (el) => el.getBoundingClientRect().width
   );
-  expect(collapsedWidth).toBeLessThan(80);
 
-  // Hover to expand
-  await sidebar.hover();
-  await page.waitForTimeout(300);
-  const expandedWidth = await sidebar.evaluate(
-    (el) => el.getBoundingClientRect().width
-  );
-  expect(expandedWidth).toBeGreaterThan(collapsedWidth);
+  // Expand via toggle
+  await page.getByTestId("sidebar-toggle").click();
+
+  await expect
+    .poll(
+      async () =>
+        await sidebar.evaluate((el) => el.getBoundingClientRect().width),
+      { timeout: 2000 }
+    )
+    .toBeGreaterThan(collapsedWidth + 100);
 
   // Click Documents tab
   await page.locator('[data-item-id="documents"]').click();

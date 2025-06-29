@@ -563,6 +563,7 @@ export const SidebarControlBar: React.FC<SidebarControlBarProps> = ({
       {/* View Mode Toggle */}
       <ViewToggle>
         <ToggleButton
+          data-testid="view-mode-chat"
           $isActive={viewMode === "chat"}
           onClick={() => onViewModeChange("chat")}
           whileTap={{ scale: 0.98 }}
@@ -571,6 +572,7 @@ export const SidebarControlBar: React.FC<SidebarControlBarProps> = ({
           Chat
         </ToggleButton>
         <ToggleButton
+          data-testid="view-mode-feed"
           $isActive={viewMode === "feed"}
           onClick={() => onViewModeChange("feed")}
           whileTap={{ scale: 0.98 }}

@@ -659,6 +659,7 @@ export const FloatingSummaryPreview: React.FC<FloatingSummaryPreviewProps> = ({
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
             <CollapsedButton
+              data-testid="summary-toggle-button"
               onClick={() => setExpanded(true)}
               onMouseEnter={() => setShowTooltip(true)}
               onMouseLeave={() => setShowTooltip(false)}

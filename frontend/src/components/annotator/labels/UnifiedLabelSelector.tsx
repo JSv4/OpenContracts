@@ -166,6 +166,7 @@ export const UnifiedLabelSelector: React.FC<UnifiedLabelSelectorProps> = ({
     >
       <motion.div
         className="selector-button"
+        data-testid="label-selector-toggle-button"
         animate={{
           scale: totalActiveLabels > 0 ? 1.05 : 1,
           boxShadow:

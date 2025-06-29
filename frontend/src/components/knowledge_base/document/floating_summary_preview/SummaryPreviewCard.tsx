@@ -275,6 +275,7 @@ export const SummaryPreviewCard: React.FC<SummaryPreviewCardProps> = ({
           ? 50
           : 30 - Math.abs(index - (activeIndex || 0)),
       }}
+      data-testid={`summary-card-${version.version}`}
     >
       <CardContainer $isHovered={isHovered || !!isActive}>
         <CardHeader>

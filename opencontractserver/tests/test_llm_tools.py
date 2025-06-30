@@ -16,7 +16,10 @@ from opencontractserver.llms.tools.core_tools import (
     _token_count,
     add_document_note,
     aduplicate_annotations_with_label,
+    aget_corpus_description,
     aload_document_txt_extract,
+    aupdate_corpus_description,
+    aupdate_document_note,
     duplicate_annotations_with_label,
     get_corpus_description,
     load_document_txt_extract,
@@ -414,3 +417,345 @@ class AsyncTestLLMTools(TestCase):
         """Async version should support slicing."""
         result = await aload_document_txt_extract(self.doc.id, start=5, end=15)
         self.assertEqual(result, self.txt_content[5:15])
+
+
+class AsyncTestUpdateCorpusDescription(TransactionTestCase):
+    """Async tests ensuring :func:`aupdate_corpus_description` behaves correctly."""
+
+    def setUp(self):  # noqa: D401 – simple helper, not public API
+        """Prepare a fresh corpus with an initial markdown description for every test."""
+        self.user = User.objects.create_user(
+            username="async_corpus_user", password="pw"
+        )
+        self.corpus = Corpus.objects.create(title="Async Corpus", creator=self.user)
+
+        # Initialise with a first markdown description (version 1).
+        self.initial_md = "# Corpus\n\nInitial description"
+        update_corpus_description(
+            corpus_id=self.corpus.id,
+            new_content=self.initial_md,
+            author_id=self.user.id,
+        )
+
+    # ------------------------------------------------------------------
+    # Success paths
+    # ------------------------------------------------------------------
+
+    async def test_aupdate_with_new_content_creates_revision(self):
+        """Supplying *new_content* should create a new revision and update the file."""
+        new_content = "# Corpus\n\nUpdated description v2"
+        revision = await aupdate_corpus_description(
+            corpus_id=self.corpus.id,
+            new_content=new_content,
+            author_id=self.user.id,
+        )
+
+        # A revision is returned with incremented version.
+        self.assertIsNotNone(revision)
+        self.assertEqual(revision.version, 2)
+
+        # The corpus markdown content now matches *new_content*.
+        latest_content = await aget_corpus_description(self.corpus.id)
+        self.assertEqual(latest_content, new_content)
+
+    async def test_aupdate_with_diff_text_creates_revision(self):
+        """Providing *diff_text* instead of full content should also work."""
+        import difflib
+
+        current = await aget_corpus_description(self.corpus.id)
+        new_content = current + "\nAnother line appended."  # simple change
+
+        diff_text = "".join(
+            difflib.ndiff(
+                current.splitlines(keepends=True), new_content.splitlines(keepends=True)
+            )
+        )
+
+        revision = await aupdate_corpus_description(
+            corpus_id=self.corpus.id,
+            diff_text=diff_text,
+            author_id=self.user.id,
+        )
+
+        self.assertIsNotNone(revision)
+        self.assertEqual(revision.version, 2)
+        latest_content = await aget_corpus_description(self.corpus.id)
+        self.assertIn("Another line appended.", latest_content)
+
+    async def test_aupdate_no_change_returns_none(self):
+        """Supplying identical content should early-exit and return *None*."""
+        result = await aupdate_corpus_description(
+            corpus_id=self.corpus.id,
+            new_content=self.initial_md,
+            author_id=self.user.id,
+        )
+        self.assertIsNone(result)
+
+    # ------------------------------------------------------------------
+    # Failure / validation paths
+    # ------------------------------------------------------------------
+
+    async def test_aupdate_missing_content_raises(self):
+        """Neither *new_content* nor *diff_text* provided – expect ``ValueError``."""
+        with self.assertRaisesRegex(
+            ValueError, "Provide either new_content or diff_text"
+        ):
+            await aupdate_corpus_description(
+                corpus_id=self.corpus.id,
+                author_id=self.user.id,
+            )
+
+    async def test_aupdate_both_content_and_diff_raise(self):
+        """Supplying both *new_content* and *diff_text* is forbidden."""
+        with self.assertRaisesRegex(
+            ValueError, "Provide only one of new_content or diff_text"
+        ):
+            await aupdate_corpus_description(
+                corpus_id=self.corpus.id,
+                new_content="foo",
+                diff_text="bar",
+                author_id=self.user.id,
+            )
+
+    async def test_aupdate_missing_author_raises(self):
+        """Author information is mandatory."""
+        with self.assertRaisesRegex(ValueError, "Provide either author or author_id"):
+            await aupdate_corpus_description(
+                corpus_id=self.corpus.id,
+                new_content="foo",
+            )
+
+    async def test_aupdate_invalid_corpus_raises(self):
+        """Non-existent corpus id should raise a clear ``ValueError``."""
+        with self.assertRaisesRegex(ValueError, "Corpus with id=999999 does not exist"):
+            await aupdate_corpus_description(
+                corpus_id=999999,
+                new_content="foo",
+                author_id=self.user.id,
+            )
+
+    # ------------------------------------------------------------------
+    # Additional coverage paths
+    # ------------------------------------------------------------------
+
+    async def test_aupdate_with_author_object(self):
+        """Passing author object directly should work."""
+        new_content = "# Corpus\n\nUpdated with author object"
+        revision = await aupdate_corpus_description(
+            corpus_id=self.corpus.id,
+            new_content=new_content,
+            author=self.user,  # Pass user object instead of ID
+        )
+
+        self.assertIsNotNone(revision)
+        self.assertEqual(revision.author, self.user)
+
+    async def test_aupdate_snapshot_interval(self):
+        """Test snapshot creation at interval boundaries."""
+        # Create revisions 2-9 (version 1 already exists from setUp)
+        for i in range(2, 10):
+            await aupdate_corpus_description(
+                corpus_id=self.corpus.id,
+                new_content=f"# Corpus\n\nVersion {i}",
+                author_id=self.user.id,
+            )
+
+        # Version 10 should trigger a snapshot
+        final_content = "# Corpus\n\nVersion 10 with snapshot"
+        revision = await aupdate_corpus_description(
+            corpus_id=self.corpus.id,
+            new_content=final_content,
+            author_id=self.user.id,
+        )
+
+        self.assertEqual(revision.version, 10)
+        self.assertIsNotNone(revision.snapshot)
+        self.assertEqual(revision.snapshot, final_content)
+
+
+class AsyncTestUpdateDocumentNote(TransactionTestCase):
+    """Async tests ensuring :func:`aupdate_document_note` behaves correctly."""
+
+    def setUp(self):  # noqa: D401 – simple helper, not public API
+        """Prepare a fresh note with initial content for every test."""
+        self.user = User.objects.create_user(username="async_note_user", password="pw")
+        self.doc = Document.objects.create(
+            creator=self.user,
+            title="Test Document for Notes",
+            description="Test Description",
+        )
+
+        # Create initial note
+        self.note = Note.objects.create(
+            document=self.doc,
+            title="Test Note",
+            content="Initial note content",
+            creator=self.user,
+        )
+
+    async def _get_note_async(self, note_id):
+        """Helper to fetch a note asynchronously."""
+        from channels.db import database_sync_to_async
+
+        return await database_sync_to_async(Note.objects.get)(pk=note_id)
+
+    # ------------------------------------------------------------------
+    # Success paths
+    # ------------------------------------------------------------------
+
+    async def test_aupdate_note_with_new_content_creates_revision(self):
+        """Supplying *new_content* should create a new revision and update the note."""
+        new_content = "Updated note content version 2"
+        revision = await aupdate_document_note(
+            note_id=self.note.id,
+            new_content=new_content,
+            author_id=self.user.id,
+        )
+
+        # A revision is returned with incremented version.
+        self.assertIsNotNone(revision)
+        self.assertEqual(revision.version, 2)  # First update after initial creation
+
+        # The note content is updated - fetch asynchronously
+        note = await self._get_note_async(self.note.id)
+        self.assertEqual(note.content, new_content)
+
+    async def test_aupdate_note_with_diff_text_creates_revision(self):
+        """Providing *diff_text* instead of full content should also work."""
+        import difflib
+
+        original_content = self.note.content
+        new_content = original_content + "\nAnother paragraph added."
+
+        diff_text = "".join(
+            difflib.ndiff(
+                original_content.splitlines(keepends=True),
+                new_content.splitlines(keepends=True),
+            )
+        )
+
+        revision = await aupdate_document_note(
+            note_id=self.note.id,
+            diff_text=diff_text,
+            author_id=self.user.id,
+        )
+
+        self.assertIsNotNone(revision)
+        self.assertEqual(revision.version, 2)
+
+        # Fetch note asynchronously
+        note = await self._get_note_async(self.note.id)
+        self.assertIn("Another paragraph added.", note.content)
+
+    async def test_aupdate_note_no_change_returns_none(self):
+        """Supplying identical content should early-exit and return *None*."""
+        result = await aupdate_document_note(
+            note_id=self.note.id,
+            new_content=self.note.content,
+            author_id=self.user.id,
+        )
+        self.assertIsNone(result)
+
+    async def test_aupdate_note_tracks_author(self):
+        """The revision should track the author who made the change."""
+        revision = await aupdate_document_note(
+            note_id=self.note.id,
+            new_content="Content changed by specific author",
+            author_id=self.user.id,
+        )
+
+        self.assertEqual(revision.author_id, self.user.id)
+
+    async def test_aupdate_note_snapshot_interval(self):
+        """Test snapshot creation at interval boundaries (every 10 revisions)."""
+        # Note already has version 1 from creation
+        # Create revisions 2-9
+        for i in range(2, 10):
+            await aupdate_document_note(
+                note_id=self.note.id,
+                new_content=f"Note version {i}",
+                author_id=self.user.id,
+            )
+
+        # Version 10 should trigger a snapshot
+        final_content = "Note version 10 with snapshot"
+        revision = await aupdate_document_note(
+            note_id=self.note.id,
+            new_content=final_content,
+            author_id=self.user.id,
+        )
+
+        self.assertEqual(revision.version, 10)
+        self.assertIsNotNone(revision.snapshot)
+        self.assertEqual(revision.snapshot, final_content)
+
+    async def test_aupdate_note_stores_checksums(self):
+        """Revisions should store SHA-256 checksums of base and full content."""
+        import hashlib
+
+        original_content = self.note.content
+        new_content = "Content with verifiable checksums"
+
+        revision = await aupdate_document_note(
+            note_id=self.note.id,
+            new_content=new_content,
+            author_id=self.user.id,
+        )
+
+        expected_base_checksum = hashlib.sha256(original_content.encode()).hexdigest()
+        expected_full_checksum = hashlib.sha256(new_content.encode()).hexdigest()
+
+        self.assertEqual(revision.checksum_base, expected_base_checksum)
+        self.assertEqual(revision.checksum_full, expected_full_checksum)
+
+    # ------------------------------------------------------------------
+    # Failure / validation paths
+    # ------------------------------------------------------------------
+
+    async def test_aupdate_note_missing_content_raises(self):
+        """Neither *new_content* nor *diff_text* provided – expect ``ValueError``."""
+        with self.assertRaisesRegex(
+            ValueError, "Provide either new_content or diff_text"
+        ):
+            await aupdate_document_note(
+                note_id=self.note.id,
+                author_id=self.user.id,
+            )
+
+    async def test_aupdate_note_both_content_and_diff_raise(self):
+        """Supplying both *new_content* and *diff_text* is forbidden."""
+        with self.assertRaisesRegex(
+            ValueError, "Provide only one of new_content or diff_text"
+        ):
+            await aupdate_document_note(
+                note_id=self.note.id,
+                new_content="foo",
+                diff_text="bar",
+                author_id=self.user.id,
+            )
+
+    async def test_aupdate_note_invalid_note_raises(self):
+        """Non-existent note id should raise a clear ``ValueError``."""
+        with self.assertRaisesRegex(ValueError, "Note with id=999999 does not exist"):
+            await aupdate_document_note(
+                note_id=999999,
+                new_content="foo",
+                author_id=self.user.id,
+            )
+
+    async def test_aupdate_note_preserves_diff_in_revision(self):
+        """The revision should store a proper unified diff."""
+        original_content = self.note.content
+        new_content = "Completely different content"
+
+        revision = await aupdate_document_note(
+            note_id=self.note.id,
+            new_content=new_content,
+            author_id=self.user.id,
+        )
+
+        # The diff should contain both old and new content indicators
+        self.assertIn("-", revision.diff)  # Removed lines
+        self.assertIn("+", revision.diff)  # Added lines
+        self.assertIn(original_content, revision.diff)
+        self.assertIn(new_content, revision.diff)

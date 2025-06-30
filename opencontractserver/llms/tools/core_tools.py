@@ -617,90 +617,20 @@ async def aupdate_corpus_description(
     author_id: int | None = None,
     author=None,
 ):
-    """Async variant of :func:`update_corpus_description` relying on Django's async ORM."""
+    """Async variant of :func:`update_corpus_description` using database_sync_to_async.
 
-    import difflib
-    import hashlib
+    Since Django 4.2 doesn't support async transactions, we wrap the synchronous
+    version using channels' database_sync_to_async for proper database handling.
+    """
 
-    from django.contrib.auth import get_user_model
-    from django.core.files.base import ContentFile
-    from django.db import transaction
-    from django.utils import timezone
-
-    from opencontractserver.corpuses.models import (
-        Corpus,
-        CorpusDescriptionRevision,
+    # Use the _db_sync_to_async wrapper defined above to call the sync version
+    return await _db_sync_to_async(update_corpus_description)(
+        corpus_id=corpus_id,
+        new_content=new_content,
+        diff_text=diff_text,
+        author_id=author_id,
+        author=author,
     )
-
-    if new_content is None and diff_text is None:
-        raise ValueError("Provide either new_content or diff_text")
-
-    if new_content is not None and diff_text is not None:
-        raise ValueError("Provide only one of new_content or diff_text, not both")
-
-    if author is None and author_id is None:
-        raise ValueError("Provide either author or author_id.")
-
-    try:
-        corpus = await Corpus.objects.aget(pk=corpus_id)
-    except Corpus.DoesNotExist as exc:
-        raise ValueError(f"Corpus with id={corpus_id} does not exist.") from exc
-
-    # Compute *new_content* from the diff when required.
-    if diff_text is not None:
-        current = corpus._read_md_description_content()
-        new_content = _apply_ndiff_patch(current, diff_text)
-    else:
-        current = corpus._read_md_description_content()
-
-    assert new_content is not None  # mypy – safeguarded above.
-
-    # Resolve author.
-    if author is None:
-        User = get_user_model()
-        author = await User.objects.aget(pk=author_id)  # type: ignore[assignment]
-
-    # No change – early exit.
-    if current == new_content:
-        return None
-
-    async with transaction.atomic():
-        # Persist the new markdown file.
-        filename = f"{uuid4()}.md"
-        corpus.md_description.save(filename, ContentFile(new_content), save=False)  # type: ignore[arg-type]
-        corpus.modified = timezone.now()
-        await corpus.asave()
-
-        # Compute next version number.
-        latest_rev = (
-            await CorpusDescriptionRevision.objects.filter(corpus_id=corpus.pk)
-            .order_by("-version")
-            .afirst()
-        )
-        next_version = 1 if latest_rev is None else latest_rev.version + 1
-
-        diff_text_final = "\n".join(
-            difflib.unified_diff(
-                current.splitlines(), new_content.splitlines(), lineterm=""
-            )
-        )
-
-        should_snapshot = (
-            next_version % corpus.REVISION_SNAPSHOT_INTERVAL == 0 or next_version == 1
-        )
-        snapshot_text = new_content if should_snapshot else None
-
-        revision = await CorpusDescriptionRevision.objects.acreate(
-            corpus=corpus,
-            author=author,
-            version=next_version,
-            diff=diff_text_final,
-            snapshot=snapshot_text,
-            checksum_base=hashlib.sha256(current.encode()).hexdigest(),
-            checksum_full=hashlib.sha256(new_content.encode()).hexdigest(),
-        )
-
-    return revision
 
 
 # --------------------------------------------------------------------------- #
@@ -816,82 +746,19 @@ async def aupdate_document_note(
     diff_text: str | None = None,
     author_id: int | None = None,
 ):
-    """Async variant of ``update_document_note`` avoiding thread-pool hand-off."""
+    """Async variant of :func:`update_document_note` using database_sync_to_async.
 
-    import difflib
-    import hashlib
+    Since Django 4.2 doesn't support async transactions, we wrap the synchronous
+    version using channels' database_sync_to_async for proper database handling.
+    """
 
-    from django.contrib.auth import get_user_model
-    from django.db import transaction
-    from django.utils import timezone
-
-    from opencontractserver.annotations.models import Note, NoteRevision
-
-    if new_content is None and diff_text is None:
-        raise ValueError("Provide either new_content or diff_text")
-
-    if new_content is not None and diff_text is not None:
-        raise ValueError("Provide only one of new_content or diff_text, not both")
-
-    try:
-        note = await Note.objects.aget(pk=note_id)
-    except Note.DoesNotExist as exc:
-        raise ValueError(f"Note with id={note_id} does not exist.") from exc
-
-    # Resolve new_content when a diff is supplied.
-    if diff_text is not None:
-        new_content = _apply_ndiff_patch(note.content or "", diff_text)
-
-    assert new_content is not None  # ensured above
-
-    # Early exit if nothing changed.
-    if (note.content or "") == new_content:
-        return None
-
-    # Resolve author (may be None for system actions).
-    author = None
-    if author_id is not None:
-        User = get_user_model()
-        author = await User.objects.aget(pk=author_id)
-
-    async with transaction.atomic():
-        original_content = note.content or ""
-
-        # Update the note *without* triggering the automatic revision logic in
-        # ``save`` – we perform the revision manually below. We therefore use
-        # ``aupdate`` on the queryset.
-        await Note.objects.filter(pk=note.pk).aupdate(
-            content=new_content, modified=timezone.now()
-        )
-
-        latest_rev = (
-            await NoteRevision.objects.filter(note_id=note.pk)
-            .order_by("-version")
-            .afirst()
-        )
-        next_version = 1 if latest_rev is None else latest_rev.version + 1
-
-        diff_text_final = "\n".join(
-            difflib.unified_diff(
-                original_content.splitlines(), new_content.splitlines(), lineterm=""
-            )
-        )
-
-        interval = getattr(Note, "REVISION_SNAPSHOT_INTERVAL", 10)
-        should_snapshot = next_version % interval == 0
-        snapshot_text = new_content if should_snapshot else None
-
-        revision = await NoteRevision.objects.acreate(
-            note_id=note.pk,
-            author=author,
-            version=next_version,
-            diff=diff_text_final,
-            snapshot=snapshot_text,
-            checksum_base=hashlib.sha256(original_content.encode()).hexdigest(),
-            checksum_full=hashlib.sha256(new_content.encode()).hexdigest(),
-        )
-
-    return revision
+    # Use the _db_sync_to_async wrapper defined above to call the sync version
+    return await _db_sync_to_async(update_document_note)(
+        note_id=note_id,
+        new_content=new_content,
+        diff_text=diff_text,
+        author_id=author_id,
+    )
 
 
 def search_document_notes(

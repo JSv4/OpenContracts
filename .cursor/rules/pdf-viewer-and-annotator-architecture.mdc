@@ -5,18 +5,16 @@ alwaysApply: false
 ---
 # Understanding the PDF Annotation System Architecture
 
-# Understanding the PDF Annotation System Architecture
-
 ## Admin Tasks if you Edit PDF-related frontend code
 1. When working on document knowledge base and pdf-related frontend functionality, ensure you update our cursor rule here [pdf-viewer-and-annotator-architecture.mdc](mdc:.cursor/rules/pdf-viewer-and-annotator-architecture.mdc) such that it captures any material changes to our existing setup.
 
 ## Context: Document Knowledge Base
 
-The `DocumentKnowledgeBase` component serves as the main container for viewing and interacting with documents, particularly PDFs. It provides a comprehensive interface that combines document viewing with annotation capabilities, search functionality, and knowledge extraction features.
+The `DocumentKnowledgeBase` component serves as the main container for viewing and interacting with documents, particularly PDFs. It provides a comprehensive interface that combines document viewing with annotation capabilities, search functionality, knowledge extraction features, and a sophisticated dual-layer architecture for both document annotation and knowledge synthesis.
 
 The system uses a sophisticated virtualized rendering approach for PDFs, where only visible pages (plus a small overscan buffer) are rendered to dramatically improve performance with large documents. This is coupled with an advanced annotation management system that allows users to view, filter, and interact with annotations overlaid on the document.
 
-## Intent: High-Performance Document Rendering with Rich Annotation Management
+## Intent: High-Performance Document System with Dual-Layer Architecture
 
 The architecture aims to:
 
@@ -26,6 +24,30 @@ The architecture aims to:
 4. Enable real-time filtering and selection of annotations
 5. Maintain consistent state across the entire application using Jotai atoms
 6. Ensure smooth scrolling and navigation even with hundreds of pages
+7. Offer dual-layer architecture for document viewing and knowledge synthesis
+8. Provide unified content feeds combining notes, annotations, and relationships
+9. Support version-controlled document summaries with version history
+10. Enable flexible, resizable panel layouts with auto-minimize capabilities
+
+## Dual-Layer Architecture
+
+The system implements two distinct viewing layers:
+
+### Document Layer
+- Traditional PDF/text viewing with annotations
+- Search functionality with highlighting
+- Annotation creation and editing
+- Extract and analysis results
+- Real-time collaboration features
+
+### Knowledge Layer
+- Document summary viewing and editing
+- Version history with author tracking
+- Markdown-based content editing
+- Clean reading experience
+- Knowledge synthesis tools
+
+Users can seamlessly switch between layers based on their current task, with intelligent context-aware switching.
 
 ## Component Interactions
 
@@ -39,12 +61,23 @@ AnnotationAtoms.tsx
 ├── structuralAnnotationsAtom - Structural annotations
 ├── allAnnotationsAtom - Computed, de-duplicated list
 └── perPageAnnotationsAtom - Page-indexed annotation map
+
+UISettingsAtom.tsx
+├── activeLayerAtom - Current layer (knowledge/document)
+├── chatPanelWidthAtom - Panel width management
+└── sidebarViewModeAtom - Chat vs feed mode
+
+DocumentAtom.tsx
+├── scrollContainerRefAtom - Scroll container reference
+├── pendingScrollAnnotationIdAtom - Annotation to scroll to
+└── textSearchStateAtom - Search state management
 ```
 
 This approach provides:
 - Centralized state management
 - Computed derivations that automatically update
 - Efficient re-rendering when only relevant state changes
+- Layer-aware state transitions
 
 ### PDF Rendering Pipeline
 
@@ -52,6 +85,7 @@ This approach provides:
    - Loads PDF document using pdfjs-dist
    - Fetches PAWLS token data for precise text selection
    - Initializes Jotai atoms with annotation data
+   - Manages layer switching and tab navigation
 
 2. **PDF** component manages the virtualized rendering of pages:
    - Calculates page heights at current zoom level (cached per zoom)
@@ -66,6 +100,38 @@ This approach provides:
    - Overlays annotation components on top of the canvas
    - Handles user interactions for creating/selecting annotations
    - Implements two-phase scroll-to-annotation system
+
+### Advanced Features
+
+#### Unified Content Feed
+The `UnifiedContentFeed` component provides a consolidated view of all document content:
+- Combines notes, annotations, relationships, and search results
+- Sortable by page order or chronologically
+- Filterable by content type and properties
+- Real-time updates as content changes
+- Consistent interaction patterns across content types
+
+#### Summary Version History
+Version control for document summaries:
+- Each edit creates a new numbered version
+- Full content snapshots for each version
+- Author and timestamp tracking
+- Diff generation between versions
+- Visual version browser with one-click switching
+
+#### Resizable Panel System
+Sophisticated chat panel width management:
+- Preset sizes: quarter (25%), half (50%), full (90%)
+- Custom width via drag handle
+- Auto-minimize when hovering over document
+- Smooth animations and transitions
+- Persistent width preferences
+
+#### Floating UI Components
+- **FloatingSummaryPreview**: Picture-in-picture summary view
+- **FloatingDocumentControls**: Contextual action buttons
+- **FloatingDocumentInput**: Unified chat/search input
+- **ZoomControls**: Simple zoom interface with keyboard shortcuts
 
 ### Virtualization Implementation Details
 
@@ -144,7 +210,7 @@ The system uses a two-phase approach for scrolling to annotations, triggered by:
    - Scroll it into view with centering
    - Retry with requestAnimationFrame if element not yet rendered
 
-See [scroll-to-annotation-flow.md](docs/architecture/components/annotator/scroll-to-annotation-flow.md) for complete details.
+See [scroll-to-annotation-flow.md](mdc:docs/architecture/components/annotator/current-state/scroll-to-annotation-flow.md) for complete details.
 
 ### Data Flow for Annotation Updates
 
@@ -154,6 +220,21 @@ When annotations are updated (added, modified, or filtered):
 2. `allAnnotationsAtom` automatically recomputes to include the changes
 3. `useVisibleAnnotations` applies current filters to the updated list
 4. Components consuming `useVisibleAnnotations` re-render with the new filtered list
+
+## Tab Navigation System
+
+The sidebar implements a sophisticated tab system with layer awareness:
+- **Summary** (knowledge layer): Document summary view
+- **Chat** (both layers): AI-powered chat interface
+- **Notes** (both layers): Document notes management
+- **Relationships** (both layers): Document connections
+- **Annotations** (document layer): Annotation list
+- **Relations** (document layer): Annotation relationships
+- **Search** (document layer): Text search
+- **Analyses** (document layer): Document analysis
+- **Extracts** (document layer): Data extraction
+
+Each tab knows which layer(s) it belongs to and can trigger layer switches when activated.
 
 ## Key Technical Aspects
 
@@ -173,4 +254,8 @@ When annotations are updated (added, modified, or filtered):
 
 8. **Absolute Positioning**: All pages are absolutely positioned based on cumulative heights, with a spacer div maintaining correct total scroll height.
 
-This architecture creates a flexible, highly performant system for displaying and interacting with annotations on PDF documents, with centralized state management and consistent filtering logic across the application. The virtualization approach enables smooth handling of documents with hundreds or thousands of pages.
+9. **Layer-aware Navigation**: The system intelligently manages which features are available in each layer and handles transitions smoothly.
+
+10. **Unified State Management**: All major state is managed through Jotai atoms, providing a single source of truth and automatic reactivity.
+
+This architecture creates a flexible, highly performant system for displaying and interacting with annotations on PDF documents, with centralized state management and consistent filtering logic across the application. The virtualization approach enables smooth handling of documents with hundreds or thousands of pages, while the dual-layer architecture provides both detailed annotation capabilities and high-level knowledge synthesis tools.

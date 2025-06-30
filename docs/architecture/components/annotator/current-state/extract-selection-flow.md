@@ -41,15 +41,17 @@ const onSelectExtract = (extract: ExtractType | null) => {
 ## UI Update Flow
 The data flows through the component hierarchy:
 ```
-DocumentAnnotator
-  └─ DocumentViewer
-      └─ AnnotatorSidebar
+DocumentKnowledgeBase
+  └─ Right Panel (activeTab: "extracts")
+      └─ ExtractTraySelector
           └─ SingleDocumentExtractResults
 ```
 
 When an extract is selected:
-- The sidebar's "Data" tab becomes visible
-- "Annotations" and "Relationships" tabs are hidden
+- The right panel switches to show the "Extracts" tab content
+- The selected extract header appears with a back button
+- `SingleDocumentExtractResults` component displays the data cells
 - Data cells are rendered with their values, approval states, and associated annotations
+- Annotations associated with the extract are highlighted in the document view
 
 This centralized data management through `useAnalysisManager` ensures consistent state across all components while maintaining clean separation of concerns between data fetching, processing, and display.

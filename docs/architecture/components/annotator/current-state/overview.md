@@ -4,9 +4,12 @@
 
 1. [Key Questions](#key-questions)
 2. [High-level Architecture](#high-level-architecture)
-3. [Virtualized Rendering System](#virtualized-rendering-system)
+3. [Layer System](#layer-system)
 4. [Component Hierarchy](#component-hierarchy)
-5. [Specific Component Deep Dives](#specific-component-deep-dives)
+5. [Major Features](#major-features)
+6. [Virtualized Rendering System](#virtualized-rendering-system)
+7. [State Management](#state-management)
+8. [Specific Component Deep Dives](#specific-component-deep-dives)
 
 ## Key Questions
 
@@ -24,6 +27,8 @@
   - Document type annotations
   - Annotation relationships
   - Corpus label information
+  - Document notes and relationships
+  - Summary version history
 - Annotations are transformed and stored in Jotai atoms:
   - `pdfAnnotationsAtom` - main annotation state
   - `structuralAnnotationsAtom` - structural annotations
@@ -36,20 +41,163 @@
 
 ## High-level Architecture
 
-The PDF annotation system uses a sophisticated architecture combining:
+The PDF annotation system uses a sophisticated dual-layer architecture:
+
+1. **Document Layer**: Traditional PDF/text viewing with annotations
+2. **Knowledge Layer**: Summary view with version history and editing
+
+Key architectural components:
 
 1. **Virtualized Rendering**: Only visible pages are rendered for performance
 2. **State Management with Jotai**: Centralized, reactive state management
 3. **Computed Derivations**: Automatic updates when dependencies change
-4. **Unified Filtering**: Single source of truth for annotation visibility
+4. **Unified Feed System**: Combines notes, annotations, relationships in one view
+5. **Summary Versioning**: Git-like version control for document summaries
+6. **Resizable Panels**: Flexible layout with chat panel width management
 
-### Core Components
+## Layer System
 
-- **DocumentKnowledgeBase**: Top-level component managing document viewing and knowledge extraction
-- **PDF**: Implements virtualized page rendering and scroll management
-- **PDFPage**: Renders individual pages with annotations when visible
-- **Annotation State**: Managed through Jotai atoms with automatic derivations
-- **Filtering System**: `useVisibleAnnotations` provides consistent filtering logic
+The `DocumentKnowledgeBase` implements a dual-layer architecture:
+
+### Document Layer
+- PDF/text document viewing with annotations
+- Search functionality
+- Annotation creation and editing
+- Extract and analysis results
+- Traditional document interaction
+
+### Knowledge Layer
+- Document summary viewing and editing
+- Version history browsing
+- Markdown-based content
+- Knowledge synthesis view
+
+Users can switch between layers based on their current task, with some features (like chat) available in both layers.
+
+## Component Hierarchy
+
+```
+DocumentKnowledgeBase
+├── Layer Management (activeLayer: "knowledge" | "document")
+├── Tab Navigation System
+│   ├── Summary (knowledge layer)
+│   ├── Chat (both layers)
+│   ├── Notes (both layers)
+│   ├── Relationships (both layers)
+│   ├── Annotations (document layer)
+│   ├── Relations (document layer)
+│   ├── Search (document layer)
+│   ├── Analyses (document layer)
+│   └── Extracts (document layer)
+├── Document Layer Components
+│   ├── PDF (Virtualization Layer)
+│   │   └── PDFPage (Rendered only when visible)
+│   ├── TxtAnnotatorWrapper (for text files)
+│   ├── FloatingDocumentControls
+│   ├── FloatingDocumentInput
+│   └── ZoomControls
+├── Knowledge Layer Components
+│   ├── UnifiedKnowledgeLayer
+│   ├── VersionHistorySidebar
+│   └── Markdown Editor/Viewer
+├── Shared Components
+│   ├── UnifiedContentFeed (feed mode)
+│   ├── ChatTray
+│   ├── FloatingSummaryPreview (PiP view)
+│   └── UnifiedLabelSelector
+└── Resizable Right Panel System
+```
+
+## Major Features
+
+### 1. Unified Feed System
+
+**Components**: `UnifiedContentFeed`, `SidebarControlBar` (references in `4:1940-1973` and `4:1988-2042`)
+
+The unified feed combines multiple content types into a single, filterable view:
+- Notes
+- Annotations
+- Relationships
+- Search results
+
+Features:
+- Filter by content type
+- Sort by page order or chronologically
+- Seamless switching between chat mode and feed mode
+- Real-time updates as content changes
+
+### 2. Summary Version History
+
+**Hook**: `useSummaryVersions` (referenced in `4:1704-1713`)
+
+Git-like version control for document summaries:
+- View all previous versions
+- Compare changes between versions
+- Create new versions when editing
+- Author and timestamp tracking
+- Revert to previous versions
+
+### 3. Floating Summary Preview
+
+**Component**: `FloatingSummaryPreview` (referenced in `4:2099-2124`)
+
+Picture-in-picture style preview that:
+- Shows current summary while in document layer
+- Allows quick switching to knowledge layer
+- Updates in real-time
+- Can be minimized or expanded
+
+### 4. Chat Panel Width Management
+
+**Hook**: `useChatPanelWidth` (referenced in `4:280-291`)
+
+Sophisticated resizable panel system:
+- Preset sizes: quarter (25%), half (50%), full (90%)
+- Custom width with drag handle
+- Auto-minimize when hovering over document
+- Persistent width preferences
+- Smooth animations
+
+### 5. Tab-based Navigation
+
+**Array**: `allTabs` (defined in `4:1223-1272`)
+
+Organized sidebar navigation with:
+- Icons and labels for each feature
+- Layer-aware tabs (some only in document layer)
+- Visual indicators for active tab
+- Collapsible sidebar on hover
+
+### 6. Note Management System
+
+**Components**: `NoteModal`, `NotesGrid`, `PostItNote` (imported in `4:147`)
+
+Rich note-taking features:
+- Sticky note visual style
+- Markdown content support
+- Edit and create capabilities
+- Author attribution
+- Chronological organization
+
+### 7. Extract and Analysis Management
+
+**Components**: `ExtractTraySelector`, `AnalysisTraySelector` (imported in `4:139-140`)
+
+Document analysis features:
+- Run custom analyzers on documents
+- View extract results in structured format
+- Create new extracts with fieldsets
+- Single document results view
+
+### 8. Floating Controls
+
+**Components**: `FloatingDocumentControls`, `FloatingDocumentInput`, `ZoomControls`
+
+Modern floating UI elements:
+- Zoom in/out controls
+- Quick chat/search input
+- Document action buttons
+- Context-aware visibility
 
 ## Virtualized Rendering System
 
@@ -63,7 +211,7 @@ The PDF component implements a sophisticated virtualization system to handle lar
    - A cumulative array stores the top position of each page for quick lookups
 
 2. **Visible Range Detection**
-   - The system tracks scroll position of the container (or window)
+   - The system tracks scroll position of the container
    - Binary search determines which pages intersect the viewport
    - An overscan of 2 pages is added above and below for smooth scrolling
 
@@ -77,45 +225,29 @@ The PDF component implements a sophisticated virtualization system to handle lar
    - Only pages within the visible range actually render their content
    - A spacer div at the bottom maintains correct scroll height
 
-### Code Example
+## State Management
 
-```typescript
-// The visible range calculation in PDF.tsx
-const calcRange = useCallback(() => {
-  const scroll = /* get scroll position */;
-  const viewH = /* get viewport height */;
+The system uses Jotai atoms for reactive state management:
 
-  // Binary search for first/last visible pages
-  // Add overscan for smooth scrolling
-  const overscan = 2;
-  let start = Math.max(0, firstVisible - overscan);
-  let end = Math.min(pageCount - 1, lastVisible + overscan);
+### Core Atoms
+- `pdfAnnotationsAtom` - Main annotation state
+- `structuralAnnotationsAtom` - Structural annotations  
+- `allAnnotationsAtom` - Computed, de-duplicated list
+- `perPageAnnotationsAtom` - Page-indexed annotation map
+- `selectedAnnotationIdsAtom` - Currently selected annotations
+- `chatSourceStateAtom` - Chat message source tracking
 
-  // Ensure selected annotation's page is included
-  if (selectedPageIdx !== undefined) {
-    start = Math.min(start, selectedPageIdx);
-    end = Math.max(end, selectedPageIdx);
-  }
+### UI State
+- `activeLayer` - Current layer (knowledge/document)
+- `activeTab` - Currently selected tab
+- `showRightPanel` - Right panel visibility
+- `zoomLevel` - PDF zoom level
+- `sidebarViewMode` - Chat vs feed mode
 
-  setRange([start, end]);
-}, [/* dependencies */]);
-```
-
-## Component Hierarchy
-
-```
-DocumentKnowledgeBase
-├── PDF (Virtualization Layer)
-│   └── PDFPage (Rendered only when visible)
-│       ├── Canvas (PDF content)
-│       ├── SelectionLayer (User interactions)
-│       ├── Selection (Annotation display)
-│       ├── SearchResult (Search highlights)
-│       └── ChatSourceResult (Chat source highlights)
-├── ViewSettingsPopup (Annotation filters)
-├── LabelSelector (Active annotation label)
-└── Various Sidebars/Panels
-```
+### Computed State
+- Annotations automatically filter based on user preferences
+- Visible pages calculate based on scroll position
+- Summary versions update when changes are saved
 
 ## Specific Component Deep Dives
 
@@ -126,12 +258,15 @@ The main container component that:
 - Handles data fetching via GraphQL
 - Coordinates between knowledge base view and document annotation view
 - Manages chat conversations, notes, and document relationships
+- Controls layer switching and tab navigation
+- Handles initial annotation selection from props or URL
 
-Key features:
-- Resizable right panel for chat/notes/annotations
-- Layer switching between "knowledge" and "document" views
-- Integration with LLM chat functionality
-- Document analysis and extract management
+Key responsibilities:
+- Data loading and transformation (referenced in `4:419-590`)
+- Panel resize management (referenced in `4:1356-1403`)
+- Tab click handling (referenced in `4:1899-1924`)
+- Layer switching logic
+- URL parameter synchronization
 
 ### PDF.tsx
 
@@ -141,12 +276,6 @@ The virtualization engine that:
 - Coordinates scrolling to specific annotations/search results
 - Provides the container structure for all PDF pages
 
-Key algorithms:
-- Binary search for visible page detection
-- Cumulative height arrays for positioning
-- Smart range expansion for selected items
-- Scroll event throttling with requestAnimationFrame
-
 ### PDFPage.tsx
 
 Renders individual PDF pages when visible:
@@ -155,42 +284,20 @@ Renders individual PDF pages when visible:
 - Handles user selection and annotation creation
 - Integrates search results and chat source highlights
 
-Performance optimizations:
-- Only renders when in viewport
-- Caches rendered content at current zoom level
-- Efficiently updates when zoom changes
-- Manages its own lifecycle independently
+### UnifiedContentFeed
 
-### State Management with Jotai
+New component that provides a unified view of all document content:
+- Combines notes, annotations, relationships, and search results
+- Sortable by page order or chronologically
+- Filterable by content type
+- Provides consistent interaction patterns
 
-The annotation system uses Jotai atoms for state management:
+### FloatingSummaryPreview
 
-```typescript
-// Core atoms in AnnotationAtoms.tsx
-pdfAnnotationsAtom          // Main annotation state
-structuralAnnotationsAtom   // Structural annotations
-allAnnotationsAtom         // Computed: all annotations deduplicated
-perPageAnnotationsAtom     // Computed: annotations indexed by page
+Picture-in-picture style component that:
+- Shows document summary while in document layer
+- Allows quick navigation to knowledge layer
+- Displays current version information
+- Can be expanded to show more content
 
-// The atoms automatically update when dependencies change
-```
-
-### Filtering System
-
-The `useVisibleAnnotations` hook provides centralized filtering:
-
-1. **Forced Visibility**: Selected annotations and those in relationships
-2. **Structural Filter**: Show/hide structural annotations
-3. **Label Filter**: Filter by annotation labels
-4. **Consistent Logic**: Same filtering everywhere in the app
-
-This ensures that annotation visibility is consistent across all components and views.
-
-### Scroll-to-Annotation System
-
-The system implements a sophisticated two-phase approach for scrolling to annotations on load:
-
-1. **Phase 1**: Page-level scrolling ensures the target page is visible
-2. **Phase 2**: Element-level scrolling centers the specific annotation
-
-See [scroll-to-annotation-flow.md](./scroll-to-annotation-flow.md) for detailed documentation of this system.
+This architecture creates a flexible, highly performant system for both document annotation and knowledge management, with smooth transitions between different viewing modes and consistent state management across the application.

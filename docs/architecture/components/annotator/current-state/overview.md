@@ -231,7 +231,7 @@ The system uses Jotai atoms for reactive state management:
 
 ### Core Atoms
 - `pdfAnnotationsAtom` - Main annotation state
-- `structuralAnnotationsAtom` - Structural annotations  
+- `structuralAnnotationsAtom` - Structural annotations
 - `allAnnotationsAtom` - Computed, de-duplicated list
 - `perPageAnnotationsAtom` - Page-indexed annotation map
 - `selectedAnnotationIdsAtom` - Currently selected annotations

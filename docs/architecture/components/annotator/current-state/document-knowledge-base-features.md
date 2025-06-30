@@ -257,4 +257,4 @@ const { data: combinedData, loading, error: queryError, refetch } = useQuery<
 - Shows/hides features based on user rights
 - Graceful degradation for limited permissions
 
-This architecture creates a comprehensive document management system that goes beyond simple PDF annotation, providing rich knowledge management capabilities while maintaining high performance and user experience standards. 
+This architecture creates a comprehensive document management system that goes beyond simple PDF annotation, providing rich knowledge management capabilities while maintaining high performance and user experience standards.

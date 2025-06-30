@@ -179,6 +179,20 @@ export const GET_CORPUS_METADATA = gql`
   query ($metadataForCorpusId: ID!) {
     corpus(id: $metadataForCorpusId) {
       id
+      title
+      description
+      mdDescription
+      descriptionRevisions {
+        id
+        version
+        author {
+          id
+          email
+        }
+        created
+        diff
+        snapshot
+      }
       allAnnotationSummaries(labelTypes: [METADATA_LABEL]) {
         id
         rawText
@@ -191,6 +205,66 @@ export const GET_CORPUS_METADATA = gql`
     }
   }
 `;
+
+export const GET_CORPUS_WITH_HISTORY = gql`
+  query GetCorpusWithHistory($id: ID!) {
+    corpus(id: $id) {
+      id
+      title
+      description
+      mdDescription
+      created
+      modified
+      creator {
+        id
+        email
+      }
+      descriptionRevisions {
+        id
+        version
+        author {
+          id
+          email
+        }
+        created
+        diff
+        snapshot
+      }
+    }
+  }
+`;
+
+export interface GetCorpusWithHistoryQueryVariables {
+  id: string;
+}
+
+export interface CorpusRevision {
+  id: string;
+  version: number;
+  author: {
+    id: string;
+    email: string;
+  };
+  created: string;
+  diff: string;
+  snapshot?: string;
+}
+
+export interface GetCorpusWithHistoryQuery {
+  corpus: {
+    id: string;
+    title: string;
+    description: string;
+    mdDescription?: string;
+    created: string;
+    modified: string;
+    creator: {
+      id: string;
+      email: string;
+    };
+    descriptionRevisions: CorpusRevision[];
+  };
+}
 
 export interface GetCorpusQueryDetailsInputType {
   corpusId: string;
@@ -2186,6 +2260,7 @@ export interface ChatMessageNode {
   id: string;
   msgType: string;
   content: string;
+  state?: string;
   // Add other fields (data, createdAt, creator, etc.) if you need them
 }
 
@@ -2212,6 +2287,7 @@ export const GET_CHAT_MESSAGES = gql`
       id
       msgType
       content
+      state
       data
     }
   }

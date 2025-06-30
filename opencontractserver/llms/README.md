@@ -72,6 +72,7 @@ Agents are the primary interface for interacting with documents and corpora. The
 - **Corpus Agents**: Work with collections of documents.
 - **Framework Flexibility**: Choose between LlamaIndex, PydanticAI, or future frameworks.
 - **Conversation Persistence**: Automatic conversation management and message storage.
+- **Nested Streaming**: Real-time visibility into child agent execution through stream observers.
 
 #### Creating Agents
 
@@ -105,6 +106,17 @@ agent = await agents.for_document(
     tools=["load_md_summary", "get_notes_for_document_corpus"]
 )
 
+# Advanced: With stream observer for nested agent visibility
+async def my_stream_observer(event):
+    """Receives events from nested agent calls."""
+    print(f"[Nested] {event.type}: {getattr(event, 'content', getattr(event, 'thought', ''))}")
+
+agent = await agents.for_corpus(
+    corpus=456,
+    framework=AgentFramework.PYDANTIC_AI,
+    stream_observer=my_stream_observer  # Will receive events from child document agents
+)
+
 # Advanced: Using existing conversation or preloaded messages
 # from opencontractserver.conversations.models import Conversation, ChatMessage
 # existing_conversation = Conversation.objects.aget(id=your_conversation_id)
@@ -134,15 +146,46 @@ response.user_message_id      # ID of stored user message (if persistence enable
 response.llm_message_id       # ID of stored LLM response (if persistence enabled)  
 response.metadata             # Additional response metadata (framework-specific)
 
-# UnifiedStreamResponse structure (for streaming)
-async for chunk in agent.stream("Analyze the liability clauses"):
-    chunk.content             # Incremental content for this chunk
-    chunk.accumulated_content # Complete content so far
-    chunk.sources             # Sources (populated in final chunk)
-    chunk.user_message_id     # User message ID (available after first chunk)
-    chunk.llm_message_id      # LLM message ID (available after first chunk)
-    chunk.is_complete         # True for the final chunk
-    chunk.metadata            # Chunk metadata
+# New, event-based streaming (>= v0.9)
+# -----------------------------------
+#
+# The streaming API now yields a *typed* event union instead of a single
+# response shape.  Each event has a ``type`` discriminator so it's trivial to
+# branch logic without ``isinstance`` checks.
+#
+#     ThoughtEvent  – short messages about the agent's reasoning (e.g. tool call
+#                     decisions, framework-specific "thinking" lines).
+#     ContentEvent  – textual delta that forms part of the **final** answer.
+#     SourceEvent   – a batch of SourceNode objects discovered mid-stream.
+#     ApprovalNeededEvent – tool requires human approval before execution.
+#     ApprovalResultEvent – approval decision has been recorded.
+#     ResumeEvent   – execution is resuming after approval.
+#     FinalEvent    – emitted once; contains the full answer, sources, usage…
+#
+# All events carry the legacy fields (``user_message_id``, ``llm_message_id``,
+# ``content``/``is_complete``) so existing websocket code keeps working.
+#
+# Example:
+# ```python
+# async for ev in agent.stream("Analyze the liability clauses"):
+#     if ev.type == "thought":
+#         print(f"🤔 {ev.thought}")
+#     elif ev.type == "content":
+#         print(ev.content, end="")
+#     elif ev.type == "sources":
+#         print(f"\nFound {len(ev.sources)} sources so far…")
+#     elif ev.type == "approval_needed":
+#         print(f"⚠️ Tool '{ev.pending_tool_call['name']}' needs approval")
+#     elif ev.type == "final":
+#         print("\nDone! Total tokens:", ev.metadata.get("usage", {}).get("total_tokens"))
+# ```
+#
+# Legacy (pre-v0.9) – UnifiedStreamResponse
+# ----------------------------------------
+#
+# Older adapters (e.g. LlamaIndex) still emit the former ``UnifiedStreamResponse``
+# object.  Your code can support both by simply checking ``hasattr(chunk, "type")``
+# and falling back to the old attributes when the discriminator is absent.
 
 # SourceNode structure (individual source)
 for source in response.sources:
@@ -234,7 +277,7 @@ conversation_info = agent.get_conversation_info()  # Returns basic info with no 
 ```python
 # Control message storage per interaction
 response = await agent.chat(
-    "Sensitive query that shouldn'''t be stored",
+    "Sensitive query that shouldn't be stored",
     store_messages=False  # Skip database storage
 )
 
@@ -320,26 +363,357 @@ pydantic_agent = await agents.for_document(
     framework=AgentFramework.PYDANTIC_AI,
     tools=["load_md_summary"]  # Same tool, different framework
 )
+
+#### Tool Approval & Human-in-the-Loop
+
+Some tools might be *dangerous* (e.g. deleting data) or simply require legal review before execution. OpenContracts supports a **durable approval gate** that pauses the agent right before such a tool would run, persists all state, and lets a human approve or reject the call at a later time—even after a server restart.
+
+##### Approval Flow Overview
+
+When a tool requiring approval is called, the framework:
+
+1. **Pauses execution** before running the tool
+2. **Emits an `ApprovalNeededEvent`** with the pending tool call details
+3. **Persists state** in the database with `state=AWAITING_APPROVAL`
+4. **Waits for human decision** via `resume_with_approval()`
+
+Upon approval/rejection:
+
+1. **Emits `ApprovalResultEvent`** with the decision
+2. If approved:
+   - **Emits `ResumeEvent`** to signal continuation
+   - **Executes the tool** with the original arguments
+   - **Continues normal agent execution** (can call more tools)
+3. If rejected:
+   - **Emits final event** with rejection message
+   - **Ends the conversation turn**
+
+##### Flagging Tools for Approval
+
+```python
+from opencontractserver.llms import tools
+
+async def delete_user_account(user_id: int) -> str:
+    """Permanently delete a user (⚠ irreversible)."""
+    # Dangerous operation implementation
+    return f"Account {user_id} deleted"
+
+# Mark tool as requiring approval
+danger_tool = tools.from_function(
+    delete_user_account,
+    name="delete_user_account", 
+    description="Delete a user – requires admin approval.",
+    requires_approval=True,  # ← approval flag
+)
+
+agent = await agents.for_document(
+    document=123, corpus=1,
+    tools=[danger_tool]
+)
 ```
+
+##### Handling Approval Events
+
+When the LLM attempts to call a flagged tool, the agent pauses and emits an `ApprovalNeededEvent`:
+
+```python
+from opencontractserver.llms.agents.core_agents import (
+    ApprovalNeededEvent,
+    ApprovalResultEvent,
+    ResumeEvent
+)
+
+async for event in agent.stream("Delete user account 42"):
+    match event.type:
+        case "approval_needed":
+            # Agent has paused, waiting for approval
+            tool_call = event.pending_tool_call
+            print(f"Tool '{tool_call['name']}' needs approval")
+            print(f"Arguments: {tool_call['arguments']}")
+            
+            # Get human decision (via UI, CLI, etc.)
+            approved = await get_user_decision()
+            
+            # Resume execution
+            async for resume_event in agent.resume_with_approval(
+                llm_message_id=event.llm_message_id,
+                approved=approved
+            ):
+                # Handle approval result and continuation events
+                match resume_event.type:
+                    case "approval_result":
+                        print(f"Decision: {resume_event.decision}")
+                    case "resume":
+                        print(f"Execution resuming...")
+                    case "thought" | "content" | "sources" | "final":
+                        # Normal event processing continues
+                        pass
+                 
+        case "thought" | "content" | "sources" | "final":
+            # Handle other events normally
+            pass
+```
+
+##### New Event Types
+
+The approval flow introduces two new event types:
+
+| Event Type | Purpose | Key Fields | When Emitted |
+|------------|---------|------------|--------------|
+| `ApprovalResultEvent` | Confirms decision was recorded | `decision` ("approved"/"rejected"), `pending_tool_call` | Immediately after `resume_with_approval()` |
+| `ResumeEvent` | Signals execution restart | Standard event fields | After approval, before tool execution |
+
+##### Approval Event Structure
+
+`ApprovalNeededEvent` contains:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | `"approval_needed"` | Event discriminator |
+| `pending_tool_call` | `dict` | `{name, arguments, tool_call_id}` |
+| `user_message_id` | `int` | Database message ID |
+| `llm_message_id` | `int` | Database message ID (use for resume) |
+| `metadata` | `dict` | Additional state information |
+
+##### Resumption API
+
+```python
+# Resume execution after approval
+# Returns an async generator of events
+async for event in agent.resume_with_approval(
+    llm_message_id=paused_message_id,
+    approved=True
+):
+    # Process events (approval_result, resume, thought, content, etc.)
+    if event.type == "final":
+        print(f"Final answer: {event.accumulated_content}")
+
+# Reject the tool execution
+async for event in agent.resume_with_approval(
+    llm_message_id=paused_message_id,
+    approved=False
+):
+    # Will receive approval_result + final event with rejection message
+    pass
+```
+
+**Multi-Tool Execution**: After approval, the agent continues its normal execution flow. It can:
+- Process the tool result
+- Call additional tools (including other approval-gated tools)
+- Generate a final response incorporating all tool results
+
+**Implementation Notes:**
+- Approval state persists across server restarts (stored in database)
+- Only PydanticAI agents support approval gating currently
+- LlamaIndex agents ignore the `requires_approval` flag
+- Code paths: `tools/pydantic_ai_tools.py` (veto-gate), `agents/pydantic_ai_agents.py` (pause/resume)
+```
+
+### Nested Agent Streaming
+
+The framework now supports **real-time visibility into nested agent execution** through the stream observer pattern. This is particularly powerful when corpus agents delegate work to document agents.
+
+#### The Stream Observer Pattern
+
+When a parent agent (e.g., corpus agent) calls a child agent (e.g., document agent via `ask_document` tool), the child's stream events can be forwarded to a configured observer:
+
+```python
+from opencontractserver.llms import agents
+from opencontractserver.llms.types import StreamObserver
+
+# Define your observer
+async def websocket_forwarder(event):
+    """Forward nested events to WebSocket clients."""
+    await websocket.send_json({
+        "type": event.type,
+        "content": getattr(event, "content", ""),
+        "thought": getattr(event, "thought", ""),
+        "sources": [s.to_dict() for s in getattr(event, "sources", [])]
+    })
+
+# Create agent with observer
+corpus_agent = await agents.for_corpus(
+    corpus=corpus_id,
+    user_id=user_id,
+    stream_observer=websocket_forwarder
+)
+
+# When streaming, nested events bubble up automatically
+async for event in corpus_agent.stream("Analyze payment terms across all contracts"):
+    # Parent agent events
+    if event.type == "thought" and "[ask_document]" in event.thought:
+        # These are relayed child agent thoughts
+        print(f"Child agent: {event.thought}")
+    else:
+        # Direct parent agent events
+        print(f"Parent: {event.type} - {event.content}")
+```
+
+#### How It Works
+
+1. **Configuration**: Set `stream_observer` in `AgentConfig` or pass it when creating agents
+2. **Automatic Forwarding**: Framework adapters call the observer for every emitted event
+3. **Child Agent Integration**: Tools like `ask_document` forward their stream to the observer
+4. **WebSocket Ready**: Perfect for real-time UI updates showing nested reasoning
+
+#### Example: Corpus Agent with Live Document Analysis
+
+```python
+# In your WebSocket handler
+async def handle_corpus_query(websocket, corpus_id, query):
+    # Create observer that forwards to WebSocket
+    async def forward_to_client(event):
+        await websocket.send_json({
+            "event": event.type,
+            "data": {
+                "content": getattr(event, "content", ""),
+                "thought": getattr(event, "thought", ""),
+                "sources": [s.to_dict() for s in getattr(event, "sources", [])],
+                "metadata": getattr(event, "metadata", {})
+            }
+        })
+    
+    # Create corpus agent with observer
+    agent = await agents.for_corpus(
+        corpus=corpus_id,
+        stream_observer=forward_to_client
+    )
+    
+    # Stream response - client sees EVERYTHING including nested calls
+    async for event in agent.stream(query):
+        # Parent events also go to client
+        await forward_to_client(event)
+```
+
+#### Benefits
+
+- **Complete Visibility**: See exactly what child agents are doing in real-time
+- **Better UX**: Users see progress even during long-running nested operations
+- **Debugging**: Full execution trace across agent boundaries
+- **No Blocking**: Parent agent continues streaming while child executes
+
+#### Implementation Details
+
+The stream observer is implemented at the framework adapter level:
+
+- **PydanticAI**: `ask_document_tool` explicitly forwards child events
+- **CoreAgentBase**: `_emit_observer_event` helper ensures safe forwarding
+- **Error Handling**: Observer exceptions are caught and logged, never breaking the stream
+
+```python
+# Inside ask_document_tool (simplified)
+async for ev in doc_agent.stream(question):
+    # Capture content for final response
+    if ev.type == "content":
+        accumulated_answer += ev.content
+    
+    # Forward ALL events to observer
+    if callable(observer_cb):
+        await observer_cb(ev)  # Real-time forwarding
+    
+    # Process sources, timeline, etc.
+```
+
+This pattern ensures that even deeply nested agent calls remain visible and debuggable, providing unprecedented transparency into complex multi-agent workflows.
 
 ### Streaming
 
-All agents support streaming responses for real-time interaction:
+All agents support streaming responses for real-time interaction. The framework now provides **event-based streaming** for rich, granular interaction visibility.
+
+#### Event-Based Streaming (Recommended)
+
+**PydanticAI agents** emit granular events that expose the agent's reasoning process:
 
 ```python
-# Stream with automatic message storage
-async for chunk in agent.stream("Summarize findings from all documents"):
+# Rich event streaming with PydanticAI
+agent = await agents.for_document(
+    document=123, corpus=1, 
+    framework=AgentFramework.PYDANTIC_AI
+)
+
+async for event in agent.stream("What are the key contract terms?"):
+    match event.type:
+        case "thought":
+            print(f"🤔 Agent thinking: {event.thought}")
+            # event.metadata may contain tool info for tool-related thoughts
+            
+        case "content":
+            print(event.content, end="", flush=True)
+            # event.metadata contains tool details if content is from tool calls
+            
+        case "sources":
+            print(f"\n📚 Found {len(event.sources)} relevant sources")
+            for source in event.sources:
+                print(f"  - {source.annotation_id}: {source.content[:50]}...")
+                
+        case "error":
+            print(f"\n❌ Error: {event.error}")
+            print(f"Error type: {event.metadata.get('error_type', 'Unknown')}")
+            # Handle error gracefully - stream ends after error event
+            break
+                
+        case "final":
+            print(f"\n✅ Complete! Usage: {event.metadata.get('usage', {})}")
+            print(f"Total sources: {len(event.sources)}")
+
+# All events include message IDs for tracking
+print(f"Conversation: {event.user_message_id} → {event.llm_message_id}")
+```
+
+**Example PydanticAI Event Sequence:**
+```
+🤔 Agent thinking: Received user prompt; beginning reasoning cycle…
+🤔 Agent thinking: Sending request to language model…
+🤔 Agent thinking: Processing model response – may invoke tools…
+🤔 Agent thinking: Calling tool `similarity_search` with args {'query': 'key contract terms', 'k': 10}
+📚 Found 5 relevant sources
+🤔 Agent thinking: Tool `similarity_search` returned a result.
+🤔 Agent thinking: Run finished; aggregating final results…
+Based on the contract analysis, the key terms include...
+✅ Complete! Usage: {'requests': 2, 'total_tokens': 1247}
+```
+
+#### Legacy Streaming (LlamaIndex & Backward Compatibility)
+
+**LlamaIndex agents** and older code use the traditional streaming approach:
+
+```python
+# Traditional streaming - still supported
+async for chunk in agent.stream("Analyze liability clauses"):
     print(chunk.content, end="")
     
     # Access metadata during streaming
     if chunk.is_complete:
-        print(f"
-Sources: {len(chunk.sources)}")
+        print(f"\nSources: {len(chunk.sources)}")
         print(f"Message ID: {chunk.llm_message_id}")
 
-# Stream without storage
-async for chunk in agent.stream("Temporary query", store_messages=False):
-    print(chunk.content, end="")
+# Detect streaming type at runtime
+async for event in agent.stream("Your query"):
+    if hasattr(event, 'type'):  # New event-based streaming
+        handle_event_based_streaming(event)
+    else:  # Legacy UnifiedStreamResponse
+        handle_legacy_streaming(event)
+```
+
+#### Advanced Streaming Patterns
+
+```python
+# Stream with custom message storage control
+async for event in agent.stream("Sensitive analysis", store_messages=False):
+    # Process events without persisting to database
+    if event.type == "content":
+        secure_output_handler(event.content)
+
+# Real-time UI updates with event metadata
+async for event in agent.stream("Complex analysis"):
+    if event.type == "thought":
+        ui.show_thinking_indicator(event.thought)
+        if "tool_name" in event.metadata:
+            ui.show_tool_usage(event.metadata["tool_name"])
+    elif event.type == "content":
+        ui.append_content(event.content)
+    elif event.type == "sources":
+        ui.update_source_panel(event.sources)
 ```
 
 ### Embeddings
@@ -433,9 +807,14 @@ The framework follows a layered architecture that separates concerns and enables
    - Returns a framework-specific agent that implements the `CoreAgent` protocol.
 
 4. **CoreAgent Protocol (`agents/core_agents.py`)**:
-   - The returned agent object (e.g., an instance of `LlamaIndexDocumentAgent`) implements methods like `async def chat(self, message: str)` and `async def stream(self, message: str)`.
-   - When you call `await agent.chat("Your query")`, you'''re calling the adapter'''s implementation, which in turn interacts with the underlying LLM SDK.
-   - The framework returns rich `UnifiedChatResponse` and `UnifiedStreamResponse` objects with sources, metadata, and message tracking.
+   - The returned agent object (e.g., an instance of `LlamaIndexDocumentAgent`) inherits from `CoreAgentBase`, which provides universal `chat()` and `stream()` wrappers that handle all database persistence, approval gating, and message lifecycle management.
+   - Framework adapters only implement low-level `_chat_raw()` and `_stream_raw()` methods that return pure content without any database side-effects.
+   - When you call `await agent.chat("Your query")`, the `CoreAgentBase` wrapper automatically handles user message storage, LLM placeholder creation, calling the adapter's `_chat_raw()` method, and completing the stored message with results.
+   - This architecture ensures that adapters cannot "forget" to persist conversations or handle approval flows—all database operations are centralized and automatic.
+   - **Approval Flow**: When a tool requiring approval is called, the framework automatically pauses execution, emits `ApprovalNeededEvent`, and waits for `resume_with_approval()` to be called.
+   - **Resume Capability**: The `resume_with_approval()` method allows continuation of paused executions, emitting `ApprovalResultEvent` and `ResumeEvent` before resuming normal agent flow.
+   - PydanticAI agents provide granular event-based streaming that exposes the agent's execution graph in real-time.
+   - The `_emit_observer_event()` helper enables stream observers to receive events from nested agent calls, providing complete visibility across agent boundaries.
 
 5. **Conversation Management**:
    - `CoreConversationManager` handles message persistence and retrieval.
@@ -457,6 +836,7 @@ The framework follows a layered architecture that separates concerns and enables
 # - FunctionTool for tool integration
 # - BasePydanticVectorStore for vector search (via LlamaIndexAnnotationVectorStore)
 # - Custom embedding models via OpenContractsPipelineEmbedding (from opencontractserver.llms.embedders.custom_pipeline_embedding)
+# - Traditional 3-phase streaming (START, CONTENT chunks, FINISH)
 
 from opencontractserver.llms.agents.llama_index_agents import LlamaIndexDocumentAgent
 from opencontractserver.llms.vector_stores.llama_index_vector_stores import LlamaIndexAnnotationVectorStore
@@ -465,6 +845,13 @@ from opencontractserver.llms.embedders.custom_pipeline_embedding import OpenCont
 # Framework-specific features
 # agent = await LlamaIndexDocumentAgent.create(document_obj, corpus_obj, config, conversation_manager, tools)
 # The OpenContractsPipelineEmbedding can be configured in AgentConfig or used directly with LlamaIndex components.
+
+# LlamaIndex streaming produces UnifiedStreamResponse objects
+async for chunk in llamaindex_agent.stream("Analyze contract"):
+    chunk.content              # Text delta
+    chunk.accumulated_content  # Full content so far
+    chunk.is_complete          # True for final chunk
+    chunk.sources              # Sources (available in final chunk)
 ```
 
 #### PydanticAI Integration
@@ -472,8 +859,10 @@ from opencontractserver.llms.embedders.custom_pipeline_embedding import OpenCont
 ```python
 # PydanticAI agents use:
 # - Modern async patterns with proper type safety
-# - RunContext for dependency injection
+# - Execution graph streaming via agent.iter() for granular visibility
+# - Rich event-based streaming (ThoughtEvent, ContentEvent, SourceEvent, FinalEvent)
 # - Structured tool definitions with Pydantic models
+# - Real-time tool call observation with arguments and results
 # - Vector search can be integrated as a tool using PydanticAIAnnotationVectorStore.create_vector_search_tool()
 
 from opencontractserver.llms.agents.pydantic_ai_agents import PydanticAIDocumentAgent
@@ -482,6 +871,48 @@ from opencontractserver.llms.vector_stores.pydantic_ai_vector_stores import Pyda
 # Framework-specific features
 # agent = await PydanticAIDocumentAgent.create(document_obj, corpus_obj, config, conversation_manager, tools)
 # vector_search_tool = PydanticAIAnnotationVectorStore(...).create_vector_search_tool()
+
+# PydanticAI streaming produces rich UnifiedStreamEvent objects
+async for event in pydantic_agent.stream("Analyze contract"):
+    event.type                 # "thought", "content", "sources", or "final"
+    event.metadata             # Rich metadata (tool names, args, usage, etc.)
+    
+    # Event-specific fields:
+    if event.type == "thought":
+        event.thought          # Agent's reasoning step
+    elif event.type == "content":
+        event.content          # Text delta for final answer
+    elif event.type == "sources":
+        event.sources          # List of SourceNode objects
+    elif event.type == "final":
+        event.accumulated_content  # Complete final answer
+        event.sources              # All sources found
+        event.metadata['usage']    # Token usage statistics
+```
+
+#### Framework Selection
+
+Choose your framework based on your needs:
+
+| Framework | Best For | Streaming Type | Visibility |
+|-----------|----------|----------------|------------|
+| **LlamaIndex** | Simple integration, stable API | Traditional (START/CONTENT/FINISH) | Basic content streaming |
+| **PydanticAI** | Rich observability, debugging UIs | Event-based (thought/content/sources/final) | Full execution graph visibility |
+
+```python
+# Specify framework explicitly
+llama_agent = await agents.for_document(
+    document=123, corpus=1,
+    framework=AgentFramework.LLAMA_INDEX
+)
+
+pydantic_agent = await agents.for_document(
+    document=123, corpus=1,
+    framework=AgentFramework.PYDANTIC_AI  # Recommended for new projects
+)
+
+# Or set globally via Django settings
+# LLMS_DEFAULT_AGENT_FRAMEWORK = "pydantic_ai"
 ```
 
 ## Advanced Usage
@@ -499,7 +930,8 @@ config = AgentConfig(
     system_prompt="You are an expert legal analyst...",
     embedder_path="sentence-transformers/all-MiniLM-L6-v2",
     tools=["load_md_summary", "get_notes_for_document_corpus"], # Ensure tools are appropriate for context
-    verbose=True
+    verbose=True,
+    stream_observer=my_observer_function  # Optional: receive nested agent events
 )
 
 # The '''corpus''' parameter is required for document agents.
@@ -650,7 +1082,7 @@ from opencontractserver.llms.vector_stores.core_vector_stores import (
 #     corpus_id=456,
 #     embedder_path="sentence-transformers/all-MiniLM-L6-v2" # Handled by config
 # )
-# For demonstration, let'''s assume '''store''' is an instance of a CoreAnnotationVectorStore compatible store.
+# For demonstration, let's assume '''store''' is an instance of a CoreAnnotationVectorStore compatible store.
 
 # Complex search with filters
 # Available filters include Django ORM lookups on Annotation fields,
@@ -732,12 +1164,12 @@ The framework provides structured error handling with specific exception types:
 ```python
 from opencontractserver.llms import agents
 from opencontractserver.llms.agents.core_agents import AgentError
-from opencontractserver.documents.models import Document # For Document.DoesNotExist
+# from opencontractserver.documents.models import Document # For Document.DoesNotExist
 # from opencontractserver.corpuses.models import Corpus # For Corpus.DoesNotExist
 
 try:
     # The '''corpus''' parameter is required for document agents.
-    agent = await agents.for_document(document=999999, corpus=999) # Assuming these don'''t exist
+    agent = await agents.for_document(document=999999, corpus=999) # Assuming these don't exist
     # response = await agent.chat("Analyze this document")
 except Document.DoesNotExist:
     print("Document not found")
@@ -761,7 +1193,7 @@ except Exception as e:
 
 ```python
 # from opencontractserver.documents.models import Document # For Document.DoesNotExist
-# from opencontractserver.llms.agents.core_agents import UnifiedStreamResponse # For streaming error
+# from opencontractserver.llms.agents.core_agents import FinalEvent, UnifiedStreamResponse # For streaming errors
 # import logging # For logger
 # logger = logging.getLogger(__name__)
 
@@ -789,15 +1221,25 @@ except Exception as e:
 # Handle streaming errors
 # async def stream_message_handler(agent, message):
 #     try:
-#         async for chunk in agent.stream(message):
-#             yield chunk
+#         async for event in agent.stream(message):
+#             yield event
 #     except Exception as e:
-#         # Send error chunk
-#         yield UnifiedStreamResponse(
-#             content=f"Error: {e}",
-#             is_complete=True,
-#             error=str(e)
-#         )
+#         # Send error event based on streaming type
+#         if hasattr(agent, '_uses_event_streaming'):  # Event-based streaming
+#             # Note: Errors are now handled internally by the framework and
+#             # emitted as ErrorEvent objects. This try/except is only needed
+#             # for truly unexpected errors outside the agent's control.
+#             yield ErrorEvent(
+#                 error=str(e),
+#                 content=f"Error: {e}",
+#                 metadata={"error": str(e), "error_type": type(e).__name__}
+#             )
+#         else:  # Legacy streaming
+#             yield UnifiedStreamResponse(
+#                 content=f"Error: {e}",
+#                 is_complete=True,
+#                 metadata={"error": str(e)}
+#             )
 ```
 
 ## Performance Considerations
@@ -806,7 +1248,7 @@ The framework is designed for production use with several performance optimizati
 
 ### Database Optimization
 
-- **Async ORM**: All database operations use Django'''s async ORM capabilities.
+- **Async ORM**: All database operations use Django's async ORM capabilities.
 - **Prefetch Related**: Vector stores prefetch related objects to avoid N+1 queries.
 - **Connection Pooling**: Efficient database connection management (handled by Django).
 - **Bulk Operations**: Message storage uses bulk operations where possible.
@@ -916,7 +1358,7 @@ async def test_conversation_persistence(db, document_factory, corpus_factory, us
 
 ## Contributing
 
-The framework is designed for extensibility. Here'''s how to contribute:
+The framework is designed for extensibility. Here's how to contribute:
 
 ### Adding Core Functionality
 
@@ -940,50 +1382,50 @@ To add support for a new LLM framework (e.g., LangChain, Haystack):
 
 2. **Implement Agent Adapters**:
    - Create `agents/langchain_agents.py`
-   - Inside this file, define classes for your document and/or corpus agents. These classes **must** inherit from `CoreAgent` (from `opencontractserver.llms.agents.core_agents.py`).
+   - Inside this file, define classes for your document and/or corpus agents. These classes **must** inherit from `CoreAgentBase` (from `opencontractserver.llms.agents.core_agents.py`).
    
    ```python
    # agents/langchain_agents.py
    from typing import AsyncGenerator # For Python < 3.9, else from collections.abc import AsyncGenerator
-   from opencontractserver.llms.agents.core_agents import CoreAgent, AgentContext, AgentConfig, UnifiedChatResponse, UnifiedStreamResponse
-   from opencontractserver.llms.conversations.core_conversations import CoreConversationManager
-   # from opencontractserver.documents.models import Document
-   # from opencontractserver.corpuses.models import Corpus
+   from opencontractserver.llms.agents.core_agents import (
+       CoreAgentBase, SourceNode, AgentConfig, 
+       UnifiedStreamEvent, ThoughtEvent, ContentEvent, FinalEvent
+    )
+    # from opencontractserver.documents.models import Document
+    # from opencontractserver.corpuses.models import Corpus
 
-   class LangChainDocumentAgent(CoreAgent):
-       # def __init__(self, context: AgentContext, conversation_manager: CoreConversationManager, underlying_agent: Any):
-       #     super().__init__(context, conversation_manager)
-       #     self.underlying_agent = underlying_agent
-       pass # Simplified for brevity
-       
-       @classmethod
-       async def create(
-           cls, 
-           # document: Document, 
-           # corpus: Corpus, 
-           config: AgentConfig, 
-           conversation_manager: CoreConversationManager, 
-           tools: list = None
-       ): # -> "LangChainDocumentAgent":
-           # context = AgentContext(document_id=document.id, corpus_id=corpus.id, user_id=config.user_id, config=config)
-           # Initialize your LangChain agent here (e.g., langchain_agent = ...)
-           # return cls(context, conversation_manager, langchain_agent)
-           pass
-       
-       async def chat(self, message: str, store_messages: bool = True) -> UnifiedChatResponse:
-           # Implement chat using your framework
-           # user_message_id, llm_message_id = await self._store_request_response_if_needed(...)
-           # Return UnifiedChatResponse with proper metadata
-           pass
-       
-       async def stream(self, message: str, store_messages: bool = True) -> AsyncGenerator[UnifiedStreamResponse, None]:
-           # Implement streaming using your framework
-           # Handle message storage similarly to chat, potentially at the end of the stream.
-           # Yield UnifiedStreamResponse chunks
-           # if False: # To make it a generator
-           #    yield
-           pass
-   ```
+    class LangChainDocumentAgent(CoreAgentBase):
+        # def __init__(self, config: AgentConfig, conversation_manager: CoreConversationManager, underlying_agent: Any):
+        #     super().__init__(config, conversation_manager)
+        #     self.underlying_agent = underlying_agent
+        pass # Simplified for brevity
+        
+        @classmethod
+        async def create(
+            cls, 
+            # document: Document, 
+            # corpus: Corpus, 
+            config: AgentConfig, 
+            conversation_manager: CoreConversationManager,
+            tools: list = None
+        ): # -> "LangChainDocumentAgent":
+            # Initialize your LangChain agent here (e.g., langchain_agent = ...)
+            # return cls(config, conversation_manager, langchain_agent)
+            pass
+        
+        async def _chat_raw(self, message: str, **kwargs) -> tuple[str, list[SourceNode], dict]:
+            # Implement raw chat using your framework (no DB operations)
+            # Return tuple of (content, sources, metadata)
+            # CoreAgentBase will handle all message storage automatically
+            pass
+        
+        async def _stream_raw(self, message: str, **kwargs) -> AsyncGenerator[UnifiedStreamEvent, None]:
+            # Implement raw streaming using your framework (no DB operations)
+            # Yield UnifiedStreamEvent objects (ThoughtEvent, ContentEvent, etc.)
+            # CoreAgentBase wrapper will handle message storage and incremental updates automatically
+            # Call self._emit_observer_event(event) to forward events to any configured observer
+            pass
+    ```
 
 3. **Integrate into `UnifiedAgentFactory`**:
    ```python
@@ -1006,7 +1448,7 @@ To add support for a new LLM framework (e.g., LangChain, Haystack):
 
 4. **Add Tool Support**:
    - Create `tools/langchain_tools.py` if needed.
-   - Implement tool conversion from `CoreTool` to your framework'''s tool format.
+   - Implement tool conversion from `CoreTool` to your framework's tool format.
    - Update `tools/tool_factory.py` (`UnifiedToolFactory`) to handle the new framework.
 
 5. **Add Vector Store Support**:
@@ -1016,7 +1458,8 @@ To add support for a new LLM framework (e.g., LangChain, Haystack):
 
 6. **Testing**:
    - Create comprehensive tests following the patterns in existing test files (e.g., `test_llama_index_agents.py`, `test_pydantic_ai_agents.py`).
-   - Test all `CoreAgent` protocol methods, conversation management, tool usage, and error handling.
+   - Test the public `chat()` and `stream()` methods (which are provided by `CoreAgentBase`), conversation management, tool usage, and error handling.
+   - Note that `_chat_raw()` and `_stream_raw()` methods are internal implementation details and typically don't require separate testing—the public API tests exercise them indirectly.
 
 By following these steps, you can extend the OpenContracts LLM framework to support new LLM technologies while maintaining the consistent, rich API with conversation management, source tracking, and structured responses.
 
@@ -1035,6 +1478,84 @@ By following these steps, you can extend the OpenContracts LLM framework to supp
 - **Migration Guides**: Provide migration paths for breaking changes.
 - **Performance Notes**: Document performance characteristics and limitations.
 
+### Event-Based Streaming Architecture
+
+The framework's event-based streaming (available in PydanticAI) provides unprecedented visibility into agent execution:
+
+```
+User Query → PydanticAI Agent → Execution Graph Stream
+                    ↓
+┌─────────────────────────────────────────────────────┐
+│ ThoughtEvent: "Received user prompt..."            │
+├─────────────────────────────────────────────────────┤
+│ ThoughtEvent: "Sending request to language model…" │
+├─────────────────────────────────────────────────────┤
+│ ContentEvent: "Based on the"                       │
+│ ContentEvent: " contract analysis"                 │
+│ ContentEvent: "..."                                │
+├─────────────────────────────────────────────────────┤
+│ ThoughtEvent: "Calling tool similarity_search(...)"│
+│ SourceEvent: [SourceNode, SourceNode, ...]         │
+│ ThoughtEvent: "Tool returned result"               │
+├─────────────────────────────────────────────────────┤
+│ ThoughtEvent: "[ask_document] Calling tool..."     │  ← Nested agent events
+│ ContentEvent: "The payment terms state..."         │  ← From child agent
+│ SourceEvent: [SourceNode from child, ...]          │  ← Child's sources
+├─────────────────────────────────────────────────────┤
+│ FinalEvent: Complete answer + all sources + usage  │
+└─────────────────────────────────────────────────────┘
+                    ↓
+           WebSocket Consumer
+                    ↓
+              Frontend UI
+```
+
+#### Event Types Detail
+
+| Event Type | Purpose | Fields | When Emitted |
+|------------|---------|--------|--------------|
+| `ThoughtEvent` | Agent reasoning steps | `thought`, `metadata` | Execution graph transitions, tool decisions |
+| `ContentEvent` | Answer content deltas | `content`, `accumulated_content`, `metadata` | Model text generation |
+| `SourceEvent` | Source discovery | `sources`, `metadata` | Vector search results |
+| `ApprovalNeededEvent` | Tool approval required | `pending_tool_call`, `metadata` | Flagged tool execution paused |
+| `ApprovalResultEvent` | Approval decision recorded | `decision`, `pending_tool_call`, `metadata` | After resume_with_approval() called |
+| `ResumeEvent` | Execution restarting | Standard event fields | After approval, before tool runs |
+| `FinalEvent` | Complete results | `accumulated_content`, `sources`, `metadata` | End of execution |
+| `ErrorEvent` | Error occurred during execution | `error`, `metadata` | Unrecoverable errors (e.g., rate limits, API failures) |
+
+#### Implementation Benefits
+
+- **Real-time Debugging**: See exactly where agents get stuck or make wrong decisions
+- **Rich UI/UX**: Build sophisticated interfaces showing agent "thinking"
+- **Performance Monitoring**: Track tool usage, token consumption, and execution time
+- **Audit Trails**: Complete visibility into agent decision-making process
+
+```python
+# Example: Building a debug UI
+async for event in agent.stream("Complex legal analysis"):
+    timestamp = time.time()
+    
+    if event.type == "thought":
+        debug_panel.add_thought(timestamp, event.thought, event.metadata)
+    elif event.type == "content":
+        answer_panel.append_text(event.content)
+    elif event.type == "sources":
+        source_panel.update_sources(event.sources)
+    elif event.type == "approval_needed":
+        # Human-in-the-loop: pause execution, request approval
+        approval_panel.show_approval_request(
+            tool_name=event.pending_tool_call["name"],
+            tool_args=event.pending_tool_call["arguments"],
+            message_id=event.llm_message_id
+        )
+        # UI triggers approval flow, which calls resume_with_approval()
+    elif event.type == "final":
+        debug_panel.add_summary(timestamp, event.metadata)
+        performance_monitor.log_usage(event.metadata.get("usage", {}))
+```
+
 ---
 
-This framework represents the evolution of OpenContracts''' LLM capabilities, providing a foundation for sophisticated document analysis while maintaining simplicity and elegance in its API design.
+This framework represents the evolution of OpenContracts' LLM capabilities, providing a foundation for sophisticated document analysis while maintaining simplicity and elegance in its API design.
+
+---

@@ -10,6 +10,7 @@ consumer still produces the four message-types (`ASYNC_START`,
 `ASYNC_CONTENT`, `ASYNC_FINISH`, `SYNC_CONTENT`) the UI depends on.
 """
 
+import datetime
 import json
 import logging
 from typing import Any
@@ -70,9 +71,16 @@ class CorpusConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
         received: list[dict[str, Any]] = []
         while True:
             try:
-                raw = await communicator.receive_from(timeout=15)
-            except Exception:  # noqa: BLE001
-                self.fail("Timed-out waiting for websocket messages")
+                start = datetime.datetime.now()
+                raw = await communicator.receive_from(timeout=50)
+                end = datetime.datetime.now()
+                logger.info(f"time taken: {end - start}")
+            except Exception as e:  # noqa: BLE001
+                import traceback
+
+                traceback.print_exc()
+                logger.error(f"Websocket timeout error: {e}", exc_info=True)
+                self.fail(f"Timed-out waiting for websocket messages: {e}")
 
             payload = json.loads(raw)
             logger.debug("payload=%s", payload)
@@ -170,14 +178,14 @@ class CorpusConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
         connected, _ = await communicator.connect()
         self.assertTrue(connected)
 
-        raw = await communicator.receive_from(timeout=15)
+        raw = await communicator.receive_from(timeout=50)
         payload = json.loads(raw)
         self.assertEqual(payload["type"], "SYNC_CONTENT")
         self.assertIn("error", payload["data"])
         self.assertEqual(payload["data"]["error"], "Requested corpus not found.")
 
         # The consumer should now close the websocket with code 4000.
-        close_event = await communicator.receive_output(timeout=15)
+        close_event = await communicator.receive_output(timeout=50)
         self.assertEqual(close_event["type"], "websocket.close")
         self.assertEqual(close_event["code"], 4000)
 

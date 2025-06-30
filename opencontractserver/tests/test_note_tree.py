@@ -6,7 +6,12 @@ from graphene.test import Client
 from graphql_relay import from_global_id, to_global_id
 
 from config.graphql.schema import schema
-from opencontractserver.annotations.models import Annotation, AnnotationLabel, Note
+from opencontractserver.annotations.models import (
+    Annotation,
+    AnnotationLabel,
+    Note,
+    NoteRevision,
+)
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.tests.base import BaseFixtureTestCase
 
@@ -286,3 +291,64 @@ class NoteTreeTestCase(BaseFixtureTestCase):
             ancestors.append(current.id)
             current = current.parent
         return ancestors
+
+
+# ----------------------------------------------------
+#          New tests for Note versioning
+# ----------------------------------------------------
+
+
+class NoteRevisionTestCase(BaseFixtureTestCase):
+    """Tests for Note versioning and NoteRevision model."""
+
+    def setUp(self):
+        super().setUp()
+
+        # Create a simple note to version against
+        self.note = Note.objects.create(
+            document=self.doc,
+            title="Versioned Note",
+            content="Initial Content",
+            creator=self.user,
+        )
+
+    def test_initial_revision_created(self):
+        """A Note should create a version-1 snapshot revision on creation."""
+
+        revisions = NoteRevision.objects.filter(note=self.note)
+        self.assertEqual(revisions.count(), 1)
+
+        rev = revisions.first()
+        self.assertEqual(rev.version, 1)
+        self.assertEqual(rev.snapshot, "Initial Content")
+        self.assertEqual(rev.author, self.user)
+
+    def test_version_up_creates_revision(self):
+        """Calling version_up should persist a new NoteRevision and update note content."""
+
+        revision = self.note.version_up(new_content="Second Content", author=self.user)
+
+        # Ensure the helper returned a revision
+        self.assertIsNotNone(revision)
+        self.assertEqual(revision.version, 2)
+        self.assertEqual(revision.author, self.user)
+        # Since REVISION_SNAPSHOT_INTERVAL=10, version 2 should not store snapshot
+        self.assertIsNone(revision.snapshot)
+        self.assertTrue(revision.diff)  # Diff should not be empty
+
+        # Note row should reflect new content
+        self.note.refresh_from_db()
+        self.assertEqual(self.note.content, "Second Content")
+
+        # There should now be exactly 2 revisions
+        self.assertEqual(self.note.revisions.count(), 2)
+
+    def test_version_up_no_change_returns_none(self):
+        """No revision should be created if content hasn't changed."""
+
+        initial_count = self.note.revisions.count()
+
+        result = self.note.version_up(new_content="Initial Content", author=self.user)
+
+        self.assertIsNone(result)
+        self.assertEqual(self.note.revisions.count(), initial_count)

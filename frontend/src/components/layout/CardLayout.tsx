@@ -122,7 +122,7 @@ export const CardLayout: React.FC<CardLayoutProps> = ({
       <ScrollableSegment
         id="ScrollableSegment"
         style={{
-          padding: use_mobile ? "5px" : use_responsive ? "10px" : "1rem",
+          padding: use_mobile ? "5px" : use_responsive ? "0px" : "1rem",
           ...(use_mobile ? { paddingLeft: "0px", paddingRight: "0px" } : {}),
         }}
         attached="bottom"

@@ -137,19 +137,19 @@ const iconColorMap: Record<string, string> = {
 };
 
 interface TabButtonProps {
-  collapsed: boolean;
-  tabKey: string;
-  active?: boolean;
+  $collapsed: boolean;
+  $tabKey: string;
+  $active?: boolean;
 }
 
 export const TabButton = styled(Button)<TabButtonProps>`
   &&& {
     width: 100%;
-    text-align: ${(props) => (props.collapsed ? "center" : "left")} !important;
+    text-align: ${(props) => (props.$collapsed ? "center" : "left")} !important;
     border-radius: 0 !important;
     margin: 0.25rem 0 !important;
     padding: ${(props) =>
-      props.collapsed ? "1.25rem 0.75rem" : "1.25rem 2rem"} !important;
+      props.$collapsed ? "1.25rem 0.75rem" : "1.25rem 2rem"} !important;
     background: transparent !important;
     border: none !important;
     position: relative;
@@ -158,10 +158,10 @@ export const TabButton = styled(Button)<TabButtonProps>`
     /* Increased icon sizes in both states */
     svg {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      width: ${(props) => (props.collapsed ? "22px" : "28px")};
-      height: ${(props) => (props.collapsed ? "22px" : "28px")};
-      color: ${(props) => iconColorMap[props.tabKey] || iconColorMap.default};
-      opacity: ${(props) => (props.active ? 1 : 0.75)};
+      width: ${(props) => (props.$collapsed ? "22px" : "28px")};
+      height: ${(props) => (props.$collapsed ? "22px" : "28px")};
+      color: ${(props) => iconColorMap[props.$tabKey] || iconColorMap.default};
+      opacity: ${(props) => (props.$active ? 1 : 0.75)};
       flex-shrink: 0; /* Prevent icon from shrinking */
     }
 
@@ -170,20 +170,20 @@ export const TabButton = styled(Button)<TabButtonProps>`
       font-size: 1rem; /* Slightly larger font */
       font-weight: 500;
       white-space: nowrap;
-      opacity: ${(props) => (props.collapsed ? 0 : 1)};
+      opacity: ${(props) => (props.$collapsed ? 0 : 1)};
       transition: opacity 0.2s ease-in-out;
       color: ${(props) =>
-        props.active
-          ? iconColorMap[props.tabKey] || iconColorMap.default
+        props.$active
+          ? iconColorMap[props.$tabKey] || iconColorMap.default
           : "#64748b"};
       margin-left: 1rem; /* Increased spacing between icon and text */
     }
 
     /* Active state */
     ${(props) =>
-      props.active &&
+      props.$active &&
       css`
-        background: ${`${iconColorMap[props.tabKey]}10`} !important;
+        background: ${`${iconColorMap[props.$tabKey]}10`} !important;
         &::before {
           content: "";
           position: absolute;
@@ -191,7 +191,7 @@ export const TabButton = styled(Button)<TabButtonProps>`
           top: 0;
           bottom: 0;
           width: 3px;
-          background: ${iconColorMap[props.tabKey] || iconColorMap.default};
+          background: ${iconColorMap[props.$tabKey] || iconColorMap.default};
           border-radius: 0 2px 2px 0;
         }
       `}
@@ -199,13 +199,13 @@ export const TabButton = styled(Button)<TabButtonProps>`
     /* Hover effects */
     &:hover {
       background: ${(props) =>
-        props.active
-          ? `${iconColorMap[props.tabKey]}15`
+        props.$active
+          ? `${iconColorMap[props.$tabKey]}15`
           : "rgba(0, 0, 0, 0.03)"} !important;
 
       svg {
         transform: ${(props) =>
-          props.collapsed ? "scale(1.2)" : "translateX(2px)"};
+          props.$collapsed ? "scale(1.2)" : "translateX(2px)"};
         opacity: 1;
       }
     }
@@ -546,6 +546,7 @@ export const ControlButton = styled(motion.button)`
 
 interface SlidingPanelProps {
   pushContent?: boolean;
+  panelWidth: number; // percentage 0-100
 }
 
 export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
@@ -555,7 +556,7 @@ export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
   right: 0;
   z-index: 2000;
 
-  width: clamp(320px, 65%, 520px);
+  width: ${(props) => props.panelWidth}%;
   height: 100%;
 
   /* Enhanced background and effects */
@@ -595,6 +596,287 @@ export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
     padding-top: max(env(safe-area-inset-top), 1rem);
     background: white;
     overflow: visible !important; // CRUCIAL: Let the button breathe!
+  }
+`;
+
+export const ResizeHandle = styled(motion.div)<{ $isDragging: boolean }>`
+  position: absolute;
+  left: -4px;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  background: ${(props) =>
+    props.$isDragging ? "rgba(66, 153, 225, 0.3)" : "transparent"};
+  transition: background 0.2s ease;
+  z-index: 2001;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 40px;
+    background: rgba(226, 232, 240, 0.8);
+    border-radius: 1px;
+    opacity: ${(props) => (props.$isDragging ? 1 : 0)};
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover {
+    background: rgba(66, 153, 225, 0.1);
+
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  /* Hide on mobile */
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const WidthControlBar = styled(motion.div)`
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 2002;
+
+  /* Hide on mobile */
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const WidthControlMenu = styled(motion.div)`
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(226, 232, 240, 0.5);
+  z-index: 2002;
+  overflow: hidden;
+
+  /* Hide on mobile */
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+/**
+ * Styled button for toggling the width control menu.
+ * Includes an id for testability and accessibility.
+ */
+export const WidthControlToggle = styled(motion.button).attrs({
+  id: "width-control-toggle",
+})`
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.5);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 2001;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    color: #4a5568;
+  }
+
+  &:hover {
+    background: white;
+    border-color: #4299e1;
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.15);
+
+    svg {
+      color: #4299e1;
+    }
+  }
+
+  /* Hide on mobile */
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const WidthMenuItem = styled(motion.button)<{ $isActive: boolean }>`
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border: none;
+  background: ${(props) =>
+    props.$isActive ? "rgba(66, 153, 225, 0.08)" : "transparent"};
+  color: ${(props) => (props.$isActive ? "#4299e1" : "#4a5568")};
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  white-space: nowrap;
+
+  &:hover {
+    background: ${(props) =>
+      props.$isActive ? "rgba(66, 153, 225, 0.12)" : "rgba(0, 0, 0, 0.03)"};
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  .percentage {
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+`;
+
+export const MenuDivider = styled.div`
+  height: 1px;
+  background: rgba(226, 232, 240, 0.5);
+  margin: 0.5rem 0;
+`;
+
+export const ChatIndicator = styled(motion.button)`
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 80px;
+  background: #4299e1;
+  border: none;
+  border-radius: 24px 0 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: -4px 0 12px rgba(66, 153, 225, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1999;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    right: 0;
+    background: linear-gradient(135deg, #5ba3eb 0%, #4299e1 100%);
+    border-radius: 22px 0 0 22px;
+  }
+
+  svg {
+    width: 24px;
+    height: 24px;
+    color: white;
+    position: relative;
+    z-index: 1;
+  }
+
+  &:hover {
+    width: 56px;
+    box-shadow: -6px 0 20px rgba(66, 153, 225, 0.3);
+
+    svg {
+      transform: scale(1.1);
+    }
+  }
+
+  /* Pulse animation */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    right: -4px;
+    background: #4299e1;
+    border-radius: 28px 0 0 28px;
+    opacity: 0;
+    animation: chatPulse 2s ease-out infinite;
+  }
+
+  @keyframes chatPulse {
+    0% {
+      opacity: 0.4;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.2);
+    }
+  }
+
+  /* Hide on mobile */
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const WidthButton = styled(motion.button)<{ $isActive: boolean }>`
+  padding: 0.5rem 1rem;
+  border: none;
+  background: ${(props) => (props.$isActive ? "#4299e1" : "transparent")};
+  color: ${(props) => (props.$isActive ? "white" : "#4a5568")};
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: ${(props) =>
+      props.$isActive ? "#3182ce" : "rgba(66, 153, 225, 0.1)"};
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+`;
+
+export const AutoMinimizeToggle = styled(motion.button)<{ $isActive: boolean }>`
+  padding: 0.5rem;
+  border: none;
+  background: ${(props) =>
+    props.$isActive ? "rgba(72, 187, 120, 0.1)" : "transparent"};
+  color: ${(props) => (props.$isActive ? "#38a169" : "#718096")};
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: ${(props) =>
+      props.$isActive ? "rgba(72, 187, 120, 0.2)" : "rgba(0, 0, 0, 0.05)"};
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
   }
 `;
 
@@ -978,3 +1260,305 @@ export const EmptyState: React.FC<{
     <p>{description}</p>
   </EmptyStateContainer>
 );
+
+export const KnowledgeLayerContainer = styled.div`
+  display: flex;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  background: #fafbfc;
+`;
+
+export const VersionHistorySidebar = styled.div<{ collapsed?: boolean }>`
+  width: ${(props) => (props.collapsed ? "60px" : "320px")};
+  background: white;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+`;
+
+export const VersionHistoryHeader = styled.div`
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+
+  h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    svg {
+      color: #3b82f6;
+    }
+  }
+
+  .version-count {
+    margin-top: 0.375rem;
+    font-size: 0.875rem;
+    color: #64748b;
+  }
+`;
+
+export const VersionList = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+
+    &:hover {
+      background: #94a3b8;
+    }
+  }
+`;
+
+export const VersionItem = styled(motion.button)<{
+  $isActive?: boolean;
+  $isCurrent?: boolean;
+}>`
+  width: 100%;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  background: ${(props) =>
+    props.$isActive ? "#eff6ff" : props.$isCurrent ? "#f0fdf4" : "white"};
+  border: 1px solid
+    ${(props) =>
+      props.$isActive ? "#3b82f6" : props.$isCurrent ? "#10b981" : "#e2e8f0"};
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateX(4px);
+    border-color: ${(props) => (props.$isActive ? "#3b82f6" : "#93c5fd")};
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  .version-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+
+    .version-number {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: ${(props) =>
+        props.$isActive ? "#3b82f6" : props.$isCurrent ? "#10b981" : "#1e293b"};
+    }
+
+    .version-badge {
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: ${(props) =>
+        props.$isActive ? "#3b82f6" : props.$isCurrent ? "#10b981" : "#e2e8f0"};
+      color: ${(props) =>
+        props.$isActive || props.$isCurrent ? "white" : "#64748b"};
+    }
+  }
+
+  .version-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+    color: #64748b;
+
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+
+      svg {
+        width: 12px;
+        height: 12px;
+      }
+    }
+  }
+`;
+
+export const KnowledgeContent = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  margin: 1rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+`;
+
+export const KnowledgeHeader = styled.div`
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+
+      svg {
+        color: #3b82f6;
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+  }
+
+  .version-info {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+
+      svg {
+        width: 14px;
+        height: 14px;
+      }
+    }
+  }
+`;
+
+export const KnowledgeBody = styled.div<{ $isEditing?: boolean }>`
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  background: ${(props) => (props.$isEditing ? "#f8fafc" : "white")};
+
+  .prose {
+    max-width: 65ch;
+    margin: 0 auto;
+  }
+`;
+
+export const EditModeToolbar = styled(motion.div)`
+  position: sticky;
+  top: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #e2e8f0;
+  padding: 1rem 2rem;
+  margin: -2rem -2rem 2rem -2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .edit-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 0.75rem;
+      background: #fef3c7;
+      color: #d97706;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
+  .toolbar-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+`;
+
+export const MarkdownEditor = styled.textarea`
+  width: 100%;
+  min-height: 500px;
+  padding: 1.5rem;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+`;
+
+export const CollapseSidebarButton = styled(motion.button)`
+  position: absolute;
+  top: 1rem;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f8fafc;
+    transform: scale(1.1);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+    color: #64748b;
+  }
+`;

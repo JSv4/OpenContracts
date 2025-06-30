@@ -18,6 +18,7 @@ from opencontractserver.llms.tools.core_tools import (
     aduplicate_annotations_with_label,
     aget_corpus_description,
     aload_document_txt_extract,
+    asearch_document_notes,
     aupdate_corpus_description,
     aupdate_document_note,
     duplicate_annotations_with_label,
@@ -759,3 +760,207 @@ class AsyncTestUpdateDocumentNote(TransactionTestCase):
         self.assertIn("+", revision.diff)  # Added lines
         self.assertIn(original_content, revision.diff)
         self.assertIn(new_content, revision.diff)
+
+
+class AsyncTestSearchDocumentNotes(TransactionTestCase):
+    """Async tests ensuring :func:`asearch_document_notes` behaves correctly."""
+
+    def setUp(self):  # noqa: D401 – simple helper, not public API
+        """Prepare test data with multiple notes for searching."""
+        self.user = User.objects.create_user(
+            username="async_search_user", password="pw"
+        )
+        self.doc = Document.objects.create(
+            creator=self.user,
+            title="Test Document for Search",
+            description="Test Description",
+        )
+
+        self.corpus = Corpus.objects.create(
+            title="Search Test Corpus",
+            creator=self.user,
+        )
+        self.corpus.documents.add(self.doc)
+
+        # Create multiple notes with different content for testing
+        self.note1 = Note.objects.create(
+            document=self.doc,
+            corpus=self.corpus,
+            title="Python Programming Guide",
+            content="This note covers Python basics and advanced features",
+            creator=self.user,
+        )
+
+        self.note2 = Note.objects.create(
+            document=self.doc,
+            corpus=self.corpus,
+            title="JavaScript Tutorial",
+            content="Learn JavaScript programming with practical examples",
+            creator=self.user,
+        )
+
+        self.note3 = Note.objects.create(
+            document=self.doc,
+            corpus=self.corpus,
+            title="Data Science with Python",
+            content="Using Python for data analysis and machine learning",
+            creator=self.user,
+        )
+
+        # Note without corpus
+        self.note4 = Note.objects.create(
+            document=self.doc,
+            corpus=None,
+            title="General Note",
+            content="This is a general note about programming",
+            creator=self.user,
+        )
+
+    async def _get_note_async(self, note_id):
+        """Helper to fetch a note asynchronously."""
+        from channels.db import database_sync_to_async
+
+        return await database_sync_to_async(Note.objects.get)(pk=note_id)
+
+    # ------------------------------------------------------------------
+    # Success paths
+    # ------------------------------------------------------------------
+
+    async def test_asearch_notes_by_title(self):
+        """Search should find notes matching title text."""
+        results = await asearch_document_notes(
+            document_id=self.doc.id,
+            search_term="Python",
+        )
+
+        # Should find notes 1 and 3 which have "Python" in title
+        self.assertEqual(len(results), 2)
+        note_ids = {r["id"] for r in results}
+        self.assertIn(self.note1.id, note_ids)
+        self.assertIn(self.note3.id, note_ids)
+
+    async def test_asearch_notes_by_content(self):
+        """Search should find notes matching content text."""
+        results = await asearch_document_notes(
+            document_id=self.doc.id,
+            search_term="JavaScript",
+        )
+
+        # Should find only note 2 which has "JavaScript" in title/content
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["id"], self.note2.id)
+
+    async def test_asearch_notes_case_insensitive(self):
+        """Search should be case-insensitive."""
+        results = await asearch_document_notes(
+            document_id=self.doc.id,
+            search_term="PYTHON",
+        )
+
+        # Should still find notes with "Python" despite case difference
+        self.assertEqual(len(results), 2)
+
+    async def test_asearch_notes_with_corpus_filter(self):
+        """Search should respect corpus filter when provided."""
+        # First check without corpus filter
+        all_results = await asearch_document_notes(
+            document_id=self.doc.id,
+            search_term="note",
+        )
+
+        # Then with corpus filter
+        corpus_results = await asearch_document_notes(
+            document_id=self.doc.id,
+            search_term="note",
+            corpus_id=self.corpus.id,
+        )
+
+        # Should have fewer results with corpus filter (note4 has no corpus)
+        self.assertLess(len(corpus_results), len(all_results))
+        # All corpus results should belong to the corpus
+        for result in corpus_results:
+            note = await self._get_note_async(result["id"])
+            self.assertEqual(note.corpus_id, self.corpus.id)
+
+    async def test_asearch_notes_with_limit(self):
+        """Search should respect limit parameter."""
+        results = await asearch_document_notes(
+            document_id=self.doc.id,
+            search_term="Python",
+            limit=1,
+        )
+
+        # Should only return 1 result despite 2 matches
+        self.assertEqual(len(results), 1)
+
+    async def test_asearch_notes_result_format(self):
+        """Search results should have correct format."""
+        results = await asearch_document_notes(
+            document_id=self.doc.id,
+            search_term="Python",
+            limit=1,
+        )
+
+        result = results[0]
+        # Check all expected fields are present
+        self.assertIn("id", result)
+        self.assertIn("title", result)
+        self.assertIn("content", result)
+        self.assertIn("creator_id", result)
+        self.assertIn("created", result)
+        self.assertIn("modified", result)
+
+        # Check types
+        self.assertIsInstance(result["id"], int)
+        self.assertIsInstance(result["title"], str)
+        self.assertIsInstance(result["content"], str)
+        self.assertIsInstance(result["creator_id"], int)
+        self.assertIsInstance(result["created"], str)  # ISO format string
+        self.assertIsInstance(result["modified"], str)  # ISO format string
+
+    async def test_asearch_notes_ordered_by_modified(self):
+        """Results should be ordered by modified date descending."""
+        # Get all notes to check ordering
+        results = await asearch_document_notes(
+            document_id=self.doc.id,
+            search_term="note",  # All notes have "note" in title or content
+        )
+
+        # Check that results are ordered by modified date descending
+        for i in range(len(results) - 1):
+            # Each result's modified date should be >= the next one
+            self.assertGreaterEqual(results[i]["modified"], results[i + 1]["modified"])
+
+    async def test_asearch_notes_no_results(self):
+        """Search with no matches should return empty list."""
+        results = await asearch_document_notes(
+            document_id=self.doc.id,
+            search_term="NonexistentTerm",
+        )
+
+        self.assertEqual(results, [])
+
+    # ------------------------------------------------------------------
+    # Failure paths
+    # ------------------------------------------------------------------
+
+    async def test_asearch_notes_invalid_document(self):
+        """Search for non-existent document should raise ValueError."""
+        with self.assertRaisesRegex(
+            ValueError, "Document with id=999999 does not exist"
+        ):
+            await asearch_document_notes(
+                document_id=999999,
+                search_term="test",
+            )
+
+    async def test_asearch_notes_empty_search_term(self):
+        """Empty search term with icontains matches all records."""
+        results = await asearch_document_notes(
+            document_id=self.doc.id,
+            search_term="",
+        )
+
+        # Empty string with icontains matches everything
+        # Should return all 4 notes for this document
+        self.assertEqual(len(results), 4)

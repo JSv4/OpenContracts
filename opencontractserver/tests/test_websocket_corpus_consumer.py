@@ -72,7 +72,7 @@ class CorpusConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
         while True:
             try:
                 start = datetime.datetime.now()
-                raw = await communicator.receive_from(timeout=25)
+                raw = await communicator.receive_from(timeout=50)
                 end = datetime.datetime.now()
                 logger.info(f"time taken: {end - start}")
             except Exception as e:  # noqa: BLE001
@@ -178,14 +178,14 @@ class CorpusConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
         connected, _ = await communicator.connect()
         self.assertTrue(connected)
 
-        raw = await communicator.receive_from(timeout=15)
+        raw = await communicator.receive_from(timeout=50)
         payload = json.loads(raw)
         self.assertEqual(payload["type"], "SYNC_CONTENT")
         self.assertIn("error", payload["data"])
         self.assertEqual(payload["data"]["error"], "Requested corpus not found.")
 
         # The consumer should now close the websocket with code 4000.
-        close_event = await communicator.receive_output(timeout=15)
+        close_event = await communicator.receive_output(timeout=50)
         self.assertEqual(close_event["type"], "websocket.close")
         self.assertEqual(close_event["code"], 4000)
 

@@ -1,26 +1,46 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings, Square, Layers, User, Eye, EyeOff } from "lucide-react";
+import {
+  Settings,
+  Square,
+  Layers,
+  User,
+  Eye,
+  EyeOff,
+  BarChart3,
+  Database,
+} from "lucide-react";
 import { Checkbox, CheckboxProps } from "semantic-ui-react";
 import { useAnnotationDisplay } from "../../annotator/context/UISettingsAtom";
 
-const ControlsContainer = styled(motion.div)`
+const ControlsContainer = styled(motion.div)<{ $panelOffset?: number }>`
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  z-index: 1000;
+  bottom: calc(
+    2rem + 48px + max(10px, 2rem)
+  ); /* UnifiedLabelSelector height (48px) + gap (2rem min 10px) */
+  right: ${(props) =>
+    props.$panelOffset ? `${props.$panelOffset + 32}px` : "2rem"};
+  z-index: 2001;
   display: flex;
   flex-direction: column-reverse;
   align-items: flex-end;
   gap: 0.75rem;
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  @media (max-width: 768px) {
+    right: 1rem;
+    bottom: calc(
+      1rem + 40px + max(10px, 2rem)
+    ); /* Smaller button size on mobile */
+  }
 `;
 
-const MainButton = styled(motion.button)`
+const ActionButton = styled(motion.button)<{ $color?: string }>`
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: white;
+  background: ${(props) => props.$color || "white"};
   border: 2px solid #e2e8f0;
   display: flex;
   align-items: center;
@@ -32,16 +52,18 @@ const MainButton = styled(motion.button)`
   svg {
     width: 24px;
     height: 24px;
-    color: #64748b;
+    color: ${(props) => (props.$color ? "white" : "#64748b")};
     transition: transform 0.3s ease;
   }
 
   &:hover {
-    border-color: #3b82f6;
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.15);
+    border-color: ${(props) => props.$color || "#3b82f6"};
+    box-shadow: 0 6px 20px
+      ${(props) =>
+        props.$color ? `${props.$color}30` : "rgba(59, 130, 246, 0.15)"};
 
     svg {
-      color: #3b82f6;
+      color: ${(props) => (props.$color ? "white" : "#3b82f6")};
     }
   }
 
@@ -51,12 +73,20 @@ const MainButton = styled(motion.button)`
 `;
 
 const ControlPanel = styled(motion.div)`
+  position: absolute;
+  right: 0;
+  /* Place the panel just above the button stack */
+  bottom: calc(56px + 1rem); /* button height + gap */
   background: white;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   border: 1px solid #e2e8f0;
   padding: 1rem;
   min-width: 240px;
+
+  @media (max-width: 768px) {
+    bottom: calc(40px + 1rem); /* smaller mobile button height */
+  }
 `;
 
 const ControlItem = styled.div`
@@ -136,12 +166,29 @@ const StyledCheckbox = styled(Checkbox)`
 interface FloatingDocumentControlsProps {
   /** Whether to show the controls (e.g., only in document layer) */
   visible?: boolean;
+  /** Callback when analyses button is clicked */
+  onAnalysesClick?: () => void;
+  /** Callback when extracts button is clicked */
+  onExtractsClick?: () => void;
+  /** Whether analyses panel is open */
+  analysesOpen?: boolean;
+  /** Whether extracts panel is open */
+  extractsOpen?: boolean;
+  /** Offset to apply when sliding panel is open */
+  panelOffset?: number;
 }
 
 export const FloatingDocumentControls: React.FC<
   FloatingDocumentControlsProps
-> = ({ visible = true }) => {
-  const [expanded, setExpanded] = useState(false);
+> = ({
+  visible = true,
+  onAnalysesClick,
+  onExtractsClick,
+  analysesOpen = false,
+  extractsOpen = false,
+  panelOffset = 0,
+}) => {
+  const [expandedSettings, setExpandedSettings] = useState(false);
 
   const {
     showStructural,
@@ -173,12 +220,9 @@ export const FloatingDocumentControls: React.FC<
   };
 
   return (
-    <ControlsContainer
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
-    >
+    <ControlsContainer $panelOffset={panelOffset}>
       <AnimatePresence>
-        {expanded && (
+        {expandedSettings && (
           <ControlPanel
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -236,13 +280,58 @@ export const FloatingDocumentControls: React.FC<
         )}
       </AnimatePresence>
 
-      <MainButton
-        data-expanded={expanded}
+      <ActionButton
+        data-expanded={expandedSettings}
+        onClick={() => setExpandedSettings(!expandedSettings)}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
         <Settings />
-      </MainButton>
+      </ActionButton>
+
+      <ActionButton
+        $color="#8b5cf6"
+        onClick={() => {
+          /*
+           * Ensure exclusivity: if the analyses panel is open we close it before
+           * toggling the extracts panel open, and vice-versa. This guarantees
+           * that both panels are never visible at the same time.
+           */
+          if (!extractsOpen) {
+            // Opening extracts – make sure analyses panel is closed first
+            if (analysesOpen && onAnalysesClick) {
+              onAnalysesClick();
+            }
+          }
+          if (onExtractsClick) onExtractsClick();
+        }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        title="View Extracts"
+      >
+        <Database />
+      </ActionButton>
+
+      <ActionButton
+        $color="#f59e0b"
+        onClick={() => {
+          /*
+           * Mirror logic for analyses button.
+           */
+          if (!analysesOpen) {
+            // Opening analyses – close extracts first if open
+            if (extractsOpen && onExtractsClick) {
+              onExtractsClick();
+            }
+          }
+          if (onAnalysesClick) onAnalysesClick();
+        }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        title="View Analyses"
+      >
+        <BarChart3 />
+      </ActionButton>
     </ControlsContainer>
   );
 };

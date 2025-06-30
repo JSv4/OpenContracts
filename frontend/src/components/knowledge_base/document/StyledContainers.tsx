@@ -58,16 +58,15 @@ export const MetadataRow = styled.div`
 `;
 
 export const ContentArea = styled.div`
-  display: grid;
-  grid-template-columns: auto 1fr;
+  display: flex;
+  flex-direction: column;
   height: calc(100vh - 90px);
   background: white;
   position: relative;
 
   /* Stack layout on mobile */
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    flex-direction: column;
   }
 `;
 
@@ -554,7 +553,7 @@ export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
   position: absolute;
   top: 0;
   right: 0;
-  z-index: 2000;
+  z-index: 100001; /* Above UnifiedLabelSelector (100000) */
 
   width: ${(props) => props.panelWidth}%;
   height: 100%;
@@ -601,35 +600,72 @@ export const SlidingPanel = styled(motion.div)<SlidingPanelProps>`
 
 export const ResizeHandle = styled(motion.div)<{ $isDragging: boolean }>`
   position: absolute;
-  left: -4px;
-  top: 0;
-  bottom: 0;
-  width: 8px;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 80px;
   cursor: ew-resize;
-  background: ${(props) =>
-    props.$isDragging ? "rgba(66, 153, 225, 0.3)" : "transparent"};
-  transition: background 0.2s ease;
   z-index: 2001;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
 
+  /* The handle track */
   &::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    transform: translateX(-50%);
+    background: ${(props) =>
+      props.$isDragging
+        ? "linear-gradient(180deg, transparent, rgba(66, 153, 225, 0.3), transparent)"
+        : "linear-gradient(180deg, transparent, rgba(226, 232, 240, 0.5), transparent)"};
+    border-radius: 2px;
+    transition: all 0.3s ease;
+    box-shadow: ${(props) =>
+      props.$isDragging ? "0 0 8px rgba(66, 153, 225, 0.3)" : "none"};
+  }
+
+  /* The grip dots */
+  &::after {
     content: "";
     position: absolute;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 2px;
-    height: 40px;
-    background: rgba(226, 232, 240, 0.8);
-    border-radius: 1px;
-    opacity: ${(props) => (props.$isDragging ? 1 : 0)};
+    width: 4px;
+    height: 24px;
+    background-image: radial-gradient(
+      circle,
+      rgba(148, 163, 184, 0.4) 1px,
+      transparent 1px
+    );
+    background-size: 4px 8px;
+    opacity: ${(props) => (props.$isDragging ? 0 : 1)};
     transition: opacity 0.2s ease;
   }
 
   &:hover {
-    background: rgba(66, 153, 225, 0.1);
-
     &::before {
+      background: linear-gradient(
+        180deg,
+        transparent,
+        rgba(66, 153, 225, 0.2),
+        transparent
+      );
+      width: 6px;
+      box-shadow: 0 0 12px rgba(66, 153, 225, 0.2);
+    }
+
+    .settings-icon {
       opacity: 1;
+      transform: scale(1);
     }
   }
 
@@ -637,6 +673,91 @@ export const ResizeHandle = styled(motion.div)<{ $isDragging: boolean }>`
   @media (max-width: 768px) {
     display: none;
   }
+`;
+
+export const ResizeHandleControl = styled(motion.button)`
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(249, 250, 251, 0.9)
+  );
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.08),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9);
+
+  /* Start hidden */
+  opacity: 0;
+
+  ${ResizeHandle}:hover & {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  /* Subtle ring */
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, transparent, rgba(66, 153, 225, 0.1));
+    opacity: 0;
+    transition: all 0.3s ease;
+  }
+
+  .settings-icon {
+    width: 16px;
+    height: 16px;
+    color: #64748b;
+    opacity: 0.7;
+    transform: scale(0.9);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 1;
+  }
+
+  &:hover {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 1),
+      rgba(249, 250, 251, 0.95)
+    );
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.15),
+      0 1px 3px rgba(0, 0, 0, 0.08), inset 0 1px 3px rgba(255, 255, 255, 1);
+
+    &::before {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    .settings-icon {
+      color: #4299e1;
+      opacity: 1;
+      transform: scale(1) rotate(90deg);
+    }
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+`;
+
+export const ResizeHandleButton = styled(motion.button)`
+  /* Legacy - no longer used */
+  display: none;
 `;
 
 export const WidthControlBar = styled(motion.div)`
@@ -660,16 +781,29 @@ export const WidthControlBar = styled(motion.div)`
 
 export const WidthControlMenu = styled(motion.div)`
   position: absolute;
-  top: 1rem;
-  left: 1rem;
+  top: 50%;
+  left: 24px; /* Position it flowing from the handle */
+  transform: translateY(-50%);
   background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
   border-radius: 12px;
   padding: 0.5rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  border: 1px solid rgba(226, 232, 240, 0.5);
-  z-index: 2002;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(226, 232, 240, 0.3);
+  z-index: 2003;
   overflow: hidden;
+  min-width: 180px;
+
+  /* Subtle connection to handle */
+  &::before {
+    content: "";
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 32px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.98));
+  }
 
   /* Hide on mobile */
   @media (max-width: 768px) {
@@ -679,79 +813,68 @@ export const WidthControlMenu = styled(motion.div)`
 
 /**
  * Styled button for toggling the width control menu.
- * Includes an id for testability and accessibility.
+ * Now removed as it's replaced by ResizeHandleButton
  */
 export const WidthControlToggle = styled(motion.button).attrs({
   id: "width-control-toggle",
 })`
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid rgba(226, 232, 240, 0.5);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  z-index: 2001;
-
-  svg {
-    width: 18px;
-    height: 18px;
-    color: #4a5568;
-  }
-
-  &:hover {
-    background: white;
-    border-color: #4299e1;
-    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.15);
-
-    svg {
-      color: #4299e1;
-    }
-  }
-
-  /* Hide on mobile */
-  @media (max-width: 768px) {
-    display: none;
-  }
+  /* Legacy component - kept for backwards compatibility but hidden */
+  display: none;
 `;
 
 export const WidthMenuItem = styled(motion.button)<{ $isActive: boolean }>`
   width: 100%;
-  padding: 0.625rem 1rem;
+  padding: 0.75rem 1rem;
   border: none;
   background: ${(props) =>
-    props.$isActive ? "rgba(66, 153, 225, 0.08)" : "transparent"};
-  color: ${(props) => (props.$isActive ? "#4299e1" : "#4a5568")};
+    props.$isActive
+      ? "linear-gradient(135deg, rgba(66, 153, 225, 0.08), rgba(66, 153, 225, 0.05))"
+      : "transparent"};
+  color: ${(props) => (props.$isActive ? "#4299e1" : "#64748b")};
   border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: left;
   display: flex;
   align-items: center;
   justify-content: space-between;
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+
+  /* Subtle left accent for active state */
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: ${(props) => (props.$isActive ? "60%" : "0")};
+    background: #4299e1;
+    border-radius: 1px;
+    transition: height 0.2s ease;
+  }
 
   &:hover {
     background: ${(props) =>
-      props.$isActive ? "rgba(66, 153, 225, 0.12)" : "rgba(0, 0, 0, 0.03)"};
+      props.$isActive
+        ? "linear-gradient(135deg, rgba(66, 153, 225, 0.12), rgba(66, 153, 225, 0.08))"
+        : "rgba(0, 0, 0, 0.02)"};
+    color: ${(props) => (props.$isActive ? "#4299e1" : "#475569")};
+    transform: translateX(2px);
   }
 
   &:active {
-    transform: scale(0.98);
+    transform: translateX(2px) scale(0.98);
   }
 
   .percentage {
     font-size: 0.75rem;
-    opacity: 0.7;
+    opacity: 0.6;
+    font-weight: 400;
   }
 `;
 
@@ -828,9 +951,23 @@ export const ChatIndicator = styled(motion.button)`
     }
   }
 
-  /* Hide on mobile */
+  /* Adjust for mobile */
   @media (max-width: 768px) {
-    display: none;
+    right: 0;
+    bottom: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 56px;
+    height: 56px;
+    border-radius: 28px 0 0 28px;
+
+    &::before {
+      border-radius: 26px 0 0 26px;
+    }
+
+    &::after {
+      border-radius: 32px 0 0 32px;
+    }
   }
 `;
 
@@ -1267,9 +1404,16 @@ export const KnowledgeLayerContainer = styled.div`
   width: 100%;
   position: relative;
   background: #fafbfc;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
-export const VersionHistorySidebar = styled.div<{ collapsed?: boolean }>`
+export const VersionHistorySidebar = styled.div<{
+  collapsed?: boolean;
+  $mobileVisible?: boolean;
+}>`
   width: ${(props) => (props.collapsed ? "60px" : "320px")};
   background: white;
   border-right: 1px solid #e2e8f0;
@@ -1278,12 +1422,30 @@ export const VersionHistorySidebar = styled.div<{ collapsed?: boolean }>`
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+
+  @media (max-width: 768px) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100% !important;
+    z-index: 10;
+    display: ${(props) => (props.$mobileVisible ? "flex" : "none")};
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
 `;
 
 export const VersionHistoryHeader = styled.div`
   padding: 1.5rem;
   border-bottom: 1px solid #e2e8f0;
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  position: relative;
+
+  @media (max-width: 768px) {
+    padding-top: 3.5rem;
+  }
 
   h3 {
     margin: 0;
@@ -1306,10 +1468,46 @@ export const VersionHistoryHeader = styled.div`
   }
 `;
 
+export const MobileBackButton = styled.button`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.5rem 1rem;
+    background: #eff6ff;
+    border: 1px solid #3b82f6;
+    border-radius: 8px;
+    color: #3b82f6;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #3b82f6;
+      color: white;
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+`;
+
 export const VersionList = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 0.75rem;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
 
   /* Custom scrollbar */
   &::-webkit-scrollbar {
@@ -1398,7 +1596,7 @@ export const VersionItem = styled(motion.button)<{
   }
 `;
 
-export const KnowledgeContent = styled.div`
+export const KnowledgeContent = styled.div<{ $mobileVisible?: boolean }>`
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1407,6 +1605,12 @@ export const KnowledgeContent = styled.div`
   border-radius: 16px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    margin: 0;
+    border-radius: 0;
+    display: ${(props) => (props.$mobileVisible !== false ? "flex" : "none")};
+  }
 `;
 
 export const KnowledgeHeader = styled.div`
@@ -1414,10 +1618,20 @@ export const KnowledgeHeader = styled.div`
   border-bottom: 1px solid #e2e8f0;
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
 
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+
   .header-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 1rem;
+    }
 
     h2 {
       margin: 0;
@@ -1428,6 +1642,10 @@ export const KnowledgeHeader = styled.div`
       align-items: center;
       gap: 0.75rem;
 
+      @media (max-width: 768px) {
+        font-size: 1.25rem;
+      }
+
       svg {
         color: #3b82f6;
       }
@@ -1436,6 +1654,15 @@ export const KnowledgeHeader = styled.div`
     .header-actions {
       display: flex;
       gap: 0.75rem;
+
+      @media (max-width: 768px) {
+        justify-content: stretch;
+
+        button {
+          flex: 1;
+          white-space: nowrap;
+        }
+      }
     }
   }
 
@@ -1446,6 +1673,13 @@ export const KnowledgeHeader = styled.div`
     display: flex;
     align-items: center;
     gap: 1rem;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+    }
 
     .info-item {
       display: flex;
@@ -1466,9 +1700,17 @@ export const KnowledgeBody = styled.div<{ $isEditing?: boolean }>`
   overflow-y: auto;
   background: ${(props) => (props.$isEditing ? "#f8fafc" : "white")};
 
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+
   .prose {
     max-width: 65ch;
     margin: 0 auto;
+
+    @media (max-width: 768px) {
+      max-width: 100%;
+    }
   }
 `;
 
@@ -1484,6 +1726,13 @@ export const EditModeToolbar = styled(motion.div)`
   justify-content: space-between;
   align-items: center;
   z-index: 10;
+
+  @media (max-width: 768px) {
+    padding: 0.75rem 1rem;
+    margin: -1rem -1rem 1rem -1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
 
   .toolbar-left {
     display: flex;
@@ -1501,6 +1750,11 @@ export const EditModeToolbar = styled(motion.div)`
       font-size: 0.875rem;
       font-weight: 500;
 
+      @media (max-width: 768px) {
+        font-size: 0.8125rem;
+        padding: 0.25rem 0.5rem;
+      }
+
       svg {
         width: 16px;
         height: 16px;
@@ -1514,6 +1768,7 @@ export const EditModeToolbar = styled(motion.div)`
   }
 `;
 
+// Forward ref to allow cursor position management
 export const MarkdownEditor = styled.textarea`
   width: 100%;
   min-height: 500px;
@@ -1526,6 +1781,12 @@ export const MarkdownEditor = styled.textarea`
   line-height: 1.6;
   resize: vertical;
   transition: border-color 0.2s;
+
+  @media (max-width: 768px) {
+    min-height: 300px;
+    padding: 1rem;
+    font-size: 0.8125rem;
+  }
 
   &:focus {
     outline: none;
@@ -1560,5 +1821,49 @@ export const CollapseSidebarButton = styled(motion.button)`
     width: 14px;
     height: 14px;
     color: #64748b;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const MobileTabBar = styled.div`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: flex;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+`;
+
+export const MobileTab = styled.button<{ $active?: boolean }>`
+  flex: 1;
+  padding: 1rem;
+  border: none;
+  background: ${(props) => (props.$active ? "#eff6ff" : "white")};
+  color: ${(props) => (props.$active ? "#3b82f6" : "#64748b")};
+  font-weight: ${(props) => (props.$active ? "600" : "500")};
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid
+    ${(props) => (props.$active ? "#3b82f6" : "transparent")};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  &:hover:not(:disabled) {
+    background: ${(props) => (props.$active ? "#eff6ff" : "#f8fafc")};
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
   }
 `;

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, MessageSquare, Send, X, ChevronUp } from "lucide-react";
 import { Form } from "semantic-ui-react";
@@ -11,31 +11,61 @@ import {
 import { useAnnotationRefs } from "../../annotator/hooks/useAnnotationRefs";
 
 interface FloatingDocumentInputProps {
+  /** Whether the input should be rendered */
   visible?: boolean;
+
+  /** Callback when a chat message is submitted. */
   onChatSubmit?: (message: string) => void;
+
+  /** Optional callback triggered when the component programmatically opens the chat sidebar. */
   onToggleChat?: () => void;
+
+  /** Width in pixels of the right-hand sliding panel (0 when hidden). */
+  panelOffset?: number;
+
+  /**
+   * Render using `position: fixed` (default) or allow the parent wrapper to
+   * control positioning.  When `false` the component behaves like a normal
+   * inline element so it can be centred with flexbox, etc.
+   */
+  fixed?: boolean;
 }
 
 const FloatingContainer = styled(motion.div)<{
   $isExpanded: boolean;
   $mode: "search" | "chat";
+  $panelOffset: number;
+  $fixed: boolean;
 }>`
-  position: fixed;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
+  ${(props) =>
+    props.$fixed
+      ? css`
+          position: fixed;
+          bottom: 2rem;
+          left: calc(50% - ${props.$panelOffset / 2}px);
+          transform: translateX(-50%);
+          /* Prevent overflow under the sliding panel */
+          max-width: calc(100vw - ${props.$panelOffset}px - 2rem);
+        `
+      : css`
+          position: relative;
+          /* In wrapper-mode the parent handles centring & right offset. */
+          max-width: 100%;
+        `}
+
   background: white;
   border-radius: ${(props) => (props.$isExpanded ? "16px" : "28px")};
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   border: 1px solid #e2e8f0;
   overflow: hidden;
   z-index: 1000;
+  pointer-events: auto;
   display: flex;
   align-items: ${(props) =>
     props.$isExpanded && props.$mode === "chat" ? "flex-end" : "center"};
   padding: ${(props) => (props.$isExpanded ? "0.75rem" : "0.5rem")};
   width: ${(props) => (props.$isExpanded ? "600px" : "120px")};
-  max-width: calc(100vw - 2rem);
+
   min-height: ${(props) =>
     props.$isExpanded ? (props.$mode === "chat" ? "auto" : "56px") : "56px"};
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -46,16 +76,51 @@ const FloatingContainer = styled(motion.div)<{
   }
 
   @media (max-width: 768px) {
-    width: ${(props) => (props.$isExpanded ? "calc(100vw - 2rem)" : "100px")};
-    bottom: 1.5rem;
+    /* Always use fixed positioning on mobile to place under zoom controls */
+    position: fixed;
+    top: 240px; /* 180px (zoom controls) + 60px gap */
+    left: 1rem;
+    transform: none;
+
+    /* Size - collapsed shows just the toggle buttons, expanded shows full width */
+    width: ${(props) => (props.$isExpanded ? "calc(100vw - 2rem)" : "auto")};
+    max-width: calc(100vw - 2rem);
+
+    /* Keep original rounded rectangle shape */
+    border-radius: ${(props) => (props.$isExpanded ? "16px" : "28px")};
+
+    /* Ensure proper padding */
+    padding: ${(props) => (props.$isExpanded ? "0.75rem" : "0.5rem")};
+
+    /* Ensure content is visible when expanded */
+    ${(props) =>
+      props.$isExpanded &&
+      css`
+        min-height: 56px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      `}
+
+    /* Smooth expansion */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Ensure it's above other elements */
+    z-index: 1100;
   }
 `;
 
-const ToggleGroup = styled.div`
+const ToggleGroup = styled.div<{ $isExpanded?: boolean }>`
   display: flex;
   gap: 0.25rem;
   margin-right: 0.75rem;
   flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    margin-right: ${(props) => (props.$isExpanded ? "0.5rem" : "0")};
+    justify-content: center;
+    width: ${(props) => (props.$isExpanded ? "auto" : "100%")};
+  }
 `;
 
 const ToggleButton = styled(motion.button)<{ $isActive: boolean }>`
@@ -80,6 +145,17 @@ const ToggleButton = styled(motion.button)<{ $isActive: boolean }>`
     background: ${(props) => (props.$isActive ? "#dbeafe" : "#f8fafc")};
     color: ${(props) => (props.$isActive ? "#3b82f6" : "#475569")};
   }
+
+  @media (max-width: 768px) {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
 `;
 
 const InputWrapper = styled.div`
@@ -87,6 +163,13 @@ const InputWrapper = styled.div`
   display: flex;
   align-items: flex-end;
   gap: 0.5rem;
+  min-width: 0;
+
+  @media (max-width: 768px) {
+    min-width: 0; /* Allow shrinking */
+    flex: 1 1 auto;
+    max-width: calc(100% - 120px); /* Account for buttons */
+  }
 `;
 
 const StyledInput = styled.input`
@@ -149,6 +232,16 @@ const ActionButton = styled(motion.button)`
     color: #94a3b8;
     cursor: not-allowed;
   }
+
+  @media (max-width: 768px) {
+    width: 36px;
+    height: 36px;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
 `;
 
 const CloseButton = styled(motion.button)`
@@ -173,6 +266,17 @@ const CloseButton = styled(motion.button)`
     background: #f1f5f9;
     color: #475569;
   }
+
+  @media (max-width: 768px) {
+    width: 28px;
+    height: 28px;
+    margin-left: 0.25rem;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
 `;
 
 const SearchStatus = styled.div`
@@ -195,12 +299,18 @@ const ModeIndicator = styled(motion.div)<{ $mode: "search" | "chat" }>`
   font-weight: 600;
   white-space: nowrap;
   pointer-events: none;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 export const FloatingDocumentInput: React.FC<FloatingDocumentInputProps> = ({
   visible = true,
   onChatSubmit,
   onToggleChat,
+  panelOffset = 0,
+  fixed = true,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [mode, setMode] = useState<"search" | "chat">("search");
@@ -310,20 +420,38 @@ export const FloatingDocumentInput: React.FC<FloatingDocumentInputProps> = ({
     }
   }, [isExpanded, mode]);
 
-  const handleModeChange = (newMode: "search" | "chat") => {
-    setMode(newMode);
-    setLocalInput("");
-    setShowModeIndicator(true);
-    setTimeout(() => setShowModeIndicator(false), 2000);
+  /**
+   * Handle click on a mode toggle button. If the clicked mode is already
+   * active we treat the click as a *toggle* – collapsing the widget when it
+   * is currently expanded, or expanding it when collapsed.
+   *
+   * If a *different* mode is clicked we switch modes and ensure the widget is
+   * expanded.
+   */
+  const handleModeButtonClick = (clickedMode: "search" | "chat") => {
+    if (clickedMode === mode) {
+      // Same mode clicked → toggle expand/collapse
+      if (isExpanded) {
+        handleClose();
+      } else {
+        setIsExpanded(true);
+      }
+    } else {
+      // Switch modes; ensure expanded
+      setMode(clickedMode);
+      setLocalInput("");
+      setShowModeIndicator(true);
+      setTimeout(() => setShowModeIndicator(false), 2000);
 
-    if (newMode === "search") {
-      debouncedSetSearchText.cancel();
-      setSearchText("");
+      if (clickedMode === "search") {
+        debouncedSetSearchText.cancel();
+        setSearchText("");
+      }
+
+      if (!isExpanded) {
+        setIsExpanded(true);
+      }
     }
-  };
-
-  const handleExpand = () => {
-    setIsExpanded(true);
   };
 
   const handleClose = () => {
@@ -392,10 +520,15 @@ export const FloatingDocumentInput: React.FC<FloatingDocumentInputProps> = ({
       ref={containerRef}
       $isExpanded={isExpanded}
       $mode={mode}
+      $panelOffset={panelOffset}
+      $fixed={fixed}
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
       transition={{ type: "spring", damping: 25, stiffness: 300 }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onMouseUp={(e) => e.stopPropagation()}
+      onMouseMove={(e) => e.stopPropagation()}
     >
       <AnimatePresence>
         {showModeIndicator && (
@@ -410,10 +543,10 @@ export const FloatingDocumentInput: React.FC<FloatingDocumentInputProps> = ({
         )}
       </AnimatePresence>
 
-      <ToggleGroup onClick={!isExpanded ? handleExpand : undefined}>
+      <ToggleGroup $isExpanded={isExpanded}>
         <ToggleButton
           $isActive={mode === "search"}
-          onClick={() => handleModeChange("search")}
+          onClick={() => handleModeButtonClick("search")}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -421,7 +554,7 @@ export const FloatingDocumentInput: React.FC<FloatingDocumentInputProps> = ({
         </ToggleButton>
         <ToggleButton
           $isActive={mode === "chat"}
-          onClick={() => handleModeChange("chat")}
+          onClick={() => handleModeButtonClick("chat")}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >

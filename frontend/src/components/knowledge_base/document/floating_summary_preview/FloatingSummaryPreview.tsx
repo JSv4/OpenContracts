@@ -27,12 +27,17 @@ const FloatingContainer = styled(motion.div)`
   position: fixed;
   bottom: 2.5rem;
   left: 2.5rem;
-  z-index: 1000;
+  z-index: 100002;
   overflow: visible;
 
   @media (max-width: 768px) {
     bottom: 1.5rem;
     left: 1.5rem;
+  }
+
+  @media (max-width: 480px) {
+    bottom: 1rem;
+    left: 1rem;
   }
 `;
 
@@ -197,7 +202,13 @@ const ExpandedContainer = styled(motion.div)<{ $isPiP?: boolean }>`
   `}
 
   @media (max-width: 768px) {
-    width: ${(props) => (props.$isPiP ? "calc(100vw - 3rem)" : "380px")};
+    width: ${(props) =>
+      props.$isPiP ? "calc(100vw - 3rem)" : "min(380px, calc(100vw - 3rem))"};
+  }
+
+  @media (max-width: 480px) {
+    width: calc(100vw - 3rem);
+    padding: ${(props) => (props.$isPiP ? "1.25rem" : "1rem 0.75rem 0.5rem")};
   }
 `;
 
@@ -427,6 +438,11 @@ const PiPContentPreview = styled.div`
   border-radius: 16px;
   border: 1px solid rgba(226, 232, 240, 0.4);
   max-height: 400px;
+
+  @media (max-width: 480px) {
+    padding: 0.75rem;
+    margin-top: 0.75rem;
+  }
 
   /* Custom scrollbar */
   &::-webkit-scrollbar {

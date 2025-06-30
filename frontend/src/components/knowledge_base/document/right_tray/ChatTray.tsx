@@ -141,6 +141,11 @@ interface ChatTrayProps {
   setShowLoad: React.Dispatch<React.SetStateAction<boolean>>;
   onMessageSelect?: () => void;
   corpusId?: string;
+  /**
+   * Optional initial message to send immediately once the WebSocket is ready.
+   * Used when the user submits a chat query via the floating input.
+   */
+  initialMessage?: string;
 }
 
 /**
@@ -159,6 +164,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   setShowLoad,
   onMessageSelect,
   corpusId,
+  initialMessage,
 }) => {
   // Chat state
   const [isNewChat, setIsNewChat] = useState(false);
@@ -1381,6 +1387,69 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       </Button>
     );
   };
+
+  /* ----------------------------------------------------------- */
+  /* Handle initialMessage (from FloatingDocumentInput)          */
+  /* ----------------------------------------------------------- */
+
+  // Store the latest initialMessage in a ref so we can clear it after use
+  const pendingInitialRef = useRef<string | undefined>();
+
+  useEffect(() => {
+    if (initialMessage && initialMessage.trim()) {
+      pendingInitialRef.current = initialMessage.trim();
+
+      // If user hasn't opened/select a conversation yet, auto-start a new one
+      if (!selectedConversationId && !isNewChat) {
+        startNewChat();
+      }
+    }
+  }, [initialMessage]);
+
+  /**
+   * Helper to send a text message immediately (bypassing newMessage state).
+   */
+  const sendTextImmediately = useCallback(
+    (text: string): void => {
+      const trimmed = text.trim();
+      if (!trimmed || !socketRef.current || !wsReady) return;
+
+      if (sendingLockRef.current) return;
+      sendingLockRef.current = true;
+
+      try {
+        setChat((prev) => [
+          ...prev,
+          {
+            user: user_obj?.email || "You",
+            content: trimmed,
+            timestamp: new Date().toLocaleString(),
+            isAssistant: false,
+            isComplete: false,
+          },
+        ]);
+
+        socketRef.current.send(JSON.stringify({ query: trimmed }));
+        setWsError(null);
+      } catch (err) {
+        console.error("Failed to send initial message:", err);
+        setWsError("Failed to send message. Please try again.");
+      } finally {
+        setTimeout(() => {
+          sendingLockRef.current = false;
+        }, 300);
+      }
+    },
+    [wsReady, user_obj?.email]
+  );
+
+  // Once the socket is ready, flush the pending initial message (if any)
+  useEffect(() => {
+    if (wsReady && pendingInitialRef.current) {
+      sendTextImmediately(pendingInitialRef.current);
+      pendingInitialRef.current = undefined;
+    }
+  }, [wsReady, sendTextImmediately]);
 
   /**
    * Main UI return

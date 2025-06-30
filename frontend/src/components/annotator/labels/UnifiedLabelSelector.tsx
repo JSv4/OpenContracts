@@ -22,6 +22,8 @@ interface UnifiedLabelSelectorProps {
   sidebarWidth: string;
   labels?: AnnotationLabelType[];
   showRightPanel?: boolean;
+  panelOffset?: number;
+  hideControls?: boolean;
 }
 
 export const UnifiedLabelSelector: React.FC<UnifiedLabelSelectorProps> = ({
@@ -30,6 +32,8 @@ export const UnifiedLabelSelector: React.FC<UnifiedLabelSelectorProps> = ({
   sidebarWidth,
   labels,
   showRightPanel,
+  panelOffset = 0,
+  hideControls = false,
 }) => {
   const { width } = useWindowDimensions();
   const isMobile = width <= 768;
@@ -154,12 +158,16 @@ export const UnifiedLabelSelector: React.FC<UnifiedLabelSelectorProps> = ({
   // Calculate total active labels
   const totalActiveLabels = (activeSpanLabel ? 1 : 0) + doc_annotations.length;
 
+  // Hide controls if requested
+  if (hideControls) return null;
+
   return (
     <StyledUnifiedSelector
       ref={componentRef}
       isExpanded={isExpanded}
       sidebarWidth={sidebarWidth}
       showRightPanel={showRightPanel}
+      panelOffset={panelOffset}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleSelectorClick}
@@ -357,16 +365,16 @@ interface StyledSelectorProps {
   isExpanded: boolean;
   sidebarWidth: string;
   showRightPanel?: boolean;
+  panelOffset?: number;
 }
 
 const StyledUnifiedSelector = styled.div<StyledSelectorProps>`
-  position: absolute;
-  bottom: 2.5rem;
-  right: 1.5rem;
+  position: fixed;
+  bottom: 2rem;
+  right: ${(props) =>
+    props.panelOffset ? `${props.panelOffset + 24}px` : "1.5rem"};
   z-index: 100000;
-  transform: ${(props) =>
-    props.showRightPanel ? "translateX(-520px)" : "none"};
-  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+  transition: right 0.3s cubic-bezier(0.19, 1, 0.22, 1);
 
   @media (max-width: 768px) {
     position: fixed;

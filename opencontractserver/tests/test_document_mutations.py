@@ -275,3 +275,73 @@ class DocumentMutationTestCase(TestCase):
         # Verify that the document was actually deleted
         with self.assertRaises(Document.DoesNotExist):
             Document.objects.get(id=document.id)
+
+    def test_document_summary_creation_and_editing(self):
+        """Create a new markdown summary for a document and then update it, validating version increments."""
+
+        # Create corpus and link a document to it
+        from opencontractserver.corpuses.models import Corpus
+
+        corpus = Corpus.objects.create(title="Summary Corpus", creator=self.user)
+        document = Document.objects.create(
+            creator=self.user,
+            title="Summary Test Doc",
+            description="Testing summary mutation",
+        )
+        corpus.documents.add(document)
+
+        doc_gid = to_global_id("DocumentType", document.id)
+        corpus_gid = to_global_id("CorpusType", corpus.id)
+
+        mutation = """
+            mutation UpdateDocumentSummary($documentId: ID!, $corpusId: ID!, $newContent: String!) {
+              updateDocumentSummary(
+                documentId: $documentId,
+                corpusId: $corpusId,
+                newContent: $newContent
+              ) {
+                ok
+                message
+                version
+                obj {
+                  id
+                  summaryContent(corpusId: $corpusId)
+                  currentSummaryVersion(corpusId: $corpusId)
+                }
+              }
+            }
+        """
+
+        # --- Create initial summary ---
+        variables = {
+            "documentId": doc_gid,
+            "corpusId": corpus_gid,
+            "newContent": "Initial summary content.",
+        }
+        result = self.client.execute(mutation, variables=variables)
+
+        self.assertIsNone(result.get("errors"))
+        res_data = result["data"]["updateDocumentSummary"]
+        self.assertTrue(res_data["ok"])
+        self.assertEqual(res_data["version"], 1)
+        self.assertEqual(res_data["obj"]["summaryContent"], "Initial summary content.")
+        self.assertEqual(res_data["obj"]["currentSummaryVersion"], 1)
+
+        # --- Update existing summary ---
+        variables["newContent"] = "Updated summary content."
+        result = self.client.execute(mutation, variables=variables)
+
+        self.assertIsNone(result.get("errors"))
+        res_data = result["data"]["updateDocumentSummary"]
+        self.assertTrue(res_data["ok"])
+        self.assertEqual(res_data["version"], 2)
+        self.assertEqual(res_data["obj"]["summaryContent"], "Updated summary content.")
+        self.assertEqual(res_data["obj"]["currentSummaryVersion"], 2)
+
+        # --- No-change update should not create a new version ---
+        result = self.client.execute(mutation, variables=variables)
+        self.assertIsNone(result.get("errors"))
+        res_data = result["data"]["updateDocumentSummary"]
+        self.assertTrue(res_data["ok"])
+        # Version should stay at 2 since content did not change
+        self.assertEqual(res_data["version"], 2)

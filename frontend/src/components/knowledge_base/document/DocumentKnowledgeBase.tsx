@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useMemo,
-} from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@apollo/client";
 import { Button, Header, Modal, Loader } from "semantic-ui-react";
 import {
@@ -16,14 +10,6 @@ import {
   FileType,
   ArrowLeft,
   Settings,
-  GitBranch,
-  Clock,
-  User as UserIcon,
-  ChevronLeft,
-  ChevronRight,
-  AlertCircle,
-  EditIcon,
-  BookOpen,
 } from "lucide-react";
 import {
   GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
@@ -82,34 +68,14 @@ import {
   ControlButtonGroupLeft,
   ControlButtonWrapper,
   HeaderContainer,
-  LoadingPlaceholders,
   MainContentArea,
   MetadataRow,
-  RelationshipCard,
-  RelationshipPanel,
-  RelationshipType,
   SlidingPanel,
-  SummaryContent,
   EmptyState,
-  KnowledgeLayerContainer,
-  VersionHistorySidebar,
-  VersionHistoryHeader,
-  VersionList,
-  VersionItem,
-  KnowledgeContent,
-  KnowledgeHeader,
-  KnowledgeBody,
-  EditModeToolbar,
-  MarkdownEditor,
-  CollapseSidebarButton,
-  MobileTabBar,
-  MobileTab,
-  MobileBackButton,
   ResizeHandle,
   ResizeHandleControl,
   WidthControlMenu,
   WidthMenuItem,
-  MenuDivider,
   ChatIndicator,
 } from "./StyledContainers";
 import { NoteModal } from "./StickyNotes";
@@ -120,11 +86,9 @@ import {
   useAnalysisSelection,
 } from "../../annotator/hooks/AnalysisHooks";
 
-import { SingleDocumentExtractResults } from "../../annotator/sidebar/SingleDocumentExtractResults";
 import { FullScreenModal } from "./LayoutComponents";
 import { ChatTray } from "./right_tray/ChatTray";
 import { SafeMarkdown } from "../markdown/SafeMarkdown";
-import { NewChatFloatingButton } from "./ChatContainers";
 import { useAnnotationSelection } from "../../annotator/hooks/useAnnotationSelection";
 import styled from "styled-components";
 import { Icon } from "semantic-ui-react";
@@ -132,13 +96,11 @@ import { useChatSourceState } from "../../annotator/context/ChatSourceAtom";
 import { useCreateAnnotation } from "../../annotator/hooks/AnnotationHooks";
 import { useScrollContainerRef } from "../../annotator/context/DocumentAtom";
 import { useChatPanelWidth } from "../../annotator/context/UISettingsAtom";
-import { format } from "date-fns";
 import { NoteEditor } from "./NoteEditor";
 import { NewNoteModal } from "./NewNoteModal";
 import { useUrlAnnotationSync } from "../../../hooks/useUrlAnnotationSync";
 import { FloatingSummaryPreview } from "./floating_summary_preview/FloatingSummaryPreview";
 import { ZoomControls } from "./ZoomControls";
-import { useSummaryVersions } from "./floating_summary_preview/hooks/useSummaryVersions";
 
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
@@ -519,6 +481,79 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     [setShiftDown]
   );
 
+  // Show zoom indicator feedback
+  const showZoomFeedback = useCallback(() => {
+    setShowZoomIndicator(true);
+
+    // Clear existing timer
+    if (zoomIndicatorTimer.current) {
+      clearTimeout(zoomIndicatorTimer.current);
+    }
+
+    // Hide after 1.5 seconds
+    zoomIndicatorTimer.current = setTimeout(() => {
+      setShowZoomIndicator(false);
+    }, 1500);
+  }, []);
+
+  // Browser zoom event handlers
+  const handleWheelZoom = useCallback(
+    (event: WheelEvent) => {
+      // Only handle if in document layer and Ctrl/Cmd is pressed
+      if (activeLayer !== "document" || (!event.ctrlKey && !event.metaKey)) {
+        return;
+      }
+
+      // Prevent default browser zoom
+      event.preventDefault();
+
+      // Calculate zoom delta (normalize across browsers)
+      const delta = event.deltaY > 0 ? -0.1 : 0.1;
+      const newZoom = Math.max(0.5, Math.min(4, zoomLevel + delta));
+
+      setZoomLevel(newZoom);
+      showZoomFeedback();
+    },
+    [activeLayer, zoomLevel, setZoomLevel, showZoomFeedback]
+  );
+
+  const handleKeyboardZoom = useCallback(
+    (event: KeyboardEvent) => {
+      // Only handle if in document layer
+      if (activeLayer !== "document") return;
+
+      // Check for Ctrl/Cmd modifier
+      if (!event.ctrlKey && !event.metaKey) return;
+
+      let handled = false;
+
+      switch (event.key) {
+        case "+":
+        case "=": // Handle both + and = (same key without shift)
+          event.preventDefault();
+          setZoomLevel(Math.min(zoomLevel + 0.1, 4));
+          handled = true;
+          break;
+        case "-":
+        case "_": // Handle both - and _ (same key without shift)
+          event.preventDefault();
+          setZoomLevel(Math.max(zoomLevel - 0.1, 0.5));
+          handled = true;
+          break;
+        case "0":
+          event.preventDefault();
+          setZoomLevel(1); // Reset to 100%
+          handled = true;
+          break;
+      }
+
+      if (handled) {
+        showZoomFeedback();
+      }
+    },
+    [activeLayer, zoomLevel, setZoomLevel, showZoomFeedback]
+  );
+
   // Fetch combined knowledge & annotation data
   const authReady = useAuthReady();
   const {
@@ -850,31 +885,26 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     fetchMarkdownContent();
   }, [combinedData?.document?.mdSummaryFile]);
 
+  // Browser zoom event handling
+  useEffect(() => {
+    // Only attach listeners if we're in document view
+    if (activeLayer !== "document") return;
+
+    // Add wheel listener with passive: false to allow preventDefault
+    document.addEventListener("wheel", handleWheelZoom, { passive: false });
+    document.addEventListener("keydown", handleKeyboardZoom);
+
+    return () => {
+      document.removeEventListener("wheel", handleWheelZoom);
+      document.removeEventListener("keydown", handleKeyboardZoom);
+    };
+  }, [activeLayer, handleWheelZoom, handleKeyboardZoom]);
+
   const [selectedNote, setSelectedNote] = useState<(typeof notes)[0] | null>(
     null
   );
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
-
-  // Add state for summary editing and version management
-  const [isEditingSummary, setIsEditingSummary] = useState(false);
-  const [editedSummaryContent, setEditedSummaryContent] = useState<string>("");
-  const [selectedSummaryVersion, setSelectedSummaryVersion] = useState<
-    number | null
-  >(null);
-  const [selectedSummaryContent, setSelectedSummaryContent] = useState<
-    string | null
-  >(null);
-
-  // Get summary versions data
-  const {
-    versions: summaryVersions,
-    currentVersion: currentSummaryVersion,
-    currentContent: currentSummaryContentFromHook,
-    loading: summaryLoading,
-    updateSummary,
-    refetch: refetchSummary,
-  } = useSummaryVersions(documentId, corpusId);
 
   // Unified feed state
   const [sidebarViewMode, setSidebarViewMode] =
@@ -895,6 +925,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [showExtractsPanel, setShowExtractsPanel] = useState(false);
   const [showLoad, setShowLoad] = useState(false);
   const [pendingChatMessage, setPendingChatMessage] = useState<string>();
+  const [showZoomIndicator, setShowZoomIndicator] = useState(false);
+  const zoomIndicatorTimer = useRef<NodeJS.Timeout>();
 
   // Clear pending message after passing it to ChatTray
   useEffect(() => {
@@ -1087,6 +1119,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       openedDocument(null); // leave corpus intact
       setSelectedAnnotations([]);
       selectedAnnotationIds([]);
+      // Clean up zoom indicator timer
+      if (zoomIndicatorTimer.current) {
+        clearTimeout(zoomIndicatorTimer.current);
+      }
     };
   }, [setSelectedAnnotations]);
 
@@ -1112,6 +1148,26 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       bottom: auto;
     }
   `;
+
+  const ZoomIndicator = styled.div`
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    z-index: 2000;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+  `;
+
+  const [selectedSummaryContent, setSelectedSummaryContent] = useState<
+    string | null
+  >(null);
 
   return (
     <FullScreenModal
@@ -1186,9 +1242,22 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           {activeLayer === "document" && (
             <ZoomControls
               zoomLevel={zoomLevel}
-              onZoomIn={() => setZoomLevel(Math.min(zoomLevel + 0.1, 4))}
-              onZoomOut={() => setZoomLevel(Math.max(zoomLevel - 0.1, 0.5))}
+              onZoomIn={() => {
+                setZoomLevel(Math.min(zoomLevel + 0.1, 4));
+                showZoomFeedback();
+              }}
+              onZoomOut={() => {
+                setZoomLevel(Math.max(zoomLevel - 0.1, 0.5));
+                showZoomFeedback();
+              }}
             />
+          )}
+
+          {/* Zoom Indicator - shows current zoom level when zooming */}
+          {showZoomIndicator && activeLayer === "document" && (
+            <ZoomIndicator data-testid="zoom-indicator">
+              {Math.round(zoomLevel * 100)}%
+            </ZoomIndicator>
           )}
 
           {/* Unified Search/Chat Input - only in document layer */}

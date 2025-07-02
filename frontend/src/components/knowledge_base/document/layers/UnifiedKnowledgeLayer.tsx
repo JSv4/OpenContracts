@@ -30,7 +30,6 @@ import {
   LoadingPlaceholders,
   MarkdownEditor,
 } from "../StyledContainers";
-import { FileText } from "lucide-react";
 import { useSummaryVersions } from "../floating_summary_preview/hooks/useSummaryVersions";
 import { SafeMarkdown } from "../../markdown/SafeMarkdown";
 import { toast } from "react-toastify";

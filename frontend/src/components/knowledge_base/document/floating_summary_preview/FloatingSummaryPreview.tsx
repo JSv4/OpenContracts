@@ -583,6 +583,7 @@ export const FloatingSummaryPreview: React.FC<FloatingSummaryPreviewProps> = ({
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
               <BackButton
+                data-testid="back-to-document-button"
                 onClick={() => {
                   if (onBackToDocument) {
                     onBackToDocument();

@@ -772,6 +772,283 @@ test("Chat source chip in unified feed centres its highlight in PDF", async ({
   }
 });
 
+/* --------------------------------------------------------------------- */
+/* browser zoom controls test                                             */
+/* --------------------------------------------------------------------- */
+test("Browser zoom controls (Ctrl+scroll, keyboard shortcuts) work correctly", async ({
+  mount,
+  page,
+}) => {
+  await mount(
+    <DocumentKnowledgeBaseTestWrapper
+      mocks={[...graphqlMocks, ...createSummaryMocks(PDF_DOC_ID, CORPUS_ID)]}
+      documentId={PDF_DOC_ID}
+      corpusId={CORPUS_ID}
+    />
+  );
+
+  // Wait for document to load
+  await expect(
+    page.getByRole("heading", { name: mockPdfDocument.title ?? "" })
+  ).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // PDF should be visible
+  await expect(page.locator("#pdf-container canvas").first()).toBeVisible({
+    timeout: LONG_TIMEOUT,
+  });
+
+  // Wait a bit for zoom calculation to stabilize
+  await page.waitForTimeout(1000);
+
+  // Get initial zoom level (might not be 100% due to fit-to-width calculations)
+  const zoomControls = page.locator(".zoom-level").first();
+  await expect(zoomControls).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Get the initial zoom text and ensure it's stable
+  let initialZoomText = await zoomControls.textContent();
+  await page.waitForTimeout(500);
+  initialZoomText = await zoomControls.textContent();
+
+  const initialZoom = parseInt(initialZoomText?.replace("%", "") || "100");
+  const resetZoomLevel = initialZoom; // Store the initial zoom as the reset level
+  console.log(
+    `[TEST] Initial zoom level: ${initialZoom}% (this is the reset level)`
+  );
+
+  // Test 1: Ctrl+scroll wheel zoom in
+  console.log("[TEST] Testing Ctrl+scroll wheel zoom in");
+  const pdfContainer = page.locator("#pdf-container");
+  const containerBox = await pdfContainer.boundingBox();
+  expect(containerBox).toBeTruthy();
+
+  // Simulate Ctrl+wheel up (zoom in)
+  await page.keyboard.down("Control");
+  await page.mouse.move(
+    containerBox!.x + containerBox!.width / 2,
+    containerBox!.y + containerBox!.height / 2
+  );
+  await page.mouse.wheel(0, -100); // Negative deltaY = scroll up = zoom in
+  await page.keyboard.up("Control");
+
+  // Check zoom changes
+  const expectedZoomIn = Math.min(initialZoom + 10, 400);
+  console.log(`[TEST] Expected zoom after scroll in: ${expectedZoomIn}%`);
+
+  // Wait for zoom to update
+  await page.waitForTimeout(500);
+
+  // Primary check: zoom controls should show the new value
+  await expect(zoomControls).toHaveText(`${expectedZoomIn}%`, {
+    timeout: 5000,
+  });
+
+  // Define zoom indicator selector for reuse
+  const zoomIndicator = page.getByTestId("zoom-indicator");
+
+  // Optional check: if zoom indicator is visible, verify it
+  const indicatorCountZoomIn = await zoomIndicator.count();
+  if (indicatorCountZoomIn > 0) {
+    console.log("[TEST] Zoom indicator is visible, verifying its value");
+    await expect(zoomIndicator).toHaveText(`${expectedZoomIn}%`);
+  } else {
+    console.log("[TEST] Zoom indicator not visible, skipping indicator check");
+  }
+
+  // Test 2: Ctrl+scroll wheel zoom out
+  console.log("[TEST] Testing Ctrl+scroll wheel zoom out");
+  let currentZoom = expectedZoomIn;
+  await page.keyboard.down("Control");
+  // Just do one zoom out step
+  await page.mouse.wheel(0, 100); // Positive deltaY = zoom out
+  await page.keyboard.up("Control");
+
+  // Check zoom changes
+  // One wheel event changes zoom by 10%
+  const expectedZoomOut = Math.max(currentZoom - 10, 50);
+  console.log(`[TEST] Expected zoom after scroll out: ${expectedZoomOut}%`);
+
+  // Wait for zoom to update
+  await page.waitForTimeout(500);
+
+  // Primary check: zoom controls should show the new value
+  await expect(zoomControls).toHaveText(`${expectedZoomOut}%`, {
+    timeout: 5000,
+  });
+
+  // Optional check: if zoom indicator is visible, verify it
+  const indicatorCountZoomOut = await page
+    .getByTestId("zoom-indicator")
+    .count();
+  if (indicatorCountZoomOut > 0) {
+    console.log("[TEST] Zoom indicator is visible, verifying its value");
+    await expect(zoomIndicator).toHaveText(`${expectedZoomOut}%`);
+  } else {
+    console.log("[TEST] Zoom indicator not visible, skipping indicator check");
+  }
+
+  currentZoom = expectedZoomOut;
+
+  // Test 3: Ctrl+Plus to zoom in
+  console.log("[TEST] Testing Ctrl+Plus keyboard shortcut");
+  await page.keyboard.press("Control++"); // Ctrl+Plus
+
+  const expectedAfterPlus = Math.min(currentZoom + 10, 400);
+  console.log(`[TEST] Expected zoom after Ctrl+Plus: ${expectedAfterPlus}%`);
+
+  // Wait for zoom to update
+  await page.waitForTimeout(500);
+
+  // Primary check: zoom controls
+  await expect(zoomControls).toHaveText(`${expectedAfterPlus}%`, {
+    timeout: 5000,
+  });
+  currentZoom = expectedAfterPlus;
+
+  // Test 4: Ctrl+Minus to zoom out
+  console.log("[TEST] Testing Ctrl+Minus keyboard shortcut");
+  await page.keyboard.press("Control+-"); // Ctrl+Minus
+
+  const expectedAfterMinus = Math.max(currentZoom - 10, 50);
+  console.log(`[TEST] Expected zoom after Ctrl+Minus: ${expectedAfterMinus}%`);
+
+  // Wait for zoom to update
+  await page.waitForTimeout(500);
+
+  // Primary check: zoom controls
+  await expect(zoomControls).toHaveText(`${expectedAfterMinus}%`, {
+    timeout: 5000,
+  });
+  currentZoom = expectedAfterMinus;
+
+  // Log the current zoom before reset
+  console.log(`[TEST] Zoom level before Ctrl+0 reset: ${currentZoom}%`);
+
+  // Test 5: Ctrl+0 to reset zoom
+  console.log("[TEST] Testing Ctrl+0 reset zoom (should go to 100%)");
+  await page.keyboard.press("Control+0"); // Ctrl+0
+
+  // Wait a bit for the event to process
+  await page.waitForTimeout(300);
+
+  // Check if zoom indicator appears
+  const indicatorVisible = await page
+    .getByTestId("zoom-indicator")
+    .isVisible()
+    .catch(() => false);
+  console.log(
+    `[TEST] Zoom indicator visible after Ctrl+0: ${indicatorVisible}`
+  );
+
+  if (indicatorVisible) {
+    const indicatorText = await page
+      .getByTestId("zoom-indicator")
+      .textContent();
+    console.log(`[TEST] Zoom indicator text: ${indicatorText}`);
+    await expect(zoomIndicator).toBeHidden({ timeout: 3000 });
+  }
+
+  // Check the zoom controls directly
+  await page.waitForTimeout(500);
+  const zoomAfterReset = await zoomControls.textContent();
+  console.log(`[TEST] Zoom controls after Ctrl+0: ${zoomAfterReset}`);
+
+  // Ctrl+0 should reset to 100%, not the initial zoom
+  await expect(zoomControls).toHaveText("100%", { timeout: 5000 });
+  currentZoom = 100;
+
+  // Test 6: Zoom bounds - test maximum zoom
+  console.log("[TEST] Testing maximum zoom bound");
+  // Zoom in many times to hit the max (4.0 = 400%)
+  for (let i = 0; i < 35; i++) {
+    // 35 * 0.1 = 3.5, so we should hit the 4.0 cap
+    await page.keyboard.press("Control++");
+    await page.waitForTimeout(50); // Small delay between presses
+  }
+
+  // Should cap at 400%
+  await expect(zoomControls).toHaveText("400%");
+
+  // One more zoom in should still be 400%
+  await page.keyboard.press("Control++");
+  await page.waitForTimeout(500);
+  await expect(zoomControls).toHaveText("400%");
+
+  // Test 7: Zoom bounds - test minimum zoom
+  console.log("[TEST] Testing minimum zoom bound");
+  // Reset first
+  await page.keyboard.press("Control+0");
+  await page.waitForTimeout(500);
+
+  // Zoom out many times to hit the min (0.5 = 50%)
+  for (let i = 0; i < 10; i++) {
+    // 10 * 0.1 = 1.0, but we start at 1.0 so should hit 0.5 cap
+    await page.keyboard.press("Control+-");
+    await page.waitForTimeout(50);
+  }
+
+  // Should cap at 50%
+  await expect(zoomControls).toHaveText("50%");
+
+  // One more zoom out should still be 50%
+  await page.keyboard.press("Control+-");
+  await page.waitForTimeout(500);
+  await expect(zoomControls).toHaveText("50%");
+
+  // Test 8: Zoom only works in document layer, not knowledge layer
+  console.log("[TEST] Testing zoom disabled in knowledge layer");
+
+  // Switch to knowledge layer via floating summary preview
+  const summaryButton = page.getByTestId("summary-toggle-button");
+  await expect(summaryButton).toBeVisible({ timeout: LONG_TIMEOUT });
+  await summaryButton.click();
+
+  // Wait for expanded summary
+  await expect(page.locator('h3:has-text("Document Summary")')).toBeVisible({
+    timeout: LONG_TIMEOUT,
+  });
+
+  // Click on summary to switch to knowledge layer
+  const summaryCard = page.getByTestId("summary-card-1");
+  await expect(summaryCard).toBeVisible({ timeout: LONG_TIMEOUT });
+  await summaryCard.click();
+
+  // Verify we're in knowledge layer
+  await expect(
+    page.getByRole("heading", { name: "Mock Summary Title" }).first()
+  ).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Try to zoom - should not show indicator
+  await page.keyboard.press("Control++");
+
+  // Wait a bit and verify zoom indicator does NOT appear
+  await page.waitForTimeout(500);
+  const indicatorCountInKnowledge = await page
+    .getByTestId("zoom-indicator")
+    .count();
+  expect(indicatorCountInKnowledge).toBe(0);
+
+  // Go back to document layer
+  const backButton = page.getByTestId("back-to-document-button");
+  await expect(backButton).toBeVisible({ timeout: LONG_TIMEOUT });
+  await backButton.click();
+
+  // Verify we're back in document layer and zoom works again
+  await expect(page.locator("#pdf-container")).toBeVisible({
+    timeout: LONG_TIMEOUT,
+  });
+
+  // Reset to known state first
+  await page.keyboard.press("Control+0");
+  await page.waitForTimeout(500);
+
+  // Now test zoom works again
+  await page.keyboard.press("Control++");
+  await page.waitForTimeout(500);
+  await expect(zoomControls).toHaveText("110%");
+
+  console.log("[TEST SUCCESS] All browser zoom controls working correctly");
+});
+
 // Helper to create summary mocks (reuse from FloatingSummaryPreview tests but inline to avoid circular dep)
 const mockSummaryVersions = [
   {

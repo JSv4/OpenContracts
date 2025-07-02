@@ -250,35 +250,29 @@ class CorpusQueryConsumer(AsyncWebsocketConsumer):
                         msg_type="ASYNC_ERROR",
                         content="",
                         data={
-                            "error": getattr(event, "error", "Unknown error"),
+                            "error": event.error or "Unknown error",
                             "message_id": event.llm_message_id,
+                            "metadata": event.metadata,
                         },
                     )
+                    # Reset flag
+                    if hasattr(self, "_sent_start"):
+                        delattr(self, "_sent_start")
 
                 elif isinstance(event, FinalEvent):
-                    if getattr(event, "type", "") == "error":
-                        await self.send_standard_message(
-                            msg_type="ASYNC_ERROR",
-                            content="",
-                            data={
-                                "error": getattr(event, "error", "Unknown error"),
-                                "message_id": event.llm_message_id,
-                            },
-                        )
-                    else:
-                        await self.send_standard_message(
-                            msg_type="ASYNC_FINISH",
-                            content=event.accumulated_content or event.content,
-                            data={
-                                "sources": [s.to_dict() for s in event.sources],
-                                "message_id": event.llm_message_id,
-                                "timeline": (
-                                    event.metadata.get("timeline", [])
-                                    if isinstance(event.metadata, dict)
-                                    else []
-                                ),
-                            },
-                        )
+                    await self.send_standard_message(
+                        msg_type="ASYNC_FINISH",
+                        content=event.accumulated_content or event.content,
+                        data={
+                            "sources": [s.to_dict() for s in event.sources],
+                            "message_id": event.llm_message_id,
+                            "timeline": (
+                                event.metadata.get("timeline", [])
+                                if isinstance(event.metadata, dict)
+                                else []
+                            ),
+                        },
+                    )
 
                     if hasattr(self, "_sent_start"):
                         delattr(self, "_sent_start")

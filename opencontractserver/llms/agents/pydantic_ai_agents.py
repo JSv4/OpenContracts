@@ -308,32 +308,41 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                         builder.add(event_obj)
                         yield event_obj
 
-                        async with node.stream(agent_run.ctx) as model_stream:
-                            async for event in model_stream:
-                                text, is_answer, meta = _event_to_text_and_meta(event)
-                                if text:
-                                    if is_answer:
-                                        accumulated_content += text
-                                        # Content timeline now handled by TimelineStreamMixin
+                        try:
+                            async with node.stream(agent_run.ctx) as model_stream:
+                                async for event in model_stream:
+                                    text, is_answer, meta = _event_to_text_and_meta(event)
+                                    if text:
+                                        if is_answer:
+                                            accumulated_content += text
+                                            # Content timeline now handled by TimelineStreamMixin
 
-                                    # Merge any source nodes attached to event (unlikely here but future-proof)
-                                    accumulated_sources.extend(
-                                        [
-                                            _to_source_node(s)
-                                            for s in getattr(event, "sources", [])
-                                        ]
-                                    )
-                                    # builder will record Sources automatically
+                                        # Merge any source nodes attached to event (unlikely here but future-proof)
+                                        accumulated_sources.extend(
+                                            [
+                                                _to_source_node(s)
+                                                for s in getattr(event, "sources", [])
+                                            ]
+                                        )
+                                        # builder will record Sources automatically
 
-                                    content_ev = ContentEvent(
-                                        content=text,
-                                        accumulated_content=accumulated_content,
-                                        user_message_id=user_msg_id,
-                                        llm_message_id=llm_msg_id,
-                                        metadata=meta,
-                                    )
-                                    builder.add(content_ev)
-                                    yield content_ev
+                                        content_ev = ContentEvent(
+                                            content=text,
+                                            accumulated_content=accumulated_content,
+                                            user_message_id=user_msg_id,
+                                            llm_message_id=llm_msg_id,
+                                            metadata=meta,
+                                        )
+                                        builder.add(content_ev)
+                                        yield content_ev
+                        except Exception as e:
+                            # Already handled by outer error handler – stop processing this node
+                            yield ErrorEvent(
+                                error=str(e),
+                                user_message_id=user_msg_id,
+                                llm_message_id=llm_msg_id,
+                            )
+                            break
 
                     # ------------------------------------------------------------------
                     # CALL TOOLS NODE – Capture tool call & result events.
@@ -347,153 +356,157 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                         builder.add(event_obj)
                         yield event_obj
 
-                        async with node.stream(agent_run.ctx) as tool_stream:
-                            async for event in tool_stream:
-                                if event.event_kind == "function_tool_call":
-                                    tool_name = event.part.tool_name
-                                    # Include specialised timeline entry via ThoughtEvent metadata detection
-                                    # The ThoughtEvent itself will be passed to builder.add below.
-                                    tool_ev = ThoughtEvent(
-                                        thought=f"Calling tool `{tool_name}` with args {event.part.args}",
-                                        user_message_id=user_msg_id,
-                                        llm_message_id=llm_msg_id,
-                                        metadata={
-                                            "tool_name": tool_name,
-                                            "args": event.part.args,
-                                        },
-                                    )
-                                    builder.add(tool_ev)
-                                    yield tool_ev
+                        try:
+                            async with node.stream(agent_run.ctx) as tool_stream:
+                                async for event in tool_stream:
+                                    if event.event_kind == "function_tool_call":
+                                        tool_name = event.part.tool_name
+                                        # Include specialised timeline entry via ThoughtEvent metadata detection
+                                        # The ThoughtEvent itself will be passed to builder.add below.
+                                        tool_ev = ThoughtEvent(
+                                            thought=f"Calling tool `{tool_name}` with args {event.part.args}",
+                                            user_message_id=user_msg_id,
+                                            llm_message_id=llm_msg_id,
+                                            metadata={
+                                                "tool_name": tool_name,
+                                                "args": event.part.args,
+                                            },
+                                        )
+                                        builder.add(tool_ev)
+                                        yield tool_ev
 
-                                elif event.event_kind == "function_tool_result":
-                                    tool_name = event.result.tool_name  # type: ignore[attr-defined]
-                                    # Capture vector-search results (our canonical source provider)
-                                    if tool_name == "similarity_search":
-                                        raw_sources = event.result.content  # type: ignore[attr-defined]
-                                        if isinstance(raw_sources, list):
-                                            new_sources = [
-                                                _to_source_node(s) for s in raw_sources
-                                            ]
-                                            accumulated_sources.extend(new_sources)
-                                            # Emit a dedicated SourceEvent so the client
-                                            # can update citations in real-time.
-                                            src_ev = SourceEvent(
-                                                sources=new_sources,
+                                    elif event.event_kind == "function_tool_result":
+                                        tool_name = event.result.tool_name  # type: ignore[attr-defined]
+                                        # Capture vector-search results (our canonical source provider)
+                                        if tool_name == "similarity_search":
+                                            raw_sources = event.result.content  # type: ignore[attr-defined]
+                                            if isinstance(raw_sources, list):
+                                                new_sources = [
+                                                    _to_source_node(s) for s in raw_sources
+                                                ]
+                                                accumulated_sources.extend(new_sources)
+                                                # Emit a dedicated SourceEvent so the client
+                                                # can update citations in real-time.
+                                                src_ev = SourceEvent(
+                                                    sources=new_sources,
+                                                    user_message_id=user_msg_id,
+                                                    llm_message_id=llm_msg_id,
+                                                )
+                                                builder.add(src_ev)
+                                                yield src_ev
+
+                                        # Special handling for nested document-agent responses
+                                        elif tool_name == "ask_document":
+                                            # The ask_document tool returns a dict with keys: answer, sources, timeline
+                                            try:
+                                                result_payload = event.result.content  # type: ignore[attr-defined]
+                                                # Ensure we have a dict (pydantic may already return dict object)
+                                                if isinstance(result_payload, str):
+                                                    import json as _json
+
+                                                    result_payload = _json.loads(
+                                                        result_payload
+                                                    )
+
+                                                if isinstance(result_payload, dict):
+                                                    # 1) Surface child sources immediately so UI can pin them
+                                                    child_sources_raw = result_payload.get(
+                                                        "sources", []
+                                                    )
+                                                    if child_sources_raw:
+                                                        new_sources = [
+                                                            _to_source_node(s)
+                                                            for s in child_sources_raw
+                                                        ]
+                                                        accumulated_sources.extend(
+                                                            new_sources
+                                                        )
+                                                        src_ev = SourceEvent(
+                                                            sources=new_sources,
+                                                            user_message_id=user_msg_id,
+                                                            llm_message_id=llm_msg_id,
+                                                        )
+                                                        builder.add(src_ev)
+                                                        yield src_ev
+
+                                                    # 2) Relay child timeline entries as ThoughtEvents,
+                                                    # prefixing with document context for clarity
+                                                    child_tl = result_payload.get(
+                                                        "timeline", []
+                                                    )
+                                                    for tl_entry in child_tl:
+                                                        tl_text = (
+                                                            tl_entry.get("thought") or ""
+                                                        )
+                                                        if not tl_text:
+                                                            continue
+                                                        prefixed_text = (
+                                                            f"[ask_document] {tl_text}"
+                                                        )
+                                                        tl_ev = ThoughtEvent(
+                                                            thought=prefixed_text,
+                                                            user_message_id=user_msg_id,
+                                                            llm_message_id=llm_msg_id,
+                                                            metadata={
+                                                                "tool_name": tool_name,
+                                                                **(
+                                                                    tl_entry.get("metadata")
+                                                                    or {}
+                                                                ),
+                                                            },
+                                                        )
+                                                        builder.add(tl_ev)
+                                                        yield tl_ev
+
+                                                    # 3) Append the child answer to accumulated_content
+                                                    # so it is included in final answer.
+                                                    answer_txt = result_payload.get(
+                                                        "answer", ""
+                                                    )
+                                                    if answer_txt:
+                                                        accumulated_content += answer_txt
+                                                        content_ev = ContentEvent(
+                                                            content=answer_txt,
+                                                            accumulated_content=accumulated_content,
+                                                            user_message_id=user_msg_id,
+                                                            llm_message_id=llm_msg_id,
+                                                            metadata={
+                                                                "from": "ask_document"
+                                                            },
+                                                        )
+                                                        builder.add(content_ev)
+                                                        yield content_ev
+                                            except (
+                                                Exception
+                                            ) as _inner_exc:  # noqa: BLE001 – defensive
+                                                logger.warning(
+                                                    "Failed to process ask_document result payload: %s",
+                                                    _inner_exc,
+                                                )
+
+                                            # Always log completion of ask_document regardless of success
+                                            tool_ev = ThoughtEvent(
+                                                thought=f"Tool `{tool_name}` returned a result.",
                                                 user_message_id=user_msg_id,
                                                 llm_message_id=llm_msg_id,
+                                                metadata={"tool_name": tool_name},
                                             )
-                                            builder.add(src_ev)
-                                            yield src_ev
+                                            builder.add(tool_ev)
+                                            yield tool_ev
 
-                                    # Special handling for nested document-agent responses
-                                    elif tool_name == "ask_document":
-                                        # The ask_document tool returns a dict with keys: answer, sources, timeline
-                                        try:
-                                            result_payload = event.result.content  # type: ignore[attr-defined]
-                                            # Ensure we have a dict (pydantic may already return dict object)
-                                            if isinstance(result_payload, str):
-                                                import json as _json
-
-                                                result_payload = _json.loads(
-                                                    result_payload
-                                                )
-
-                                            if isinstance(result_payload, dict):
-                                                # 1) Surface child sources immediately so UI can pin them
-                                                child_sources_raw = result_payload.get(
-                                                    "sources", []
-                                                )
-                                                if child_sources_raw:
-                                                    new_sources = [
-                                                        _to_source_node(s)
-                                                        for s in child_sources_raw
-                                                    ]
-                                                    accumulated_sources.extend(
-                                                        new_sources
-                                                    )
-                                                    src_ev = SourceEvent(
-                                                        sources=new_sources,
-                                                        user_message_id=user_msg_id,
-                                                        llm_message_id=llm_msg_id,
-                                                    )
-                                                    builder.add(src_ev)
-                                                    yield src_ev
-
-                                                # 2) Relay child timeline entries as ThoughtEvents,
-                                                # prefixing with document context for clarity
-                                                child_tl = result_payload.get(
-                                                    "timeline", []
-                                                )
-                                                for tl_entry in child_tl:
-                                                    tl_text = (
-                                                        tl_entry.get("thought") or ""
-                                                    )
-                                                    if not tl_text:
-                                                        continue
-                                                    prefixed_text = (
-                                                        f"[ask_document] {tl_text}"
-                                                    )
-                                                    tl_ev = ThoughtEvent(
-                                                        thought=prefixed_text,
-                                                        user_message_id=user_msg_id,
-                                                        llm_message_id=llm_msg_id,
-                                                        metadata={
-                                                            "tool_name": tool_name,
-                                                            **(
-                                                                tl_entry.get("metadata")
-                                                                or {}
-                                                            ),
-                                                        },
-                                                    )
-                                                    builder.add(tl_ev)
-                                                    yield tl_ev
-
-                                                # 3) Append the child answer to accumulated_content
-                                                # so it is included in final answer.
-                                                answer_txt = result_payload.get(
-                                                    "answer", ""
-                                                )
-                                                if answer_txt:
-                                                    accumulated_content += answer_txt
-                                                    content_ev = ContentEvent(
-                                                        content=answer_txt,
-                                                        accumulated_content=accumulated_content,
-                                                        user_message_id=user_msg_id,
-                                                        llm_message_id=llm_msg_id,
-                                                        metadata={
-                                                            "from": "ask_document"
-                                                        },
-                                                    )
-                                                    builder.add(content_ev)
-                                                    yield content_ev
-                                        except (
-                                            Exception
-                                        ) as _inner_exc:  # noqa: BLE001 – defensive
-                                            logger.warning(
-                                                "Failed to process ask_document result payload: %s",
-                                                _inner_exc,
+                                        else:
+                                            # Let TimelineBuilder infer tool_result from metadata
+                                            tool_ev = ThoughtEvent(
+                                                thought=f"Tool `{tool_name}` returned a result.",
+                                                user_message_id=user_msg_id,
+                                                llm_message_id=llm_msg_id,
+                                                metadata={"tool_name": tool_name},
                                             )
-
-                                        # Always log completion of ask_document regardless of success
-                                        tool_ev = ThoughtEvent(
-                                            thought=f"Tool `{tool_name}` returned a result.",
-                                            user_message_id=user_msg_id,
-                                            llm_message_id=llm_msg_id,
-                                            metadata={"tool_name": tool_name},
-                                        )
-                                        builder.add(tool_ev)
-                                        yield tool_ev
-
-                                    else:
-                                        # Let TimelineBuilder infer tool_result from metadata
-                                        tool_ev = ThoughtEvent(
-                                            thought=f"Tool `{tool_name}` returned a result.",
-                                            user_message_id=user_msg_id,
-                                            llm_message_id=llm_msg_id,
-                                            metadata={"tool_name": tool_name},
-                                        )
-                                        builder.add(tool_ev)
-                                        yield tool_ev
+                                            builder.add(tool_ev)
+                                            yield tool_ev
+                        except Exception:
+                            # Already handled by outer error handler – stop processing this node
+                            break
 
                     # ------------------------------------------------------------------
                     # END NODE – Execution graph is finished.
@@ -592,8 +605,9 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
             return
 
         except Exception as e:
-            # Cancel the message in the database
-            await self.cancel_message(llm_msg_id, f"Error: {str(e)}")
+            # Mark the message as errored in the database
+            if llm_msg_id:
+                await self.mark_message_error(llm_msg_id, str(e))
             logger.exception(f"Error in PydanticAI stream: {e}")
 
             # Emit an ErrorEvent so consumers can handle it gracefully

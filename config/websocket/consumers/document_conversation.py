@@ -30,6 +30,7 @@ from opencontractserver.llms.agents.core_agents import (
     ApprovalNeededEvent,
     ApprovalResultEvent,
     ContentEvent,
+    ErrorEvent,
     FinalEvent,
     ResumeEvent,
     SourceEvent,
@@ -448,32 +449,37 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                             },
                         )
 
+                    elif isinstance(event, ErrorEvent):
+                        # Handle error events
+                        await self.send_standard_message(
+                            msg_type="ASYNC_ERROR",
+                            content="",
+                            data={
+                                "error": event.error or "Unknown error",
+                                "message_id": event.llm_message_id,
+                                "metadata": event.metadata,
+                            },
+                        )
+                        # Reset flag
+                        if hasattr(self, "_sent_start"):
+                            delattr(self, "_sent_start")
+
                     elif isinstance(event, FinalEvent):
                         # Prepare sources data (if not already sent)
-                        if getattr(event, "type", "") == "error":
-                            await self.send_standard_message(
-                                msg_type="ASYNC_ERROR",
-                                content="",
-                                data={
-                                    "error": getattr(event, "error", "Unknown error"),
-                                    "message_id": event.llm_message_id,
-                                },
-                            )
-                        else:
-                            sources_payload = [s.to_dict() for s in event.sources]
-                            await self.send_standard_message(
-                                msg_type="ASYNC_FINISH",
-                                content=event.accumulated_content or event.content,
-                                data={
-                                    "sources": sources_payload,
-                                    "message_id": event.llm_message_id,
-                                    "timeline": (
-                                        event.metadata.get("timeline", [])
-                                        if isinstance(event.metadata, dict)
-                                        else []
-                                    ),
-                                },
-                            )
+                        sources_payload = [s.to_dict() for s in event.sources]
+                        await self.send_standard_message(
+                            msg_type="ASYNC_FINISH",
+                            content=event.accumulated_content or event.content,
+                            data={
+                                "sources": sources_payload,
+                                "message_id": event.llm_message_id,
+                                "timeline": (
+                                    event.metadata.get("timeline", [])
+                                    if isinstance(event.metadata, dict)
+                                    else []
+                                ),
+                            },
+                        )
 
                         # Reset flag
                         if hasattr(self, "_sent_start"):
@@ -522,8 +528,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                     f"[Session {self.session_id}] Error during API call: {str(api_error)}",
                     exc_info=True,
                 )
-                # Re-raise to be caught by outer exception handler
-                raise
+                # Don't re-raise - the error has already been handled via ErrorEvent
 
         except Exception as e:
             logger.error(

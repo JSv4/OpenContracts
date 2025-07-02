@@ -754,6 +754,99 @@ test("ESC key cancels selection and closes action menu", async ({
   console.log("[TEST SUCCESS] ESC key closes action menu");
 });
 
+test("cancel button dismisses selection without action", async ({
+  mount,
+  page,
+}) => {
+  await mount(
+    <DocumentKnowledgeBaseTestWrapper
+      mocks={[...graphqlMocks, ...createSummaryMocks(PDF_DOC_ID, CORPUS_ID)]}
+      documentId={PDF_DOC_ID}
+      corpusId={CORPUS_ID}
+    />
+  );
+
+  // Wait for document to load
+  await expect(
+    page.getByRole("heading", { name: mockPdfDocument.title ?? "" })
+  ).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Select a label to verify cancel works with label selected
+  const labelSelectorButton = page.locator(
+    '[data-testid="label-selector-toggle-button"]'
+  );
+  await expect(labelSelectorButton).toBeVisible({ timeout: LONG_TIMEOUT });
+  await labelSelectorButton.click();
+  const firstLabelOption = page.locator(".label-option").first();
+  await expect(firstLabelOption).toBeVisible({ timeout: LONG_TIMEOUT });
+  await firstLabelOption.click();
+
+  // Perform text selection
+  const firstPageContainer = page.locator(".PageAnnotationsContainer").first();
+  const selectionLayer = firstPageContainer.locator("#selection-layer");
+  const layerBox = await selectionLayer.boundingBox();
+
+  await page.mouse.move(
+    layerBox!.x + layerBox!.width * 0.5,
+    layerBox!.y + layerBox!.height * 0.1
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    layerBox!.x + layerBox!.width * 0.5,
+    layerBox!.y + layerBox!.height * 0.1 + 100,
+    { steps: 10 }
+  );
+  await page.mouse.up();
+
+  // Verify action menu appears with all three options
+  const actionMenu = page.getByTestId("selection-action-menu");
+  await expect(actionMenu).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Verify all buttons are present
+  const copyButton = page.getByTestId("copy-text-button");
+  const applyLabelButton = page.getByTestId("apply-label-button");
+  const cancelButton = page.getByTestId("cancel-button");
+
+  await expect(copyButton).toBeVisible({ timeout: LONG_TIMEOUT });
+  await expect(applyLabelButton).toBeVisible({ timeout: LONG_TIMEOUT });
+  await expect(cancelButton).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Check that cancel button has ESC hint
+  await expect(cancelButton).toContainText("Cancel");
+  await expect(cancelButton).toContainText("ESC");
+
+  console.log("[TEST] All three action menu options are visible");
+
+  // Click cancel button
+  await cancelButton.click();
+
+  // Verify menu disappears
+  await expect(actionMenu).not.toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Give time to ensure no annotation was created
+  await page.waitForTimeout(1000);
+
+  // Open sidebar and verify no annotation was created
+  const chatIndicator = page
+    .locator("button")
+    .filter({ has: page.locator('svg[class*="lucide-message-square"]') })
+    .last();
+  await chatIndicator.click();
+
+  const feedToggle = page.getByTestId("view-mode-feed");
+  await feedToggle.click();
+
+  // Verify no annotation exists
+  const annotationInFeed = page
+    .locator('[data-annotation-id="new-annot-1"]')
+    .first();
+  await expect(annotationInFeed).not.toBeVisible({ timeout: 2000 });
+
+  console.log(
+    "[TEST SUCCESS] Cancel button dismissed selection without creating annotation"
+  );
+});
+
 test("filters annotations in unified feed with structural toggle", async ({
   mount,
   page,

@@ -16,7 +16,7 @@ import { useAnnotationSelection } from "../../hooks/useAnnotationSelection";
 import { useAtom } from "jotai";
 import { isCreatingAnnotationAtom } from "../../context/UISettingsAtom";
 import styled from "styled-components";
-import { Copy, Tag } from "lucide-react";
+import { Copy, Tag, X } from "lucide-react";
 
 interface SelectionLayerProps {
   pageInfo: PDFPageInfo;
@@ -456,9 +456,12 @@ const SelectionLayer = ({
               </ActionMenuItem>
             </>
           )}
-          <MenuFooter>
-            <span>ESC to cancel</span>
-          </MenuFooter>
+          <MenuDivider />
+          <ActionMenuItem onClick={handleCancel} data-testid="cancel-button">
+            <X size={16} />
+            <span>Cancel</span>
+            <ShortcutHint>ESC</ShortcutHint>
+          </ActionMenuItem>
         </SelectionActionMenu>
       )}
     </div>
@@ -512,15 +515,6 @@ const ShortcutHint = styled.span`
   padding: 2px 6px;
   border-radius: 3px;
   font-weight: 500;
-`;
-
-const MenuFooter = styled.div`
-  padding: 4px 12px;
-  font-size: 11px;
-  color: #999;
-  text-align: center;
-  border-top: 1px solid #e0e0e0;
-  margin-top: 4px;
 `;
 
 export default React.memo(SelectionLayer);

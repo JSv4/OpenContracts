@@ -338,6 +338,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                         except Exception as e:
                             # Already handled by outer error handler – stop processing this node
                             yield ErrorEvent(
+                                content=text,
                                 error=str(e),
                                 user_message_id=user_msg_id,
                                 llm_message_id=llm_msg_id,

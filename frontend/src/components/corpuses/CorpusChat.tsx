@@ -1415,11 +1415,16 @@ export const CorpusChat: React.FC<CorpusChatProps> = ({
 
         socketRef.current.send(JSON.stringify(messageData));
 
+        // Hide the modal immediately after sending the decision (optimistic UI)
+        setShowApprovalModal(false);
+
         // Clear after decision will be handled when continuation arrives
         setWsError(null);
       } catch (err) {
         console.error("Failed to send approval decision:", err);
         setWsError("Failed to send approval decision. Please try again.");
+        // Re-show modal on error so user can try again
+        setShowApprovalModal(true);
       }
     },
     [pendingApproval, wsReady]

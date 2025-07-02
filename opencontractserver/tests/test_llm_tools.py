@@ -23,10 +23,15 @@ from opencontractserver.llms.tools.core_tools import (
     aupdate_document_note,
     duplicate_annotations_with_label,
     get_corpus_description,
+    get_document_summary,
+    get_document_summary_at_version,
+    get_document_summary_diff,
+    get_document_summary_versions,
     load_document_txt_extract,
     search_document_notes,
     update_corpus_description,
     update_document_note,
+    update_document_summary,
 )
 
 User = get_user_model()
@@ -269,6 +274,232 @@ class TestLLMTools(TestCase):
         self.assertEqual(duplicate.document_id, source_ann.document_id)
         self.assertEqual(duplicate.corpus_id, source_ann.corpus_id)
         self.assertEqual(duplicate.creator_id, self.user.id)
+
+    # ------------------------------------------------------------------
+    # Tests for document summary helpers
+    # ------------------------------------------------------------------
+
+    def test_get_document_summary(self):
+        """Test retrieving document summary content."""
+        # Create document with summary
+        summary_content = "# Document Summary\n\nThis is a test summary"
+        self.doc.update_summary(
+            new_content=summary_content, author=self.user, corpus=self.corpus
+        )
+
+        # Test basic retrieval
+        result = get_document_summary(self.doc.id, self.corpus.id)
+        self.assertEqual(result, summary_content)
+
+        # Test truncation from start
+        result = get_document_summary(
+            self.doc.id, self.corpus.id, truncate_length=20, from_start=True
+        )
+        self.assertEqual(result, summary_content[:20])
+
+        # Test truncation from end
+        result = get_document_summary(
+            self.doc.id, self.corpus.id, truncate_length=15, from_start=False
+        )
+        self.assertEqual(result, summary_content[-15:])
+
+    def test_get_document_summary_no_summary(self):
+        """Test retrieving summary when none exists."""
+        # Create fresh document without summary
+        doc_no_summary = Document.objects.create(
+            creator=self.user,
+            title="No Summary Doc",
+        )
+        self.corpus.documents.add(doc_no_summary)
+
+        result = get_document_summary(doc_no_summary.id, self.corpus.id)
+        self.assertEqual(result, "")
+
+    def test_get_document_summary_invalid_document(self):
+        """Test retrieving summary for non-existent document."""
+        with self.assertRaisesRegex(
+            ValueError, "Document with id=999999 does not exist"
+        ):
+            get_document_summary(999999, self.corpus.id)
+
+    def test_get_document_summary_invalid_corpus(self):
+        """Test retrieving summary for non-existent corpus."""
+        with self.assertRaisesRegex(ValueError, "Corpus with id=999999 does not exist"):
+            get_document_summary(self.doc.id, 999999)
+
+    def test_get_document_summary_versions(self):
+        """Test retrieving version history."""
+        # Create multiple versions
+        self.doc.update_summary(
+            new_content="Version 1", author=self.user, corpus=self.corpus
+        )
+        self.doc.update_summary(
+            new_content="Version 2", author=self.user, corpus=self.corpus
+        )
+        self.doc.update_summary(
+            new_content="Version 3", author=self.user, corpus=self.corpus
+        )
+
+        # Get all versions
+        versions = get_document_summary_versions(self.doc.id, self.corpus.id)
+        self.assertEqual(len(versions), 3)
+
+        # Check ordering (newest first)
+        self.assertEqual(versions[0]["version"], 3)
+        self.assertEqual(versions[1]["version"], 2)
+        self.assertEqual(versions[2]["version"], 1)
+
+        # Check structure
+        for version in versions:
+            self.assertIn("id", version)
+            self.assertIn("version", version)
+            self.assertIn("author_id", version)
+            self.assertIn("created", version)
+            self.assertIn("checksum_base", version)
+            self.assertIn("checksum_full", version)
+            self.assertIn("has_snapshot", version)
+            self.assertIn("has_diff", version)
+
+    def test_get_document_summary_versions_with_limit(self):
+        """Test retrieving limited version history."""
+        # Create 5 versions
+        for i in range(1, 6):
+            self.doc.update_summary(
+                new_content=f"Version {i}", author=self.user, corpus=self.corpus
+            )
+
+        # Get only 3 most recent
+        versions = get_document_summary_versions(self.doc.id, self.corpus.id, limit=3)
+        self.assertEqual(len(versions), 3)
+        self.assertEqual(versions[0]["version"], 5)
+        self.assertEqual(versions[1]["version"], 4)
+        self.assertEqual(versions[2]["version"], 3)
+
+    def test_get_document_summary_diff(self):
+        """Test getting diff between versions."""
+        # Create versions
+        self.doc.update_summary(
+            new_content="Line 1\nLine 2\nLine 3", author=self.user, corpus=self.corpus
+        )
+        self.doc.update_summary(
+            new_content="Line 1\nLine 2 modified\nLine 3\nLine 4",
+            author=self.user,
+            corpus=self.corpus,
+        )
+
+        # Get diff
+        diff_info = get_document_summary_diff(
+            self.doc.id, self.corpus.id, from_version=1, to_version=2
+        )
+
+        # Check structure
+        self.assertEqual(diff_info["from_version"], 1)
+        self.assertEqual(diff_info["to_version"], 2)
+        self.assertEqual(diff_info["from_author_id"], self.user.id)
+        self.assertEqual(diff_info["to_author_id"], self.user.id)
+        self.assertIn("from_created", diff_info)
+        self.assertIn("to_created", diff_info)
+        self.assertIn("diff", diff_info)
+        self.assertIn("from_content", diff_info)
+        self.assertIn("to_content", diff_info)
+
+        # Check diff contains expected changes
+        self.assertIn("-Line 2", diff_info["diff"])
+        self.assertIn("+Line 2 modified", diff_info["diff"])
+        self.assertIn("+Line 4", diff_info["diff"])
+
+    def test_get_document_summary_diff_invalid_versions(self):
+        """Test diff with non-existent versions."""
+        self.doc.update_summary(
+            new_content="Version 1", author=self.user, corpus=self.corpus
+        )
+
+        with self.assertRaisesRegex(ValueError, "Revision version .* not found"):
+            get_document_summary_diff(
+                self.doc.id, self.corpus.id, from_version=1, to_version=5
+            )
+
+    def test_update_document_summary(self):
+        """Test creating/updating document summary."""
+        # Create initial summary
+        result = update_document_summary(
+            document_id=self.doc.id,
+            corpus_id=self.corpus.id,
+            new_content="Initial summary",
+            author_id=self.user.id,
+        )
+
+        self.assertTrue(result["created"])
+        self.assertEqual(result["version"], 1)
+        self.assertIn("revision_id", result)
+        self.assertEqual(result["author_id"], self.user.id)
+
+        # Update summary
+        result = update_document_summary(
+            document_id=self.doc.id,
+            corpus_id=self.corpus.id,
+            new_content="Updated summary",
+            author_id=self.user.id,
+        )
+
+        self.assertTrue(result["created"])
+        self.assertEqual(result["version"], 2)
+
+        # No change update
+        result = update_document_summary(
+            document_id=self.doc.id,
+            corpus_id=self.corpus.id,
+            new_content="Updated summary",  # Same content
+            author_id=self.user.id,
+        )
+
+        self.assertFalse(result["created"])
+        self.assertEqual(result["version"], 2)
+        self.assertEqual(result["message"], "No change in content")
+
+    def test_update_document_summary_with_author_object(self):
+        """Test updating summary with author object instead of ID."""
+        result = update_document_summary(
+            document_id=self.doc.id,
+            corpus_id=self.corpus.id,
+            new_content="Summary with author object",
+            author=self.user,  # Pass object instead of ID
+        )
+
+        self.assertTrue(result["created"])
+        self.assertEqual(result["author_id"], self.user.id)
+
+    def test_update_document_summary_missing_author(self):
+        """Test updating summary without author info."""
+        with self.assertRaisesRegex(ValueError, "Provide either author or author_id"):
+            update_document_summary(
+                document_id=self.doc.id,
+                corpus_id=self.corpus.id,
+                new_content="No author",
+            )
+
+    def test_get_document_summary_at_version(self):
+        """Test retrieving specific version content."""
+        # Create multiple versions
+        contents = ["Version 1 content", "Version 2 content", "Version 3 content"]
+        for content in contents:
+            self.doc.update_summary(
+                new_content=content, author=self.user, corpus=self.corpus
+            )
+
+        # Retrieve each version
+        for i, expected_content in enumerate(contents, 1):
+            result = get_document_summary_at_version(self.doc.id, self.corpus.id, i)
+            self.assertEqual(result, expected_content)
+
+    def test_get_document_summary_at_version_invalid(self):
+        """Test retrieving non-existent version."""
+        self.doc.update_summary(
+            new_content="Only version", author=self.user, corpus=self.corpus
+        )
+
+        with self.assertRaisesRegex(ValueError, "Version 5 not found"):
+            get_document_summary_at_version(self.doc.id, self.corpus.id, 5)
 
 
 class AsyncTestDuplicateTools(TransactionTestCase):
@@ -964,3 +1195,148 @@ class AsyncTestSearchDocumentNotes(TransactionTestCase):
         # Empty string with icontains matches everything
         # Should return all 4 notes for this document
         self.assertEqual(len(results), 4)
+
+
+# ------------------------------------------------------------------
+# Tests for async document summary helpers
+# ------------------------------------------------------------------
+
+
+class AsyncTestDocumentSummary(TransactionTestCase):
+    """Async tests for document summary functions."""
+
+    def setUp(self):
+        """Set up test data."""
+        self.user = User.objects.create_user(
+            username="async_summary_user", password="pw"
+        )
+        self.corpus = Corpus.objects.create(
+            title="Async Summary Corpus",
+            creator=self.user,
+        )
+        self.doc = Document.objects.create(
+            creator=self.user,
+            title="Async Summary Document",
+            description="Test Description",
+        )
+        self.corpus.documents.add(self.doc)
+
+    async def _update_summary_async(self, document, new_content, author, corpus):
+        """Helper to update document summary asynchronously."""
+        from channels.db import database_sync_to_async
+
+        return await database_sync_to_async(document.update_summary)(
+            new_content=new_content, author=author, corpus=corpus
+        )
+
+    async def test_aget_document_summary(self):
+        """Test async document summary retrieval."""
+        from opencontractserver.llms.tools.core_tools import aget_document_summary
+
+        # Create summary first using async helper
+        await self._update_summary_async(
+            self.doc,
+            new_content="Async test summary content",
+            author=self.user,
+            corpus=self.corpus,
+        )
+
+        # Test retrieval
+        result = await aget_document_summary(self.doc.id, self.corpus.id)
+        self.assertEqual(result, "Async test summary content")
+
+        # Test truncation
+        result = await aget_document_summary(
+            self.doc.id, self.corpus.id, truncate_length=10, from_start=True
+        )
+        self.assertEqual(result, "Async test")
+
+    async def test_aget_document_summary_versions(self):
+        """Test async version history retrieval."""
+        from opencontractserver.llms.tools.core_tools import (
+            aget_document_summary_versions,
+        )
+
+        # Create versions using async helper
+        for i in range(1, 4):
+            await self._update_summary_async(
+                self.doc,
+                new_content=f"Async version {i}",
+                author=self.user,
+                corpus=self.corpus,
+            )
+
+        versions = await aget_document_summary_versions(self.doc.id, self.corpus.id)
+        self.assertEqual(len(versions), 3)
+        self.assertEqual(versions[0]["version"], 3)
+
+    async def test_aget_document_summary_diff(self):
+        """Test async diff retrieval between versions."""
+        from opencontractserver.llms.tools.core_tools import aget_document_summary_diff
+
+        # Create two versions using async helper
+        await self._update_summary_async(
+            self.doc,
+            new_content="Original async content",
+            author=self.user,
+            corpus=self.corpus,
+        )
+        await self._update_summary_async(
+            self.doc,
+            new_content="Modified async content",
+            author=self.user,
+            corpus=self.corpus,
+        )
+
+        diff_info = await aget_document_summary_diff(
+            self.doc.id, self.corpus.id, from_version=1, to_version=2
+        )
+
+        self.assertEqual(diff_info["from_version"], 1)
+        self.assertEqual(diff_info["to_version"], 2)
+        self.assertIn("-Original", diff_info["diff"])
+        self.assertIn("+Modified", diff_info["diff"])
+
+    async def test_aupdate_document_summary(self):
+        """Test async document summary update."""
+        from opencontractserver.llms.tools.core_tools import aupdate_document_summary
+
+        result = await aupdate_document_summary(
+            document_id=self.doc.id,
+            corpus_id=self.corpus.id,
+            new_content="New async summary",
+            author_id=self.user.id,
+        )
+
+        self.assertTrue(result["created"])
+        self.assertEqual(result["version"], 1)
+
+        # Test no change
+        result = await aupdate_document_summary(
+            document_id=self.doc.id,
+            corpus_id=self.corpus.id,
+            new_content="New async summary",  # Same content
+            author_id=self.user.id,
+        )
+
+        self.assertFalse(result["created"])
+        self.assertEqual(result["message"], "No change in content")
+
+    async def test_aget_document_summary_at_version(self):
+        """Test async retrieval of specific version."""
+        from opencontractserver.llms.tools.core_tools import (
+            aget_document_summary_at_version,
+        )
+
+        # Create specific version using async helper
+        await self._update_summary_async(
+            self.doc,
+            new_content="Version 1 specific content",
+            author=self.user,
+            corpus=self.corpus,
+        )
+
+        result = await aget_document_summary_at_version(
+            self.doc.id, self.corpus.id, version=1
+        )
+        self.assertEqual(result, "Version 1 specific content")

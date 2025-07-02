@@ -1036,12 +1036,17 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
 
         socketRef.current.send(JSON.stringify(messageData));
 
-        // Don't clear pendingApproval immediately - wait for the response
+        // Hide the modal immediately after sending the decision (optimistic UI)
+        setShowApprovalModal(false);
+
+        // Don't clear pendingApproval yet - keep it until we get confirmation
         // It will be cleared when we receive the continuation content
         setWsError(null);
       } catch (err) {
         console.error("Failed to send approval decision:", err);
         setWsError("Failed to send approval decision. Please try again.");
+        // Re-show modal on error so user can try again
+        setShowApprovalModal(true);
       }
     },
     [pendingApproval, wsReady]

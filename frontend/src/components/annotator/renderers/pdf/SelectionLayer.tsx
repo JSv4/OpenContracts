@@ -15,6 +15,8 @@ import { useCorpusState } from "../../context/CorpusAtom";
 import { useAnnotationSelection } from "../../hooks/useAnnotationSelection";
 import { useAtom } from "jotai";
 import { isCreatingAnnotationAtom } from "../../context/UISettingsAtom";
+import styled from "styled-components";
+import { Copy, Tag } from "lucide-react";
 
 interface SelectionLayerProps {
   pageInfo: PDFPageInfo;
@@ -39,6 +41,13 @@ const SelectionLayer = ({
     { pageNumber: number; bounds: BoundingBox } | undefined
   >();
   const [multiSelections, setMultiSelections] = useState<{
+    [key: number]: BoundingBox[];
+  }>({});
+
+  // New states for selection action menu
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [actionMenuPosition, setActionMenuPosition] = useState({ x: 0, y: 0 });
+  const [pendingSelections, setPendingSelections] = useState<{
     [key: number]: BoundingBox[];
   }>({});
 
@@ -102,6 +111,57 @@ const SelectionLayer = ({
   );
 
   /**
+   * Handles copying selected text to clipboard.
+   */
+  const handleCopyText = useCallback(() => {
+    const selections = pendingSelections;
+    const pages = Object.keys(selections)
+      .map(Number)
+      .sort((a, b) => a - b);
+    let combinedText = "";
+
+    for (const pageNum of pages) {
+      const pageAnnotation = pageInfo.getPageAnnotationJson(
+        selections[pageNum]
+      );
+      if (pageAnnotation) {
+        combinedText += pageAnnotation.rawText + " ";
+      }
+    }
+
+    if (combinedText.trim()) {
+      navigator.clipboard.writeText(combinedText.trim());
+      console.log("[SelectionLayer] Text copied to clipboard");
+    }
+
+    // Clear states
+    setShowActionMenu(false);
+    setPendingSelections({});
+    setMultiSelections({});
+  }, [pendingSelections, pageInfo]);
+
+  /**
+   * Handles applying the current label to create an annotation.
+   */
+  const handleApplyLabel = useCallback(() => {
+    if (activeSpanLabel) {
+      handleCreateMultiPageAnnotation(pendingSelections);
+    }
+    setShowActionMenu(false);
+    setPendingSelections({});
+  }, [activeSpanLabel, pendingSelections, handleCreateMultiPageAnnotation]);
+
+  /**
+   * Handles canceling the selection without any action.
+   */
+  const handleCancel = useCallback(() => {
+    setShowActionMenu(false);
+    setPendingSelections({});
+    setMultiSelections({});
+    console.log("[SelectionLayer] Selection cancelled by user");
+  }, []);
+
+  /**
    * Handles the mouse up event to finalize the selection.
    */
   const handleMouseUp = useCallback(
@@ -122,8 +182,10 @@ const SelectionLayer = ({
           setIsCreatingAnnotation(false); // Reset creating annotation state
 
           if (!event.shiftKey) {
-            console.log("onMouseUp - handleCreateMultiPageAnnotation");
-            handleCreateMultiPageAnnotation(updatedSelections);
+            // Instead of immediately creating annotation, show action menu
+            setPendingSelections(updatedSelections);
+            setActionMenuPosition({ x: event.clientX, y: event.clientY });
+            setShowActionMenu(true);
           }
 
           return updatedSelections;
@@ -132,13 +194,7 @@ const SelectionLayer = ({
         console.log("onMouseUp - localPageSelection", localPageSelection);
       }
     },
-    [
-      localPageSelection,
-      pageNumber,
-      handleCreateMultiPageAnnotation,
-      pageInfo,
-      setIsCreatingAnnotation,
-    ]
+    [localPageSelection, pageNumber, setIsCreatingAnnotation]
   );
 
   /**
@@ -228,11 +284,16 @@ const SelectionLayer = ({
    * Converts bounding box selections to JSX elements.
    */
   const convertBoundsToSelections = useCallback(
-    (selection: BoundingBox, activeLabel: AnnotationLabelType): JSX.Element => {
-      const annotation = pageInfo.getAnnotationForBounds(
-        normalizeBounds(selection),
-        activeLabel
-      );
+    (
+      selection: BoundingBox,
+      activeLabel: AnnotationLabelType | null
+    ): JSX.Element => {
+      const annotation = activeLabel
+        ? pageInfo.getAnnotationForBounds(
+            normalizeBounds(selection),
+            activeLabel
+          )
+        : null;
 
       const tokens = annotation && annotation.tokens ? annotation.tokens : null;
 
@@ -243,7 +304,7 @@ const SelectionLayer = ({
             id={crypto.randomUUID()}
             showBoundingBox
             hidden={false}
-            color={activeSpanLabel?.color ? activeSpanLabel.color : ""}
+            color={activeLabel?.color || "#0066cc"}
             bounds={selection}
             selected={false}
           />
@@ -251,12 +312,77 @@ const SelectionLayer = ({
         </>
       );
     },
-    [pageInfo, activeSpanLabel, pageInfo]
+    [pageInfo]
   );
 
   const pageQueuedSelections = multiSelections[pageNumber]
     ? multiSelections[pageNumber]
     : [];
+
+  // Handle ESC key during selection
+  useEffect(() => {
+    const handleEscapeDuringSelection = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && localPageSelection) {
+        event.preventDefault();
+        event.stopPropagation();
+        setLocalPageSelection(undefined);
+        setIsCreatingAnnotation(false);
+        setMultiSelections({});
+        console.log("[SelectionLayer] Selection cancelled with ESC");
+      }
+    };
+
+    if (localPageSelection) {
+      document.addEventListener("keydown", handleEscapeDuringSelection);
+      return () => {
+        document.removeEventListener("keydown", handleEscapeDuringSelection);
+      };
+    }
+  }, [localPageSelection, setIsCreatingAnnotation]);
+
+  // Handle clicks outside the action menu and keyboard shortcuts
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showActionMenu && !target.closest(".selection-action-menu")) {
+        setShowActionMenu(false);
+        setPendingSelections({});
+        setMultiSelections({});
+      }
+    };
+
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (showActionMenu) {
+        switch (event.key.toLowerCase()) {
+          case "c":
+            event.preventDefault();
+            handleCopyText();
+            break;
+          case "a":
+            event.preventDefault();
+            if (activeSpanLabel) {
+              handleApplyLabel();
+            }
+            break;
+          case "escape":
+            event.preventDefault();
+            setShowActionMenu(false);
+            setPendingSelections({});
+            setMultiSelections({});
+            break;
+        }
+      }
+    };
+
+    if (showActionMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyPress);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+        document.removeEventListener("keydown", handleKeyPress);
+      };
+    }
+  }, [showActionMenu, handleCopyText, handleApplyLabel, activeSpanLabel]);
 
   return (
     <div
@@ -274,19 +400,127 @@ const SelectionLayer = ({
         zIndex: 1,
       }}
     >
-      {localPageSelection?.pageNumber === pageNumber && activeSpanLabel
+      {localPageSelection?.pageNumber === pageNumber
         ? convertBoundsToSelections(localPageSelection.bounds, activeSpanLabel)
         : null}
-      {pageQueuedSelections.length > 0 && activeSpanLabel
+      {pageQueuedSelections.length > 0
         ? pageQueuedSelections.map((selection, index) =>
-            convertBoundsToSelections(
-              selection,
-              activeSpanLabel as AnnotationLabelType
-            )
+            convertBoundsToSelections(selection, activeSpanLabel)
           )
         : null}
+      {/* Show pending selections even without a label (for copy action) */}
+      {showActionMenu &&
+        pendingSelections[pageNumber] &&
+        pendingSelections[pageNumber].map((selection, index) => (
+          <SelectionBoundary
+            key={`pending-${index}`}
+            id={`pending-${index}`}
+            showBoundingBox
+            hidden={false}
+            color="#0066cc"
+            bounds={selection}
+            selected={false}
+          />
+        ))}
+
+      {/* Selection Action Menu */}
+      {showActionMenu && (
+        <SelectionActionMenu
+          className="selection-action-menu"
+          data-testid="selection-action-menu"
+          style={{
+            position: "fixed",
+            left: `${actionMenuPosition.x}px`,
+            top: `${actionMenuPosition.y}px`,
+            zIndex: 1000,
+          }}
+        >
+          <ActionMenuItem
+            onClick={handleCopyText}
+            data-testid="copy-text-button"
+          >
+            <Copy size={16} />
+            <span>Copy Text</span>
+            <ShortcutHint>C</ShortcutHint>
+          </ActionMenuItem>
+          {activeSpanLabel && (
+            <>
+              <MenuDivider />
+              <ActionMenuItem
+                onClick={handleApplyLabel}
+                data-testid="apply-label-button"
+              >
+                <Tag size={16} />
+                <span>Apply Label: {activeSpanLabel.text}</span>
+                <ShortcutHint>A</ShortcutHint>
+              </ActionMenuItem>
+            </>
+          )}
+          <MenuFooter>
+            <span>ESC to cancel</span>
+          </MenuFooter>
+        </SelectionActionMenu>
+      )}
     </div>
   );
 };
+
+// Styled components for the action menu
+const SelectionActionMenu = styled.div`
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  min-width: 160px;
+`;
+
+const ActionMenuItem = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  color: #333;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+`;
+
+const MenuDivider = styled.div`
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 4px 0;
+`;
+
+const ShortcutHint = styled.span`
+  margin-left: auto;
+  font-size: 12px;
+  color: #666;
+  background-color: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+`;
+
+const MenuFooter = styled.div`
+  padding: 4px 12px;
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 4px;
+`;
 
 export default React.memo(SelectionLayer);

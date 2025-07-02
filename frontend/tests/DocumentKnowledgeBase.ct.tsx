@@ -500,7 +500,25 @@ test("selects a label and creates an annotation via unified feed", async ({
   await page.mouse.up();
   console.log("Mouse up completed");
 
-  // Give the UI a moment to stabilize after the drop
+  // Check that the action menu appears
+  const actionMenu = page.getByTestId("selection-action-menu");
+  await expect(actionMenu).toBeVisible({ timeout: LONG_TIMEOUT });
+  console.log("[TEST] Action menu appeared after selection");
+
+  // Verify both options are present (copy and apply label)
+  const copyButton = page.getByTestId("copy-text-button");
+  const applyLabelButton = page.getByTestId("apply-label-button");
+  await expect(copyButton).toBeVisible({ timeout: LONG_TIMEOUT });
+  await expect(applyLabelButton).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Check that the label name is shown in the apply button
+  await expect(applyLabelButton).toContainText("Apply Label:");
+
+  // Click the apply label button to create the annotation
+  await applyLabelButton.click();
+  console.log("[TEST] Clicked apply label button");
+
+  // Give the UI a moment to stabilize after the annotation creation
   await page.waitForTimeout(500);
 
   // Wait for Apollo cache to update
@@ -531,6 +549,209 @@ test("selects a label and creates an annotation via unified feed", async ({
     .first();
   await expect(annotationInFeed).toBeVisible({ timeout: 15000 });
   console.log("[TEST SUCCESS] Found annotation in unified feed");
+});
+
+test("keyboard shortcut 'C' copies selected text", async ({ mount, page }) => {
+  await mount(
+    <DocumentKnowledgeBaseTestWrapper
+      mocks={[...graphqlMocks, ...createSummaryMocks(PDF_DOC_ID, CORPUS_ID)]}
+      documentId={PDF_DOC_ID}
+      corpusId={CORPUS_ID}
+    />
+  );
+
+  // Wait for document to load
+  await expect(
+    page.getByRole("heading", { name: mockPdfDocument.title ?? "" })
+  ).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // PDF should be visible
+  await expect(page.locator("#pdf-container canvas").first()).toBeVisible({
+    timeout: LONG_TIMEOUT,
+  });
+
+  // Perform text selection
+  const firstPageContainer = page.locator(".PageAnnotationsContainer").first();
+  const selectionLayer = firstPageContainer.locator("#selection-layer");
+  const layerBox = await selectionLayer.boundingBox();
+  expect(layerBox).toBeTruthy();
+
+  // Create a selection
+  await page.mouse.move(
+    layerBox!.x + layerBox!.width * 0.5,
+    layerBox!.y + layerBox!.height * 0.1
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    layerBox!.x + layerBox!.width * 0.5,
+    layerBox!.y + layerBox!.height * 0.1 + 100,
+    { steps: 10 }
+  );
+  await page.mouse.up();
+
+  // Verify action menu appears
+  const actionMenu = page.getByTestId("selection-action-menu");
+  await expect(actionMenu).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Grant clipboard permissions
+  await page.context().grantPermissions(["clipboard-write", "clipboard-read"]);
+
+  // Press 'C' to copy
+  await page.keyboard.press("c");
+  console.log("[TEST] Pressed 'C' key to copy");
+
+  // Verify menu disappears after copy
+  await expect(actionMenu).not.toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Verify clipboard content (in Playwright we can read clipboard)
+  const clipboardText = await page.evaluate(() =>
+    navigator.clipboard.readText()
+  );
+  expect(clipboardText).toBeTruthy();
+  console.log("[TEST SUCCESS] Text copied to clipboard:", clipboardText);
+});
+
+test("keyboard shortcut 'A' applies label to create annotation", async ({
+  mount,
+  page,
+}) => {
+  await mount(
+    <DocumentKnowledgeBaseTestWrapper
+      mocks={[...graphqlMocks, ...createSummaryMocks(PDF_DOC_ID, CORPUS_ID)]}
+      documentId={PDF_DOC_ID}
+      corpusId={CORPUS_ID}
+    />
+  );
+
+  // Wait for document to load
+  await expect(
+    page.getByRole("heading", { name: mockPdfDocument.title ?? "" })
+  ).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Select a label first
+  const labelSelectorButton = page.locator(
+    '[data-testid="label-selector-toggle-button"]'
+  );
+  await expect(labelSelectorButton).toBeVisible({ timeout: LONG_TIMEOUT });
+  await labelSelectorButton.click();
+  const firstLabelOption = page.locator(".label-option").first();
+  await expect(firstLabelOption).toBeVisible({ timeout: LONG_TIMEOUT });
+  await firstLabelOption.click();
+
+  // Perform text selection
+  const firstPageContainer = page.locator(".PageAnnotationsContainer").first();
+  const selectionLayer = firstPageContainer.locator("#selection-layer");
+  const layerBox = await selectionLayer.boundingBox();
+
+  await page.mouse.move(
+    layerBox!.x + layerBox!.width * 0.5,
+    layerBox!.y + layerBox!.height * 0.1
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    layerBox!.x + layerBox!.width * 0.5,
+    layerBox!.y + layerBox!.height * 0.1 + 100,
+    { steps: 10 }
+  );
+  await page.mouse.up();
+
+  // Verify action menu appears
+  const actionMenu = page.getByTestId("selection-action-menu");
+  await expect(actionMenu).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Press 'A' to apply label
+  await page.keyboard.press("a");
+  console.log("[TEST] Pressed 'A' key to apply label");
+
+  // Verify menu disappears after applying label
+  await expect(actionMenu).not.toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Give time for annotation to be created
+  await page.waitForTimeout(1000);
+
+  // Open sidebar and check for annotation
+  const chatIndicator = page
+    .locator("button")
+    .filter({ has: page.locator('svg[class*="lucide-message-square"]') })
+    .last();
+  await chatIndicator.click();
+
+  const feedToggle = page.getByTestId("view-mode-feed");
+  await feedToggle.click();
+
+  const annotationInFeed = page
+    .locator('[data-annotation-id="new-annot-1"]')
+    .first();
+  await expect(annotationInFeed).toBeVisible({ timeout: 15000 });
+  console.log("[TEST SUCCESS] Annotation created using 'A' keyboard shortcut");
+});
+
+test("ESC key cancels selection and closes action menu", async ({
+  mount,
+  page,
+}) => {
+  await mount(
+    <DocumentKnowledgeBaseTestWrapper
+      mocks={[...graphqlMocks, ...createSummaryMocks(PDF_DOC_ID, CORPUS_ID)]}
+      documentId={PDF_DOC_ID}
+      corpusId={CORPUS_ID}
+    />
+  );
+
+  // Wait for document to load
+  await expect(
+    page.getByRole("heading", { name: mockPdfDocument.title ?? "" })
+  ).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  const firstPageContainer = page.locator(".PageAnnotationsContainer").first();
+  const selectionLayer = firstPageContainer.locator("#selection-layer");
+  const layerBox = await selectionLayer.boundingBox();
+
+  // Test 1: ESC during selection (before mouse up)
+  console.log("[TEST] Testing ESC during active selection");
+  await page.mouse.move(
+    layerBox!.x + layerBox!.width * 0.5,
+    layerBox!.y + layerBox!.height * 0.1
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    layerBox!.x + layerBox!.width * 0.5,
+    layerBox!.y + layerBox!.height * 0.1 + 50,
+    { steps: 5 }
+  );
+
+  // Press ESC while still dragging
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+
+  // Action menu should NOT appear
+  const actionMenu = page.getByTestId("selection-action-menu");
+  await expect(actionMenu).not.toBeVisible({ timeout: 1000 });
+  console.log("[TEST] ESC during selection prevented menu from appearing");
+
+  // Test 2: ESC after selection (with menu visible)
+  console.log("[TEST] Testing ESC with action menu visible");
+  await page.mouse.move(
+    layerBox!.x + layerBox!.width * 0.5,
+    layerBox!.y + layerBox!.height * 0.2
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    layerBox!.x + layerBox!.width * 0.5,
+    layerBox!.y + layerBox!.height * 0.2 + 100,
+    { steps: 10 }
+  );
+  await page.mouse.up();
+
+  // Verify action menu appears
+  await expect(actionMenu).toBeVisible({ timeout: LONG_TIMEOUT });
+
+  // Press ESC to close menu
+  await page.keyboard.press("Escape");
+
+  // Menu should disappear
+  await expect(actionMenu).not.toBeVisible({ timeout: LONG_TIMEOUT });
+  console.log("[TEST SUCCESS] ESC key closes action menu");
 });
 
 test("filters annotations in unified feed with structural toggle", async ({

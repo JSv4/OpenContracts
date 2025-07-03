@@ -60,6 +60,7 @@ from opencontractserver.llms.tools.core_tools import (
     aadd_document_note,
     aduplicate_annotations_with_label,
     aget_corpus_description,
+    aget_document_summary,
     aget_document_summary_diff,
     aget_document_summary_versions,
     aget_md_summary_token_length,
@@ -69,10 +70,7 @@ from opencontractserver.llms.tools.core_tools import (
     asearch_document_notes,
     aupdate_corpus_description,
     aupdate_document_note,
-    get_document_summary_versions,
-    get_document_summary_diff,
     aupdate_document_summary,
-    aget_document_summary,
 )
 from opencontractserver.llms.tools.pydantic_ai_tools import (
     PydanticAIDependencies,
@@ -317,7 +315,9 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                         try:
                             async with node.stream(agent_run.ctx) as model_stream:
                                 async for event in model_stream:
-                                    text, is_answer, meta = _event_to_text_and_meta(event)
+                                    text, is_answer, meta = _event_to_text_and_meta(
+                                        event
+                                    )
                                     if text:
                                         if is_answer:
                                             accumulated_content += text
@@ -363,22 +363,28 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                     if event.event_kind == "function_tool_call":
                                         tool_name = event.part.tool_name
                                         tool_args = event.part.args
-                                        tool_call_id = getattr(event.part, 'tool_call_id', str(uuid4()))
-                                        
+                                        tool_call_id = getattr(
+                                            event.part, "tool_call_id", str(uuid4())
+                                        )
+
                                         # Check if tool requires approval BEFORE pydantic-ai executes it
-                                        if self._check_tool_requires_approval(tool_name):
+                                        if self._check_tool_requires_approval(
+                                            tool_name
+                                        ):
                                             # Log the exact format of tool_args for debugging
                                             logger.info(
                                                 f"Tool '{tool_name}' requires approval. "
                                                 f"Args type: {type(tool_args)}, value: {tool_args!r}"
                                             )
-                                            
+
                                             # Ensure args are JSON-serializable
                                             if isinstance(tool_args, dict):
                                                 serializable_args = tool_args
                                             elif hasattr(tool_args, "model_dump"):
                                                 # Pydantic model
-                                                serializable_args = tool_args.model_dump()
+                                                serializable_args = (
+                                                    tool_args.model_dump()
+                                                )
                                             elif hasattr(tool_args, "__dict__"):
                                                 # Regular object
                                                 serializable_args = tool_args.__dict__
@@ -388,13 +394,15 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                                     f"Tool args not easily serializable: {type(tool_args)}"
                                                 )
                                                 serializable_args = str(tool_args)
-                                            
+
                                             # Store state to DB
                                             await self.complete_message(
                                                 llm_msg_id,
                                                 content="Awaiting user approval for tool execution.",
                                                 metadata={
-                                                    "state": str(MessageState.AWAITING_APPROVAL),
+                                                    "state": str(
+                                                        MessageState.AWAITING_APPROVAL
+                                                    ),
                                                     "pending_tool_call": {
                                                         "name": tool_name,
                                                         "arguments": serializable_args,
@@ -404,7 +412,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                                     "timeline": builder.timeline,  # Preserve timeline so far
                                                 },
                                             )
-                                            
+
                                             # Emit approval event and stop streaming
                                             yield ApprovalNeededEvent(
                                                 pending_tool_call={
@@ -414,10 +422,14 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                                 },
                                                 user_message_id=user_msg_id,
                                                 llm_message_id=llm_msg_id,
-                                                metadata={"state": str(MessageState.AWAITING_APPROVAL)},
+                                                metadata={
+                                                    "state": str(
+                                                        MessageState.AWAITING_APPROVAL
+                                                    )
+                                                },
                                             )
                                             return  # Exit the stream
-                                        
+
                                         # If no approval needed, emit the tool call event normally
                                         tool_ev = ThoughtEvent(
                                             thought=f"Calling tool `{tool_name}` with args {event.part.args}",
@@ -438,7 +450,8 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                             raw_sources = event.result.content  # type: ignore[attr-defined]
                                             if isinstance(raw_sources, list):
                                                 new_sources = [
-                                                    _to_source_node(s) for s in raw_sources
+                                                    _to_source_node(s)
+                                                    for s in raw_sources
                                                 ]
                                                 accumulated_sources.extend(new_sources)
                                                 # Emit a dedicated SourceEvent so the client
@@ -466,8 +479,10 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
 
                                                 if isinstance(result_payload, dict):
                                                     # 1) Surface child sources immediately so UI can pin them
-                                                    child_sources_raw = result_payload.get(
-                                                        "sources", []
+                                                    child_sources_raw = (
+                                                        result_payload.get(
+                                                            "sources", []
+                                                        )
                                                     )
                                                     if child_sources_raw:
                                                         new_sources = [
@@ -492,7 +507,8 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                                     )
                                                     for tl_entry in child_tl:
                                                         tl_text = (
-                                                            tl_entry.get("thought") or ""
+                                                            tl_entry.get("thought")
+                                                            or ""
                                                         )
                                                         if not tl_text:
                                                             continue
@@ -506,7 +522,9 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                                             metadata={
                                                                 "tool_name": tool_name,
                                                                 **(
-                                                                    tl_entry.get("metadata")
+                                                                    tl_entry.get(
+                                                                        "metadata"
+                                                                    )
                                                                     or {}
                                                                 ),
                                                             },
@@ -520,7 +538,9 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                                                         "answer", ""
                                                     )
                                                     if answer_txt:
-                                                        accumulated_content += answer_txt
+                                                        accumulated_content += (
+                                                            answer_txt
+                                                        )
                                                         content_ev = ContentEvent(
                                                             content=answer_txt,
                                                             accumulated_content=accumulated_content,
@@ -711,10 +731,12 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
         current_state = paused_msg.data.get("state")
         # Handle both enum and string values for state comparison
         awaiting_state = MessageState.AWAITING_APPROVAL
-        if hasattr(awaiting_state, 'value'):
+        if hasattr(awaiting_state, "value"):
             awaiting_state = awaiting_state.value
-            
-        if current_state != awaiting_state and current_state != str(MessageState.AWAITING_APPROVAL):
+
+        if current_state != awaiting_state and current_state != str(
+            MessageState.AWAITING_APPROVAL
+        ):
             logger.warning(
                 f"Message {llm_message_id} is not awaiting approval. "
                 f"Current state: {current_state}, data: {paused_msg.data}"
@@ -722,25 +744,27 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
             # Check if it was already processed (handle both enum values and strings)
             completed_states = [MessageState.COMPLETED, MessageState.CANCELLED]
             completed_values = [str(s) for s in completed_states]
-            if hasattr(MessageState.COMPLETED, 'value'):
+            if hasattr(MessageState.COMPLETED, "value"):
                 completed_values.extend([s.value for s in completed_states])
-                
+
             if current_state in completed_values:
                 logger.info("Message was already processed, likely a duplicate request")
                 # Return empty generator to avoid error
                 return
-            raise ValueError(f"Message is not awaiting approval (state: {current_state})")
+            raise ValueError(
+                f"Message is not awaiting approval (state: {current_state})"
+            )
 
         pending = paused_msg.data.get("pending_tool_call") or {}
         tool_name = pending.get("name")
         tool_args_raw = pending.get("arguments", {})
-        
+
         # Log the raw state for debugging
         logger.info(
             f"Resume approval for tool '{tool_name}': "
             f"raw args type={type(tool_args_raw)}, value={tool_args_raw!r}"
         )
-        
+
         # Normalize tool_args to always be a dict
         if isinstance(tool_args_raw, str):
             # Try to parse as JSON first
@@ -755,7 +779,9 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                     logger.info(f"String arg for update_document_summary: {tool_args}")
                 else:
                     # Generic fallback for other tools
-                    logger.warning(f"Tool args is plain string for {tool_name}: {tool_args_raw}")
+                    logger.warning(
+                        f"Tool args is plain string for {tool_name}: {tool_args_raw}"
+                    )
                     tool_args = {"arg": tool_args_raw}
         elif isinstance(tool_args_raw, dict):
             tool_args = tool_args_raw
@@ -776,7 +802,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
         if approved:
             # Locate tool by name among config.tools if available
             wrapper_fn = None
-            for tool in (self.config.tools or []):
+            for tool in self.config.tools or []:
                 if getattr(tool, "__name__", None) == tool_name:
                     wrapper_fn = tool
                     logger.info(f"Found tool '{tool_name}' in config.tools: {tool}")
@@ -798,17 +824,19 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
 
             # Try to execute the tool
             tool_executed = False
-            
+
             if wrapper_fn is not None:
                 # Found in config.tools - these should be callable functions
-                logger.info(f"Executing tool '{tool_name}' from config.tools with args: {tool_args}")
+                logger.info(
+                    f"Executing tool '{tool_name}' from config.tools with args: {tool_args}"
+                )
                 try:
                     result = await _maybe_await(wrapper_fn(_EmptyCtx(), **tool_args))
                     tool_executed = True
                 except TypeError as e:
                     logger.error(f"TypeError calling tool from config: {e}")
                     # Don't retry here, fall through to registry lookup
-                    
+
             if not tool_executed:
                 # Resort to pydantic-ai registry – may return Tool object.
                 tool_obj = self.pydantic_ai_agent._function_tools.get(tool_name)
@@ -827,8 +855,10 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                         "Tool object is not callable and no inner function found"
                     )
 
-                logger.info(f"Executing tool '{tool_name}' via registry with args: {tool_args}")
-                
+                logger.info(
+                    f"Executing tool '{tool_name}' via registry with args: {tool_args}"
+                )
+
                 # Final check to ensure tool_args is a dict
                 if not isinstance(tool_args, dict):
                     logger.error(
@@ -844,7 +874,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                             tool_args = {"arg": tool_args}
                     else:
                         tool_args = {}
-                
+
                 try:
                     result = await _maybe_await(candidate(_EmptyCtx(), **tool_args))
                 except TypeError as e:
@@ -959,14 +989,14 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
             # ----------------------------------------------
 
             accumulated_content = ""
-            
+
             # Create a continuation prompt that includes the tool result
             continuation_prompt = (
                 f"The tool '{tool_name}' was executed with user approval and returned: "
                 f"{json.dumps(tool_result, indent=2)}. "
                 f"Please continue with your original task based on this result."
             )
-            
+
             logger.info(f"Resuming with continuation prompt: {continuation_prompt}")
 
             async for ev in self._stream_core(
@@ -995,10 +1025,10 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
 
     def _check_tool_requires_approval(self, tool_name: str) -> bool:
         """Check if a tool requires approval before execution.
-        
+
         Args:
             tool_name: Name of the tool to check
-            
+
         Returns:
             True if the tool requires approval, False otherwise
         """
@@ -1017,7 +1047,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                     # Check if the tool itself has a requires_approval attribute
                     if hasattr(tool, "requires_approval"):
                         return tool.requires_approval
-        
+
         # Check tools registered with pydantic-ai agent
         if hasattr(self.pydantic_ai_agent, "_function_tools"):
             tool_obj = self.pydantic_ai_agent._function_tools.get(tool_name)
@@ -1027,22 +1057,24 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                     core_tool = getattr(tool_obj, attr, None)
                     if core_tool and hasattr(core_tool, "requires_approval"):
                         return core_tool.requires_approval
-                
+
                 # Check if the tool object itself has requires_approval
                 if hasattr(tool_obj, "requires_approval"):
                     return tool_obj.requires_approval
-                    
+
                 # Check the wrapped function
                 for attr in ("function", "_wrapped_function", "callable_function"):
                     func = getattr(tool_obj, attr, None)
                     if func:
                         # Check if the function has a core_tool attribute
-                        if hasattr(func, "core_tool") and hasattr(func.core_tool, "requires_approval"):
+                        if hasattr(func, "core_tool") and hasattr(
+                            func.core_tool, "requires_approval"
+                        ):
                             return func.core_tool.requires_approval
                         # Check if the function itself has requires_approval
                         if hasattr(func, "requires_approval"):
                             return func.requires_approval
-        
+
         # Default to not requiring approval
         return False
 
@@ -1222,9 +1254,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
             },
         )
 
-        async def get_document_summary_diff_tool(
-            from_version: int, to_version: int
-        ):
+        async def get_document_summary_diff_tool(from_version: int, to_version: int):
             """Return unified diff between two document summary versions."""
             return await aget_document_summary_diff(
                 document_id=context.document.id,

@@ -33,6 +33,11 @@ from opencontractserver.llms.agents.core_agents import (
 from opencontractserver.llms.embedders.custom_pipeline_embedding import (
     OpenContractsPipelineEmbedding,
 )
+from opencontractserver.llms.tools.core_tools import (
+    get_document_summary,
+    get_document_summary_diff,
+    get_document_summary_versions,
+)
 from opencontractserver.llms.tools.llama_index_tools import (
     get_md_summary_token_length_tool,
     get_note_content_token_length_tool,
@@ -42,11 +47,6 @@ from opencontractserver.llms.tools.llama_index_tools import (
 )
 from opencontractserver.llms.vector_stores.llama_index_vector_stores import (
     DjangoAnnotationVectorStore,
-)
-from opencontractserver.llms.tools.core_tools import (
-    get_document_summary,
-    get_document_summary_versions,
-    get_document_summary_diff,
 )
 
 # Apply nest_asyncio to enable nested event loops
@@ -222,6 +222,16 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
                 ),
             ]
         )
+
+        # -------------------------------------------------
+        # Integrate caller-supplied tools (if any)
+        # -------------------------------------------------
+        if tools:
+            # Ensure we preserve the default tools while allowing callers to augment
+            # the agent with additional functionality.
+            # Custom tools are simply appended – duplicates are not de-duplicated
+            # to avoid unintentionally masking caller intent.
+            current_tools.extend(tools)
 
         # Convert loaded messages to LlamaIndex format
         prefix_messages = [

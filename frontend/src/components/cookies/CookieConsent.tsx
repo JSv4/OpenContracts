@@ -91,7 +91,10 @@ export const CookieConsentDialog = () => {
         <Button
           color="green"
           inverted
-          onClick={() => showCookieAcceptModal(false)}
+          onClick={() => {
+            localStorage.setItem("oc_cookieAccepted", "true");
+            showCookieAcceptModal(false);
+          }}
         >
           <Icon name="checkmark" /> Accept
         </Button>

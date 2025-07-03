@@ -1,19 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@apollo/client";
-import { Card, Button, Header, Modal, Loader } from "semantic-ui-react";
+import { Button, Header, Modal, Loader } from "semantic-ui-react";
 import {
   MessageSquare,
   FileText,
-  Notebook,
-  Database,
   User,
   Calendar,
   X,
-  ChartNetwork,
   FileType,
   ArrowLeft,
-  Search,
-  BarChart3,
+  Settings,
 } from "lucide-react";
 import {
   GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
@@ -22,7 +18,7 @@ import {
 } from "../../../graphql/queries";
 import { getDocumentRawText, getPawlsLayer } from "../../annotator/api/rest";
 import { CorpusType, LabelType } from "../../../types/graphql-api";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { PDFContainer } from "../../annotator/display/viewer/DocumentViewer";
 import { PDFDocumentLoadingTask } from "pdfjs-dist";
 import { useUISettings } from "../../annotator/hooks/useUISettings";
@@ -61,58 +57,70 @@ import {
 } from "../../annotator/context/CorpusAtom";
 import { useAtom } from "jotai";
 import { useInitialAnnotations } from "../../annotator/hooks/AnnotationHooks";
-import { LabelSelector } from "../../annotator/labels/label_selector/LabelSelector";
+import { UnifiedLabelSelector } from "../../annotator/labels/UnifiedLabelSelector";
 import { PDF } from "../../annotator/renderers/pdf/PDF";
 import TxtAnnotatorWrapper from "../../annotator/components/wrappers/TxtAnnotatorWrapper";
-import { DocTypeLabelDisplay } from "../../annotator/labels/doc_types/DocTypeLabelDisplay";
 import { useAnnotationControls } from "../../annotator/context/UISettingsAtom";
-import { RelationshipList } from "../../annotator/display/components/RelationshipList";
-import { AnnotationList } from "../../annotator/display/components/AnnotationList";
-import LayerSwitcher from "../../widgets/buttons/LayerSelector";
-import DocNavigation from "../../widgets/buttons/DocNavigation";
+
 import {
   ContentArea,
   ControlButton,
   ControlButtonGroupLeft,
   ControlButtonWrapper,
   HeaderContainer,
-  LoadingPlaceholders,
   MainContentArea,
   MetadataRow,
-  RelationshipCard,
-  RelationshipPanel,
-  RelationshipType,
   SlidingPanel,
-  SummaryContent,
-  TabButton,
-  TabsColumn,
   EmptyState,
+  ResizeHandle,
+  ResizeHandleControl,
+  WidthControlMenu,
+  WidthMenuItem,
+  ChatIndicator,
 } from "./StyledContainers";
-import { NoteModal, NotesGrid, PostItNote, NotesHeader } from "./StickyNotes";
-import { SearchSidebarWidget } from "../../annotator/search_widget/SearchSidebarWidget";
+import { NoteModal } from "./StickyNotes";
+
 import { useTextSearch } from "../../annotator/hooks/useTextSearch";
 import {
   useAnalysisManager,
   useAnalysisSelection,
 } from "../../annotator/hooks/AnalysisHooks";
-import ExtractTraySelector from "../../analyses/ExtractTraySelector";
-import AnalysisTraySelector from "../../analyses/AnalysisTraySelector";
-import { SingleDocumentExtractResults } from "../../annotator/sidebar/SingleDocumentExtractResults";
-import { FullScreenModal, SourceIndicator } from "./LayoutComponents";
+
+import { FullScreenModal } from "./LayoutComponents";
 import { ChatTray } from "./right_tray/ChatTray";
 import { SafeMarkdown } from "../markdown/SafeMarkdown";
-import { NewChatFloatingButton } from "./ChatContainers";
-import { SelectDocumentAnalyzerModal } from "./SelectDocumentAnalyzerModal";
-import { SelectDocumentFieldsetModal } from "./SelectDocumentFieldsetModal";
 import { useAnnotationSelection } from "../../annotator/hooks/useAnnotationSelection";
 import styled from "styled-components";
 import { Icon } from "semantic-ui-react";
 import { useChatSourceState } from "../../annotator/context/ChatSourceAtom";
 import { useCreateAnnotation } from "../../annotator/hooks/AnnotationHooks";
 import { useScrollContainerRef } from "../../annotator/context/DocumentAtom";
+import { useChatPanelWidth } from "../../annotator/context/UISettingsAtom";
+import { NoteEditor } from "./NoteEditor";
+import { NewNoteModal } from "./NewNoteModal";
+import { useUrlAnnotationSync } from "../../../hooks/useUrlAnnotationSync";
+import { FloatingSummaryPreview } from "./floating_summary_preview/FloatingSummaryPreview";
+import { ZoomControls } from "./ZoomControls";
 
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
+import { openedDocument, openedCorpus } from "../../../graphql/cache";
+import { selectedAnnotationIds } from "../../../graphql/cache";
+import { useAuthReady } from "../../../hooks/useAuthReady";
+
+// New imports for unified feed
+import {
+  UnifiedContentFeed,
+  SidebarControlBar,
+  ContentFilters,
+  SortOption,
+  SidebarViewMode,
+} from "./unified_feed";
+import { FloatingDocumentControls } from "./FloatingDocumentControls";
+import { FloatingDocumentInput } from "./FloatingDocumentInput";
+import { FloatingAnalysesPanel } from "./FloatingAnalysesPanel";
+import { FloatingExtractsPanel } from "./FloatingExtractsPanel";
+import UnifiedKnowledgeLayer from "./layers/UnifiedKnowledgeLayer";
 
 // Setting worker path to worker bundle.
 GlobalWorkerOptions.workerSrc = workerSrc;
@@ -120,169 +128,95 @@ GlobalWorkerOptions.workerSrc = workerSrc;
 interface DocumentKnowledgeBaseProps {
   documentId: string;
   corpusId: string;
+  /**
+   * Optional list of annotation IDs that should be selected when the modal opens.
+   * When provided the component will seed `selectedAnnotationsAtom`, triggering
+   * the usual scroll-to-annotation behaviour in the PDF/TXT viewers.
+   */
+  initialAnnotationIds?: string[];
   onClose?: () => void;
 }
-
-// Panels from the old "AnnotatorSidebar":
-const AnnotationsPanel: React.FC = () => {
-  const { selectedAnalysis, selectedExtract } = useAnalysisSelection();
-
-  return (
-    <div
-      className="sidebar__annotations"
-      style={{ padding: "1rem", overflowY: "hidden" }}
-    >
-      {selectedAnalysis && (
-        <SourceIndicator>
-          Showing annotations from analysis: {selectedAnalysis.analyzer.id}
-        </SourceIndicator>
-      )}
-      {selectedExtract && (
-        <SourceIndicator>
-          Showing annotations from extract: {selectedExtract.name}
-        </SourceIndicator>
-      )}
-      <AnnotationList read_only={false} />
-    </div>
-  );
-};
-
-const RelationsPanel: React.FC = () => {
-  const { selectedAnalysis } = useAnalysisSelection();
-  const { selectedExtract } = useAnalysisSelection();
-
-  return (
-    <div
-      className="sidebar__relation__annotation"
-      style={{ padding: "1rem", overflowY: "hidden" }}
-    >
-      {selectedAnalysis && (
-        <SourceIndicator>
-          Showing relationships from analysis: {selectedAnalysis.analyzer.id}
-        </SourceIndicator>
-      )}
-      {selectedExtract && (
-        <SourceIndicator>
-          Showing relationships from extract: {selectedExtract.name}
-        </SourceIndicator>
-      )}
-      <RelationshipList read_only={false} />
-    </div>
-  );
-};
-
-const SelectedExtractHeader = styled.div`
-  display: flex;
-  align-items: center;
-  margin-bottom: 1.25rem;
-  padding: 1rem 1.25rem;
-  background: linear-gradient(135deg, #f8fafc, rgba(255, 255, 255, 0.8));
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-
-  &:hover {
-    background: linear-gradient(135deg, #f1f5f9, rgba(255, 255, 255, 0.9));
-    border-color: #cbd5e1;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(148, 163, 184, 0.05);
-  }
-`;
-
-const ExtractInfo = styled.div`
-  flex: 1;
-  min-width: 0;
-
-  h3 {
-    margin: 0 0 0.375rem 0;
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #1e293b;
-  }
-
-  p {
-    margin: 0;
-    font-size: 0.875rem;
-    color: #64748b;
-  }
-`;
-
-const BackButton = styled(Button)`
-  background: white !important;
-  color: #64748b !important;
-  border: 1px solid #e2e8f0 !important;
-  padding: 0.625rem 1rem !important;
-  border-radius: 12px !important;
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 0.5rem !important;
-  transition: all 0.2s ease !important;
-
-  &:hover {
-    background: #f8fafc !important;
-    color: #4a90e2 !important;
-    border-color: #4a90e2 !important;
-    transform: translateX(-2px);
-  }
-
-  i.icon {
-    margin: 0 !important;
-    font-size: 1rem !important;
-    transition: transform 0.2s ease !important;
-  }
-
-  &:hover i.icon {
-    transform: translateX(-2px);
-  }
-`;
-
-const AnimatedWrapper = styled.div`
-  &.exit {
-    animation: slideOut 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  @keyframes slideOut {
-    from {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    to {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-  }
-`;
 
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   documentId,
   corpusId,
+  initialAnnotationIds,
   onClose,
 }) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
-  // Helper to compute the panel width following the clamp strategy
-  const getPanelWidth = (windowWidth: number): number =>
-    Math.min(Math.max(windowWidth * 0.65, 320), 520);
-
   const { setProgress, zoomLevel, setShiftDown, setZoomLevel } = useUISettings({
     width,
   });
+
+  // Chat panel width management
+  const { mode, customWidth, setMode, setCustomWidth, minimize, restore } =
+    useChatPanelWidth();
+
+  // Calculate actual panel width based on mode
+  const getPanelWidthPercentage = (): number => {
+    let width: number;
+    switch (mode) {
+      case "quarter":
+        width = 25;
+        break;
+      case "half":
+        width = 50;
+        break;
+      case "full":
+        width = 90;
+        break;
+      case "custom":
+        width = customWidth || 50;
+        break;
+      default:
+        width = 50;
+    }
+    console.log("Panel width calculation - mode:", mode, "width:", width);
+    return width;
+  };
+
+  // Resize handle state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartWidth, setDragStartWidth] = useState(0);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const documentAreaRef = useRef<HTMLDivElement>(null);
+  const [showWidthMenu, setShowWidthMenu] = useState(false);
+
   const [showGraph, setShowGraph] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("summary");
-  const [showAnalyzerModal, setShowAnalyzerModal] = useState(false);
 
   // This layer state still determines whether to show the knowledge base layout vs document layout
   const [activeLayer, setActiveLayer] = useState<"knowledge" | "document">(
-    "knowledge"
+    "document"
   );
 
   const [viewState, setViewState] = useState<ViewState>(ViewState.LOADING);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
+
+  // Calculate floating controls offset and visibility
+  const calculateFloatingControlsState = () => {
+    if (isMobile || !showRightPanel || activeLayer !== "document") {
+      return { offset: 0, visible: true };
+    }
+
+    const panelWidthPercent = getPanelWidthPercentage();
+    const windowWidth = window.innerWidth;
+    const panelWidthPx = (panelWidthPercent / 100) * windowWidth;
+    const remainingSpacePercent = 100 - panelWidthPercent;
+    const remainingSpacePx = windowWidth - panelWidthPx;
+
+    // Hide controls if less than 10% viewport or less than 100px remaining
+    const shouldHide = remainingSpacePercent < 10 || remainingSpacePx < 100;
+
+    return {
+      offset: shouldHide ? 0 : panelWidthPx,
+      visible: !shouldHide,
+    };
+  };
+
+  const floatingControlsState = calculateFloatingControlsState();
 
   const { setDocumentType } = useDocumentType();
   const { setDocument } = useDocumentState();
@@ -296,11 +230,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [, setStructuralAnnotations] = useAtom(structuralAnnotationsAtom);
   const { setCorpus } = useCorpusState();
   const { setInitialAnnotations } = useInitialAnnotations();
-  const { setSearchText } = useSearchText();
+  const { searchText, setSearchText } = useSearchText();
   const { setPermissions } = useDocumentPermissions();
   const { setTextSearchState } = useTextSearchState();
   const { activeSpanLabel, setActiveSpanLabel } = useAnnotationControls();
   const { setChatSourceState } = useChatSourceState();
+  const { setPdfDoc } = usePdfDoc();
 
   // Call the hook ONCE here
   const createAnnotationHandler = useCreateAnnotation();
@@ -309,7 +244,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const [markdownError, setMarkdownError] = useState<boolean>(false);
 
   const { selectedAnalysis, selectedExtract } = useAnalysisSelection();
-  const { selectedAnnotations } = useAnnotationSelection();
+  const { selectedAnnotations, setSelectedAnnotations } =
+    useAnnotationSelection();
 
   const {
     dataCells,
@@ -468,7 +404,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         const transformedCorpus: CorpusType = {
           ...data.corpus,
           myPermissions: getPermissions(data.corpus.myPermissions || []),
-        };
+        } as any;
         corpusUpdatePayload.selectedCorpus = transformedCorpus; // Assign the transformed object
       }
 
@@ -482,6 +418,17 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         setCorpus(corpusUpdatePayload); // Pass the complete payload
         console.log("[processAnnotationsData] setCorpus called.");
       }
+
+      // Keep global navigation vars in sync so router & other components know
+      openedDocument(data.document as any);
+      if (data.corpus) {
+        const transformedCorpus: CorpusType = {
+          ...data.corpus,
+          myPermissions: getPermissions(data.corpus.myPermissions || []),
+        } as any;
+        openedCorpus(transformedCorpus);
+      }
+      setPermissions(data.document.myPermissions ?? []);
     }
   };
 
@@ -534,7 +481,81 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     [setShiftDown]
   );
 
+  // Show zoom indicator feedback
+  const showZoomFeedback = useCallback(() => {
+    setShowZoomIndicator(true);
+
+    // Clear existing timer
+    if (zoomIndicatorTimer.current) {
+      clearTimeout(zoomIndicatorTimer.current);
+    }
+
+    // Hide after 1.5 seconds
+    zoomIndicatorTimer.current = setTimeout(() => {
+      setShowZoomIndicator(false);
+    }, 1500);
+  }, []);
+
+  // Browser zoom event handlers
+  const handleWheelZoom = useCallback(
+    (event: WheelEvent) => {
+      // Only handle if in document layer and Ctrl/Cmd is pressed
+      if (activeLayer !== "document" || (!event.ctrlKey && !event.metaKey)) {
+        return;
+      }
+
+      // Prevent default browser zoom
+      event.preventDefault();
+
+      // Calculate zoom delta (normalize across browsers)
+      const delta = event.deltaY > 0 ? -0.1 : 0.1;
+      const newZoom = Math.max(0.5, Math.min(4, zoomLevel + delta));
+
+      setZoomLevel(newZoom);
+      showZoomFeedback();
+    },
+    [activeLayer, zoomLevel, setZoomLevel, showZoomFeedback]
+  );
+
+  const handleKeyboardZoom = useCallback(
+    (event: KeyboardEvent) => {
+      // Only handle if in document layer
+      if (activeLayer !== "document") return;
+
+      // Check for Ctrl/Cmd modifier
+      if (!event.ctrlKey && !event.metaKey) return;
+
+      let handled = false;
+
+      switch (event.key) {
+        case "+":
+        case "=": // Handle both + and = (same key without shift)
+          event.preventDefault();
+          setZoomLevel(Math.min(zoomLevel + 0.1, 4));
+          handled = true;
+          break;
+        case "-":
+        case "_": // Handle both - and _ (same key without shift)
+          event.preventDefault();
+          setZoomLevel(Math.max(zoomLevel - 0.1, 0.5));
+          handled = true;
+          break;
+        case "0":
+          event.preventDefault();
+          setZoomLevel(1); // Reset to 100%
+          handled = true;
+          break;
+      }
+
+      if (handled) {
+        showZoomFeedback();
+      }
+    },
+    [activeLayer, zoomLevel, setZoomLevel, showZoomFeedback]
+  );
+
   // Fetch combined knowledge & annotation data
+  const authReady = useAuthReady();
   const {
     data: combinedData,
     loading,
@@ -544,6 +565,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     GetDocumentKnowledgeAndAnnotationsOutput,
     GetDocumentKnowledgeAndAnnotationsInput
   >(GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS, {
+    skip: !authReady || !documentId || !corpusId,
     variables: {
       documentId,
       corpusId,
@@ -686,13 +708,29 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       }
     },
     onError: (error) => {
+      // If the backend hasn\'t yet indexed/authorised this doc the first
+      // request may come back with "Document matching query does not exist.".
+      // We silently ignore this **once** and keep the loader visible; a
+      // follow-up refetch (triggered when Apollo receives the updated auth
+      // headers) will succeed and onCompleted will take over.
+      const benign404 =
+        error?.graphQLErrors?.length === 1 &&
+        error.graphQLErrors[0].message.includes(
+          "Document matching query does not exist"
+        );
+
+      if (benign404) {
+        console.warn("Initial 404 for document – will retry automatically");
+        return; // keep LOADING state
+      }
+
+      // Otherwise treat as real error
       console.error("GraphQL Query Error fetching document data:", error);
       toast.error(`Failed to load document details: ${error.message}`);
       setViewState(ViewState.ERROR);
     },
     fetchPolicy: "network-only",
     nextFetchPolicy: "no-cache",
-    skip: !documentId || !corpusId,
   });
 
   useEffect(() => {
@@ -722,7 +760,108 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     created: new Date().toISOString(),
   };
 
+  const notes = combinedData?.document?.allNotes ?? [];
   const docRelationships = combinedData?.document?.allDocRelationships ?? [];
+
+  // Resize handlers
+  const handleResizeStart = (e: React.MouseEvent) => {
+    // Don't start resize if clicking on a button
+    const target = e.target as HTMLElement;
+    if (target.closest("button")) {
+      return;
+    }
+
+    setIsDragging(true);
+    setDragStartX(e.clientX);
+    setDragStartWidth(getPanelWidthPercentage());
+    e.preventDefault();
+  };
+
+  const handleResizeMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging) return;
+
+      const deltaX = dragStartX - e.clientX;
+      const windowWidth = window.innerWidth;
+      const deltaPercentage = (deltaX / windowWidth) * 100;
+      const newWidth = Math.max(
+        15,
+        Math.min(95, dragStartWidth + deltaPercentage)
+      );
+
+      // Snap to preset widths if close
+      const snapThreshold = 3;
+      if (Math.abs(newWidth - 25) < snapThreshold) {
+        setMode("quarter");
+      } else if (Math.abs(newWidth - 50) < snapThreshold) {
+        setMode("half");
+      } else if (Math.abs(newWidth - 90) < snapThreshold) {
+        setMode("full");
+      } else {
+        setCustomWidth(newWidth);
+      }
+    },
+    [isDragging, dragStartX, dragStartWidth, setMode, setCustomWidth]
+  );
+
+  const handleResizeEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Add resize event listeners
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handleResizeMove);
+      document.addEventListener("mouseup", handleResizeEnd);
+      return () => {
+        document.removeEventListener("mousemove", handleResizeMove);
+        document.removeEventListener("mouseup", handleResizeEnd);
+      };
+    }
+  }, [isDragging, handleResizeMove, handleResizeEnd]);
+
+  // Auto-minimize logic
+  const handleDocumentMouseEnter = useCallback(() => {
+    // Desktop: no auto-collapse – user controls size fully.
+    if (!isMobile) return;
+
+    // Mobile / small-screen responsive mode: close the panel when the user
+    // interacts with the document to maximise canvas real-estate.
+    if (showRightPanel && !isDragging) {
+      setShowRightPanel(false);
+    }
+  }, [showRightPanel, isDragging, isMobile, setShowRightPanel]);
+
+  const handlePanelMouseEnter = useCallback(() => {
+    // Restoration logic only relevant on desktop where we allow minimised width
+    if (!isMobile && isMinimized) {
+      restore();
+      setIsMinimized(false);
+    }
+  }, [isMinimized, restore, isMobile]);
+
+  // Reset minimized state when panel closes
+  useEffect(() => {
+    if (!showRightPanel) {
+      setIsMinimized(false);
+    }
+  }, [showRightPanel]);
+
+  // Close width menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (showWidthMenu && !target.closest("[data-width-menu]")) {
+        setShowWidthMenu(false);
+      }
+    };
+
+    if (showWidthMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showWidthMenu]);
 
   // Load MD summary if available
   useEffect(() => {
@@ -746,354 +885,117 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     fetchMarkdownContent();
   }, [combinedData?.document?.mdSummaryFile]);
 
+  // Browser zoom event handling
+  useEffect(() => {
+    // Only attach listeners if we're in document view
+    if (activeLayer !== "document") return;
+
+    // Add wheel listener with passive: false to allow preventDefault
+    document.addEventListener("wheel", handleWheelZoom, { passive: false });
+    document.addEventListener("keydown", handleKeyboardZoom);
+
+    return () => {
+      document.removeEventListener("wheel", handleWheelZoom);
+      document.removeEventListener("keydown", handleKeyboardZoom);
+    };
+  }, [activeLayer, handleWheelZoom, handleKeyboardZoom]);
+
   const [selectedNote, setSelectedNote] = useState<(typeof notes)[0] | null>(
     null
   );
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [showNewNoteModal, setShowNewNoteModal] = useState(false);
 
-  /* doc viewer (pdf or text snippet) */
-  const { setPdfDoc } = usePdfDoc();
+  // Unified feed state
+  const [sidebarViewMode, setSidebarViewMode] =
+    useState<SidebarViewMode["mode"]>("chat");
+  const [feedFilters, setFeedFilters] = useState<ContentFilters>({
+    contentTypes: new Set(["note", "annotation", "relationship", "search"]),
+    annotationFilters: {
+      showStructural: false,
+    },
+    relationshipFilters: {
+      showStructural: false,
+    },
+  });
+  const [feedSortBy, setFeedSortBy] = useState<SortOption>("page");
 
-  // Minimal arrays are replaced by a single unified array of tabs:
-  // Each tab includes which layer it wants by default ("knowledge", "document", or "both").
-  // If tab.layer === "document", we switch activeLayer to "document".
-  // If tab.layer === "knowledge", we switch activeLayer to "knowledge".
-  // If tab.layer === "both", we don't change the layer from whatever it currently is.
-  interface NavTab {
-    key: string;
-    label: string;
-    icon: React.ReactNode;
-    layer: "knowledge" | "document" | "both";
-  }
-
-  const allTabs: NavTab[] = [
-    {
-      key: "summary",
-      label: "Summary",
-      icon: <FileText size={18} />,
-      layer: "knowledge",
-    },
-    {
-      key: "chat",
-      label: "Chat",
-      icon: <MessageSquare size={18} />,
-      layer: "both",
-    },
-    {
-      key: "notes",
-      label: "Notes",
-      icon: <Notebook size={18} />,
-      layer: "both",
-    },
-    {
-      key: "relationships",
-      label: "Doc Relationships",
-      icon: <ChartNetwork size={18} />,
-      layer: "both",
-    },
-    {
-      key: "annotations",
-      label: "Annotations",
-      icon: <FileText size={18} />,
-      layer: "document",
-    },
-    {
-      key: "relations",
-      label: "Annotation Relationships",
-      icon: <ChartNetwork size={18} />,
-      layer: "document",
-    },
-    {
-      key: "search",
-      label: "Search",
-      icon: <Search size={18} />,
-      layer: "document",
-    },
-    {
-      key: "analyses",
-      label: "Analyses",
-      icon: <BarChart3 size={18} />,
-      layer: "document",
-    },
-    {
-      key: "extracts",
-      label: "Extracts",
-      icon: <FileText size={18} />,
-      layer: "document",
-    },
-  ];
-
-  // We no longer base tabs on the layer. Instead, we always show allTabs.
-  const visibleTabs = allTabs;
-
-  const notes = combinedData?.document?.allNotes ?? [];
-
-  // Decide if we show the right panel based on whether or not a tab is selected
-  useEffect(() => {
-    if (!activeTab) {
-      // If no tab is selected, always hide the panel
-      setShowRightPanel(false);
-    } else {
-      // In practice, we do want to show the right panel for all selected tabs
-      // The existing code already handles which content to show. We'll keep it that way.
-      setShowRightPanel(true);
-    }
-  }, [activeTab]);
-
-  // Add new state for showing load menu
+  // Add new state for floating panels
+  const [showAnalysesPanel, setShowAnalysesPanel] = useState(false);
+  const [showExtractsPanel, setShowExtractsPanel] = useState(false);
   const [showLoad, setShowLoad] = useState(false);
+  const [pendingChatMessage, setPendingChatMessage] = useState<string>();
+  const [showZoomIndicator, setShowZoomIndicator] = useState(false);
+  const zoomIndicatorTimer = useRef<NodeJS.Timeout>();
 
-  /* State for showing the new SelectDocumentFieldsetModal */
-  const [showFieldsetModal, setShowFieldsetModal] = useState(false);
-
-  const [isExiting, setIsExiting] = useState(false);
-
-  const handleBack = () => {
-    setIsExiting(true);
-    setTimeout(() => {
-      onSelectExtract(null);
-      setIsExiting(false);
-    }, 200); // Match the slideOut animation duration
-  };
+  // Clear pending message after passing it to ChatTray
+  useEffect(() => {
+    if (pendingChatMessage) {
+      // Clear after a short delay to ensure ChatTray has received it
+      const timer = setTimeout(() => setPendingChatMessage(undefined), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingChatMessage]);
 
   const rightPanelContent = (() => {
-    switch (activeTab) {
-      case "chat":
-        return (
-          <ChatTray
-            setShowLoad={setShowLoad}
-            showLoad={showLoad}
-            documentId={documentId}
-            onMessageSelect={() => {
-              setActiveLayer("document");
+    if (!showRightPanel) return null;
+
+    // First, add the control bar for switching between chat and feed modes
+    const controlBar = (
+      <SidebarControlBar
+        viewMode={sidebarViewMode}
+        onViewModeChange={setSidebarViewMode}
+        filters={feedFilters}
+        onFiltersChange={setFeedFilters}
+        sortBy={feedSortBy}
+        onSortChange={setFeedSortBy}
+        hasActiveSearch={!!searchText}
+      />
+    );
+
+    // Handle unified feed mode
+    if (sidebarViewMode === "feed") {
+      return (
+        <div
+          style={{ display: "flex", flexDirection: "column", height: "100%" }}
+        >
+          {controlBar}
+          <UnifiedContentFeed
+            notes={notes}
+            filters={feedFilters}
+            sortBy={feedSortBy}
+            isLoading={loading}
+            onItemSelect={(item) => {
+              // Handle item selection based on type
+              if (item.type === "annotation" || item.type === "relationship") {
+                setActiveLayer("document");
+              }
+              // For notes, we could open the note modal
+              if (item.type === "note" && "creator" in item.data) {
+                setSelectedNote(item.data as (typeof notes)[0]);
+              }
             }}
-            corpusId={corpusId}
           />
-        );
-      case "notes":
-        return (
-          <div className="flex-1 overflow-auto">
-            <NotesHeader>
-              <h3>
-                <Notebook size={20} />
-                Document Notes
-              </h3>
-              <div className="meta">
-                {notes.length} note{notes.length !== 1 ? "s" : ""}
-              </div>
-            </NotesHeader>
-            {loading ? (
-              <LoadingPlaceholders type="notes" />
-            ) : notes.length === 0 ? (
-              <EmptyState
-                icon={<Notebook size={40} />}
-                title="No notes yet"
-                description="Start adding notes to this document"
-              />
-            ) : (
-              <NotesGrid>
-                {notes.map((note, index) => (
-                  <PostItNote
-                    key={note.id}
-                    onClick={() => setSelectedNote(note)}
-                    initial={{ opacity: 0, y: 20, rotate: 0 }}
-                    animate={{
-                      opacity: 1,
-                      y: 0,
-                      rotate:
-                        ((index % 3) - 1) * 1.5 + (Math.random() * 1 - 0.5),
-                      transition: {
-                        opacity: { duration: 0.3 },
-                        y: { duration: 0.3 },
-                        rotate: { duration: 0.4, ease: "easeOut" },
-                      },
-                    }}
-                    whileHover={{
-                      y: -4,
-                      rotate: ((index % 3) - 1) * 0.5,
-                      transition: { duration: 0.2 },
-                    }}
-                  >
-                    <div className="content">
-                      <SafeMarkdown>{note.content}</SafeMarkdown>
-                    </div>
-                    <div className="meta">
-                      {note.creator.email} •{" "}
-                      {new Date(note.created).toLocaleDateString()}
-                    </div>
-                  </PostItNote>
-                ))}
-              </NotesGrid>
-            )}
-          </div>
-        );
-      case "search":
-        return (
-          <div
-            className="p-4 flex-1 flex flex-col"
-            style={{ overflow: "hidden" }}
-          >
-            <SearchSidebarWidget />
-          </div>
-        );
-      case "relationships":
-        return (
-          <div className="p-4 flex-1 flex flex-col">
-            {loading ? (
-              <LoadingPlaceholders type="relationships" />
-            ) : docRelationships.length === 0 ? (
-              <EmptyState
-                icon={<ChartNetwork size={40} />}
-                title="No relationships yet"
-                description="Connect this document with others to create relationships"
-              />
-            ) : (
-              <RelationshipPanel>
-                <h3>
-                  <ChartNetwork size={20} />
-                  Document Relationships
-                </h3>
-                {docRelationships.map((rel) => {
-                  const otherDoc =
-                    rel.sourceDocument.id === documentId
-                      ? rel.targetDocument
-                      : rel.sourceDocument;
-                  return (
-                    <RelationshipCard key={rel.id}>
-                      <Card.Content>
-                        <RelationshipType>
-                          {rel.relationshipType}
-                        </RelationshipType>
-                        <Card.Header style={{ marginBottom: "0.5rem" }}>
-                          {otherDoc.title || "Untitled Document"}
-                        </Card.Header>
-                        <Card.Meta>
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: "1rem",
-                              color: "#6c757d",
-                            }}
-                          >
-                            <span>
-                              <FileType
-                                size={14}
-                                style={{ marginRight: "0.25rem" }}
-                              />
-                              {otherDoc.fileType}
-                            </span>
-                            <span>
-                              <User
-                                size={14}
-                                style={{ marginRight: "0.25rem" }}
-                              />
-                              {otherDoc.creator?.email}
-                            </span>
-                          </div>
-                        </Card.Meta>
-                        {rel.annotationLabel && (
-                          <Card.Description style={{ marginTop: "0.75rem" }}>
-                            {rel.annotationLabel.text}
-                          </Card.Description>
-                        )}
-                      </Card.Content>
-                    </RelationshipCard>
-                  );
-                })}
-              </RelationshipPanel>
-            )}
-          </div>
-        );
-      case "annotations":
-        return <AnnotationsPanel />;
-      case "relations":
-        return <RelationsPanel />;
-      case "analyses":
-        return (
-          <>
-            <div style={{ padding: "1rem", overflow: "hidden" }}>
-              <AnalysisTraySelector read_only={false} analyses={analyses} />
-            </div>
-            <NewChatFloatingButton onClick={() => setShowAnalyzerModal(true)}>
-              <i className="plus icon" />
-            </NewChatFloatingButton>
-            <SelectDocumentAnalyzerModal
-              documentId={documentId}
-              corpusId={corpusId}
-              open={showAnalyzerModal}
-              onClose={() => setShowAnalyzerModal(false)}
-            />
-          </>
-        );
-      case "extracts":
-        return (
-          <div style={{ padding: "1rem", overflow: "hidden" }}>
-            <AnimatePresence exitBeforeEnter>
-              {selectedExtract ? (
-                <motion.div
-                  key="selected-extract"
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  <AnimatedWrapper className={isExiting ? "exit" : ""}>
-                    <SelectedExtractHeader>
-                      <ExtractInfo>
-                        <h3>{selectedExtract.name}</h3>
-                        <p>
-                          {selectedExtract.fieldset?.description ||
-                            "No description available"}
-                        </p>
-                      </ExtractInfo>
-                      <BackButton onClick={handleBack}>
-                        <Icon name="arrow left" />
-                        Back to Extracts
-                      </BackButton>
-                    </SelectedExtractHeader>
-                  </AnimatedWrapper>
-                  <motion.div
-                    key="extract-results"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    <SingleDocumentExtractResults
-                      datacells={dataCells}
-                      columns={columns}
-                    />
-                  </motion.div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="extract-selector"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <ExtractTraySelector read_only={false} extracts={extracts} />
-
-                  {/* Floating button to open our new fieldset picker */}
-                  <NewChatFloatingButton
-                    onClick={() => setShowFieldsetModal(true)}
-                    style={{ bottom: "80px" }}
-                  >
-                    <i className="plus icon" />
-                  </NewChatFloatingButton>
-
-                  <SelectDocumentFieldsetModal
-                    documentId={documentId}
-                    corpusId={corpusId}
-                    open={showFieldsetModal}
-                    onClose={() => setShowFieldsetModal(false)}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        );
-      case "summary":
-      default:
-        return null;
+        </div>
+      );
     }
+
+    // Handle chat mode (default behavior)
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        {controlBar}
+        <ChatTray
+          setShowLoad={setShowLoad}
+          showLoad={showLoad}
+          documentId={documentId}
+          onMessageSelect={() => {
+            setActiveLayer("document");
+          }}
+          corpusId={corpusId}
+          initialMessage={pendingChatMessage}
+        />
+      </div>
+    );
   })();
 
   // The main viewer content:
@@ -1164,34 +1066,23 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   // Decide which content is in the center based on activeLayer
   const mainLayerContent =
     activeLayer === "knowledge" ? (
-      <SummaryContent className={showRightPanel ? "dimmed" : ""}>
-        {loading ? (
-          <LoadingPlaceholders type="summary" />
-        ) : markdownContent ? (
-          <div className="prose max-w-none">
-            <SafeMarkdown>{markdownContent}</SafeMarkdown>
-          </div>
-        ) : (
-          <EmptyState
-            icon={<FileText size={40} />}
-            title="No summary available"
-            description={
-              markdownError
-                ? "Failed to load the document summary"
-                : "This document doesn't have a summary yet"
-            }
-          />
-        )}
-      </SummaryContent>
+      <UnifiedKnowledgeLayer
+        documentId={documentId}
+        corpusId={corpusId}
+        metadata={metadata}
+        parentLoading={loading}
+      />
     ) : (
       <div
         id="document-layer"
+        ref={documentAreaRef}
+        onMouseEnter={handleDocumentMouseEnter}
         style={{
           flex: 1,
           position: "relative",
           marginRight:
             !isMobile && showRightPanel
-              ? `${getPanelWidth(width)}px`
+              ? `${getPanelWidthPercentage()}%`
               : undefined,
         }}
       >
@@ -1199,40 +1090,84 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       </div>
     );
 
-  // Minimal onClick logic to unify the nav:
-  const handleTabClick = (tabKey: string) => {
-    if (activeTab === tabKey) {
-      // If clicking the same tab, deselect it and close panel
-      setActiveTab("");
-      setShowRightPanel(false);
-      return;
-    }
-
-    // Special handling for summary tab - don't show right panel
-    if (tabKey === "summary") {
-      setActiveTab(tabKey);
-      setShowRightPanel(false);
-      return;
-    }
-
-    setActiveTab(tabKey);
-
-    // Determine which layer to switch to based on tab's declared layer
-    const clickedTab = visibleTabs.find((t) => t.key === tabKey);
-    if (clickedTab?.layer === "document") {
-      setActiveLayer("document");
-    } else if (clickedTab?.layer === "knowledge") {
-      setActiveLayer("knowledge");
-    }
-    // If layer === 'both', remain on the current activeLayer
-  };
-
-  // Set initial state
+  // Set initial state - ensure chat panel starts with proper width
   useEffect(() => {
-    setActiveTab("summary");
     setShowRightPanel(false);
-    setActiveLayer("knowledge");
+    setActiveLayer("document");
+    // Force initial width to half
+    if (mode !== "half") {
+      setMode("half");
+    }
   }, []);
+
+  /* ------------------------------------------------------------------ */
+  /* Seed selection atom once if the caller provided initial ids         */
+  useEffect(() => {
+    if (initialAnnotationIds && initialAnnotationIds.length > 0) {
+      setSelectedAnnotations(initialAnnotationIds);
+    }
+  }, [initialAnnotationIds, setSelectedAnnotations]);
+
+  // keep URL ↔ selection in sync
+  useUrlAnnotationSync();
+
+  /* ------------------------------------------------------ */
+  /*  Cleanup on unmount – clear document + annotation sel  */
+  /* ------------------------------------------------------ */
+  useEffect(() => {
+    return () => {
+      openedDocument(null); // leave corpus intact
+      setSelectedAnnotations([]);
+      selectedAnnotationIds([]);
+      // Clean up zoom indicator timer
+      if (zoomIndicatorTimer.current) {
+        clearTimeout(zoomIndicatorTimer.current);
+      }
+    };
+  }, [setSelectedAnnotations]);
+
+  /* ------------------------------------------------------------- */
+  /* Floating input wrapper (centres input within remaining space) */
+  /* ------------------------------------------------------------- */
+
+  const FloatingInputWrapper = styled.div<{ $panelOffset: number }>`
+    position: absolute;
+    bottom: 2rem;
+    left: 0;
+    right: ${(props) => props.$panelOffset}px;
+    display: flex;
+    justify-content: center;
+    pointer-events: none; /* allow clicks only on children */
+    z-index: 1500;
+
+    @media (max-width: 768px) {
+      /* On mobile, let the child component handle its own positioning */
+      position: static;
+      left: auto;
+      right: auto;
+      bottom: auto;
+    }
+  `;
+
+  const ZoomIndicator = styled.div`
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    z-index: 2000;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+  `;
+
+  const [selectedSummaryContent, setSelectedSummaryContent] = useState<
+    string | null
+  >(null);
 
   return (
     <FullScreenModal
@@ -1262,91 +1197,129 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       </HeaderContainer>
 
       <ContentArea id="content-area">
-        {/* LEFT SIDEBAR TABS (always visible now) */}
-        <TabsColumn
-          collapsed={sidebarCollapsed}
-          onMouseEnter={() => setSidebarCollapsed(false)}
-          onMouseLeave={() => setSidebarCollapsed(true)}
-        >
-          {visibleTabs.map((t) => (
-            <TabButton
-              key={t.key}
-              tabKey={t.key}
-              active={activeTab === t.key}
-              onClick={() => handleTabClick(t.key)}
-              collapsed={sidebarCollapsed}
-            >
-              {t.icon}
-              <span>{t.label}</span>
-            </TabButton>
-          ))}
-        </TabsColumn>
-
         <MainContentArea id="main-content-area">
           {mainLayerContent}
-          <LabelSelector
+          <UnifiedLabelSelector
             sidebarWidth="0px"
             activeSpanLabel={activeSpanLabel ?? null}
             setActiveLabel={setActiveSpanLabel}
             showRightPanel={showRightPanel}
-          />
-          <DocTypeLabelDisplay showRightPanel={showRightPanel} />
-          <LayerSwitcher
-            layers={[
-              {
-                id: "knowledge",
-                label: "Knowledge Base",
-                icon: <Database size={16} />,
-                isActive: activeLayer === "knowledge",
-                onClick: () => {
-                  setActiveLayer("knowledge");
-                  setActiveTab("summary");
-                  // Clear chat selections when switching to knowledge layer
-                  setChatSourceState((prev) => ({
-                    ...prev,
-                    selectedMessageId: null,
-                    selectedSourceIndex: null,
-                  }));
-                },
-              },
-              {
-                id: "document",
-                label: "Document",
-                icon: <FileText size={16} />,
-                isActive: activeLayer === "document",
-                onClick: () => {
-                  setActiveLayer("document");
-                  // If we had no active tab or knowledge tab, default to e.g. "chat" in doc
-                  if (
-                    ![
-                      "chat",
-                      "notes",
-                      "relationships",
-                      "annotations",
-                      "relations",
-                      "search",
-                      "analyses",
-                      "extracts",
-                    ].includes(activeTab)
-                  ) {
-                    setActiveTab("chat");
-                  }
-                },
-              },
-            ]}
+            panelOffset={floatingControlsState.offset}
+            hideControls={!floatingControlsState.visible}
           />
 
+          {/* Floating Summary Preview - always visible, acts as picture-in-picture for knowledge layer */}
+          <FloatingSummaryPreview
+            documentId={documentId}
+            corpusId={corpusId}
+            documentTitle={metadata.title || "Untitled Document"}
+            isVisible={true}
+            isInKnowledgeLayer={activeLayer === "knowledge"}
+            onSwitchToKnowledge={(content?: string) => {
+              setActiveLayer("knowledge");
+              setShowRightPanel(false);
+              if (content) {
+                setSelectedSummaryContent(content);
+              } else {
+                setSelectedSummaryContent(null);
+              }
+              setChatSourceState((prev) => ({
+                ...prev,
+                selectedMessageId: null,
+                selectedSourceIndex: null,
+              }));
+            }}
+            onBackToDocument={() => {
+              setActiveLayer("document");
+              setSelectedSummaryContent(null);
+              // When going back to document, show chat panel by default
+              setShowRightPanel(true);
+              setSidebarViewMode("chat");
+            }}
+          />
+
+          {/* Zoom Controls - only in document layer */}
           {activeLayer === "document" && (
-            <DocNavigation
+            <ZoomControls
               zoomLevel={zoomLevel}
-              onZoomIn={() => setZoomLevel(Math.min(zoomLevel + 0.1, 4))}
-              onZoomOut={() => setZoomLevel(Math.min(zoomLevel - 0.1, 4))}
+              onZoomIn={() => {
+                setZoomLevel(Math.min(zoomLevel + 0.1, 4));
+                showZoomFeedback();
+              }}
+              onZoomOut={() => {
+                setZoomLevel(Math.max(zoomLevel - 0.1, 0.5));
+                showZoomFeedback();
+              }}
             />
           )}
+
+          {/* Zoom Indicator - shows current zoom level when zooming */}
+          {showZoomIndicator && activeLayer === "document" && (
+            <ZoomIndicator data-testid="zoom-indicator">
+              {Math.round(zoomLevel * 100)}%
+            </ZoomIndicator>
+          )}
+
+          {/* Unified Search/Chat Input - only in document layer */}
+          <FloatingInputWrapper $panelOffset={floatingControlsState.offset}>
+            <FloatingDocumentInput
+              fixed={false}
+              visible={activeLayer === "document"}
+              onChatSubmit={(message) => {
+                setPendingChatMessage(message);
+                setSidebarViewMode("chat");
+                setShowRightPanel(true);
+              }}
+              onToggleChat={() => {
+                setSidebarViewMode("chat");
+                setShowRightPanel(true);
+              }}
+            />
+          </FloatingInputWrapper>
+
+          {/* Floating Document Controls - only in document layer */}
+          <FloatingDocumentControls
+            visible={
+              activeLayer === "document" && floatingControlsState.visible
+            }
+            onAnalysesClick={() => setShowAnalysesPanel(!showAnalysesPanel)}
+            onExtractsClick={() => setShowExtractsPanel(!showExtractsPanel)}
+            analysesOpen={showAnalysesPanel}
+            extractsOpen={showExtractsPanel}
+            panelOffset={floatingControlsState.offset}
+          />
+
+          {/* Floating Analyses Panel */}
+          <FloatingAnalysesPanel
+            visible={
+              showAnalysesPanel &&
+              activeLayer === "document" &&
+              floatingControlsState.visible
+            }
+            analyses={analyses}
+            onClose={() => setShowAnalysesPanel(false)}
+            panelOffset={floatingControlsState.offset}
+          />
+
+          {/* Floating Extracts Panel */}
+          <FloatingExtractsPanel
+            visible={
+              showExtractsPanel &&
+              activeLayer === "document" &&
+              floatingControlsState.visible
+            }
+            extracts={extracts}
+            onClose={() => setShowExtractsPanel(false)}
+            panelOffset={floatingControlsState.offset}
+          />
+
           {/* Right Panel, if needed */}
           <AnimatePresence>
-            {showRightPanel && activeTab && (
+            {showRightPanel && (
               <SlidingPanel
+                id="sliding-panel"
+                panelWidth={getPanelWidthPercentage()}
+                onMouseEnter={handlePanelMouseEnter}
                 initial={{ x: "100%", opacity: 0 }}
                 animate={{ x: "0%", opacity: 1 }}
                 exit={{ x: "100%", opacity: 0 }}
@@ -1355,11 +1328,79 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                   opacity: { duration: 0.2, ease: "easeOut" },
                 }}
               >
+                <ResizeHandle
+                  id="resize-handle"
+                  onMouseDown={handleResizeStart}
+                  $isDragging={isDragging}
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <ResizeHandleControl
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowWidthMenu(!showWidthMenu);
+                    }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Settings className="settings-icon" />
+                  </ResizeHandleControl>
+                </ResizeHandle>
+
+                <AnimatePresence>
+                  {showWidthMenu && (
+                    <WidthControlMenu
+                      initial={{ opacity: 0, scale: 0.8, x: -20 }}
+                      animate={{ opacity: 1, scale: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, x: -20 }}
+                      transition={{
+                        duration: 0.2,
+                        ease: [0.4, 0, 0.2, 1],
+                      }}
+                      data-width-menu
+                    >
+                      <WidthMenuItem
+                        id="compact-width-menu-item"
+                        $isActive={mode === "quarter"}
+                        onClick={() => {
+                          setMode("quarter");
+                          setShowWidthMenu(false);
+                        }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        Compact
+                        <span className="percentage">25%</span>
+                      </WidthMenuItem>
+                      <WidthMenuItem
+                        $isActive={mode === "half"}
+                        onClick={() => {
+                          setMode("half");
+                          setShowWidthMenu(false);
+                        }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        Standard
+                        <span className="percentage">50%</span>
+                      </WidthMenuItem>
+                      <WidthMenuItem
+                        id="wide-width-menu-item"
+                        $isActive={mode === "full"}
+                        onClick={() => {
+                          setMode("full");
+                          setShowWidthMenu(false);
+                        }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        Wide
+                        <span className="percentage">90%</span>
+                      </WidthMenuItem>
+                    </WidthControlMenu>
+                  )}
+                </AnimatePresence>
+
                 <ControlButtonGroupLeft>
                   <ControlButtonWrapper>
                     <ControlButton
                       onClick={() => {
-                        setActiveTab("");
                         setShowRightPanel(false);
                       }}
                       whileHover={{ scale: 1.1 }}
@@ -1374,6 +1415,26 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                 </ControlButtonGroupLeft>
                 {rightPanelContent}
               </SlidingPanel>
+            )}
+          </AnimatePresence>
+
+          {/* Chat indicator when panel is closed */}
+          <AnimatePresence>
+            {!showRightPanel && (
+              <ChatIndicator
+                onClick={() => {
+                  setSidebarViewMode("chat");
+                  setShowRightPanel(true);
+                }}
+                initial={{ x: 100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 100, opacity: 0 }}
+                transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <MessageSquare />
+              </ChatIndicator>
             )}
           </AnimatePresence>
         </MainContentArea>
@@ -1403,9 +1464,23 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       >
         {selectedNote && (
           <>
+            <Modal.Header>{selectedNote.title || "Untitled Note"}</Modal.Header>
             <Modal.Content>
               <SafeMarkdown>{selectedNote.content}</SafeMarkdown>
             </Modal.Content>
+            <Modal.Actions>
+              <Button
+                primary
+                onClick={() => {
+                  setEditingNoteId(selectedNote.id);
+                  setSelectedNote(null);
+                }}
+              >
+                <Icon name="edit" />
+                Edit Note
+              </Button>
+              <Button onClick={() => setSelectedNote(null)}>Close</Button>
+            </Modal.Actions>
             <div className="meta">
               Added by {selectedNote.creator.email} on{" "}
               {new Date(selectedNote.created).toLocaleString()}
@@ -1413,6 +1488,29 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           </>
         )}
       </NoteModal>
+
+      {editingNoteId && (
+        <NoteEditor
+          noteId={editingNoteId}
+          isOpen={true}
+          onClose={() => setEditingNoteId(null)}
+          onUpdate={() => {
+            // Refetch the document data to get updated notes
+            refetch();
+          }}
+        />
+      )}
+
+      <NewNoteModal
+        isOpen={showNewNoteModal}
+        onClose={() => setShowNewNoteModal(false)}
+        documentId={documentId}
+        corpusId={corpusId}
+        onCreated={() => {
+          // Refetch the document data to get the new note
+          refetch();
+        }}
+      />
     </FullScreenModal>
   );
 };

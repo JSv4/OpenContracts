@@ -7,15 +7,20 @@ import { useReactiveVar } from "@apollo/client";
 import { VerticallyCenteredDiv } from "../layout/Wrappers";
 
 import { openedCorpus, openedDocument } from "../../graphql/cache";
-
-const handleNavHome = () => {
-  openedCorpus(null);
-  openedDocument();
-};
+import { useNavigate } from "react-router-dom";
 
 export const CorpusBreadcrumbs = () => {
   const opened_corpus = useReactiveVar(openedCorpus);
   const opened_document = useReactiveVar(openedDocument);
+
+  const navigate = useNavigate();
+
+  const gotoHome = () => {
+    openedCorpus(null);
+    openedDocument(null);
+    navigate("/corpuses");
+  };
+  const gotoCorpus = () => navigate(`/corpuses/${opened_corpus?.id}`);
 
   return (
     <VerticallyCenteredDiv>
@@ -33,7 +38,7 @@ export const CorpusBreadcrumbs = () => {
         <Breadcrumb>
           {opened_corpus ? (
             <Breadcrumb.Section
-              onClick={() => handleNavHome()}
+              onClick={gotoHome}
               link
               active={!opened_document && !opened_corpus}
             >
@@ -46,7 +51,7 @@ export const CorpusBreadcrumbs = () => {
             <>
               <Breadcrumb.Divider />
               <Breadcrumb.Section
-                onClick={() => openedDocument(null)}
+                onClick={gotoCorpus}
                 link
                 active={opened_corpus && !opened_document}
               >

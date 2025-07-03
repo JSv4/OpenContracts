@@ -1,18 +1,58 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
   Bot,
-  ExternalLink,
   Pin,
   ChevronUp,
   ChevronDown,
+  Clock,
+  Zap,
+  MessageSquare,
+  Wrench,
+  CheckCircle,
+  Activity,
+  Plus,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useSetAtom } from "jotai";
+import { useSetAtom, useAtomValue } from "jotai";
 import { chatSourcesAtom } from "../../annotator/context/ChatSourceAtom";
+import { useMemo } from "react";
+import { useCreateAnnotation } from "../../annotator/hooks/AnnotationHooks";
+import { useCorpusState } from "../../annotator/context/CorpusAtom";
+import { useSelectedDocument } from "../../annotator/context/DocumentAtom";
+import {
+  ServerTokenAnnotation,
+  ServerSpanAnnotation,
+} from "../../annotator/types/annotations";
+import {
+  MultipageAnnotationJson,
+  SinglePageAnnotationJson,
+  BoundingBox,
+  SpanAnnotationJson,
+} from "../../types";
+import { AnnotationLabelType } from "../../../types/graphql-api";
+
+// Timeline entry type based on the schema
+export interface TimelineEntry {
+  type:
+    | "thought"
+    | "content"
+    | "tool_call"
+    | "tool_result"
+    | "sources"
+    | "status";
+  text?: string;
+  tool?: string;
+  args?: any;
+  count?: number;
+  metadata?: Record<string, any>;
+  msg?: string;
+}
 
 export interface ChatMessageProps {
   messageId?: string; // Optional because some messages (like streaming ones) might not have an ID yet
@@ -21,12 +61,16 @@ export interface ChatMessageProps {
   timestamp: string;
   isAssistant: boolean;
   hasSources?: boolean;
+  hasTimeline?: boolean;
   isSelected?: boolean;
   onSelect?: () => void;
   sources?: Array<{
     text: string;
     onClick?: () => void;
   }>;
+  timeline?: TimelineEntry[];
+  approvalStatus?: "approved" | "rejected" | "awaiting";
+  isComplete?: boolean;
 }
 
 const MessageContainer = styled(motion.div)<{
@@ -296,6 +340,9 @@ const SourceList = styled.div`
 `;
 
 const SourceChip = styled.div<{ $isSelected: boolean }>`
+  position: relative;
+  overflow: visible;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -386,46 +433,392 @@ const ExpandButton = styled.button<{ $isExpanded: boolean }>`
   }
 `;
 
+// NEW styled components for annotation from source
+const AnnotateButton = styled.button`
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  color: #5c7c9d;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    color: #4a6b8c;
+  }
+`;
+
+const LabelMenu = styled.div`
+  position: absolute;
+  top: 2.2rem;
+  right: 0.5rem;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(200, 200, 200, 0.8);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  z-index: 2000;
+`;
+
+const LabelButton = styled.button`
+  border: none;
+  background: transparent;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+  border-radius: 0.375rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+`;
+// END new styled components
+
+// Timeline styled components
+const TimelineContainer = styled.div`
+  position: relative;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(156, 163, 175, 0.2);
+  overflow: hidden;
+  transition: all 0.2s ease-in-out;
+  margin-top: 0.75rem;
+`;
+
+const TimelineHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: rgba(156, 163, 175, 0.05);
+  border-bottom: 1px solid rgba(156, 163, 175, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    background: rgba(156, 163, 175, 0.1);
+  }
+`;
+
+const TimelineTitle = styled.div`
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+`;
+
+const TimelineContent = styled(motion.div)`
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #4a5568;
+  max-height: 400px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  position: relative;
+`;
+
+const AutoScrollIndicator = styled(motion.div)<{ $active: boolean }>`
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  margin: 0 -0.75rem -0.5rem;
+  background: ${(props) =>
+    props.$active
+      ? "linear-gradient(to top, rgba(255,255,255,0.95), rgba(255,255,255,0.8))"
+      : "linear-gradient(to top, rgba(245,245,245,0.95), rgba(245,245,245,0.8))"};
+  border-top: 1px solid
+    ${(props) =>
+      props.$active ? "rgba(59, 130, 246, 0.2)" : "rgba(156, 163, 175, 0.2)"};
+  font-size: 0.7rem;
+  color: ${(props) => (props.$active ? "#3b82f6" : "#9ca3af")};
+  cursor: ${(props) => (props.$active ? "default" : "pointer")};
+  transition: all 0.2s ease;
+
+  svg {
+    width: 12px;
+    height: 12px;
+    animation: ${(props) => (props.$active ? "bounce 2s infinite" : "none")};
+  }
+
+  @keyframes bounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+
+  &:hover {
+    background: ${(props) =>
+      props.$active
+        ? "linear-gradient(to top, rgba(255,255,255,1), rgba(255,255,255,0.9))"
+        : "linear-gradient(to top, rgba(245,245,245,1), rgba(245,245,245,0.9))"};
+  }
+`;
+
+const TimelineList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+`;
+
+const TimelineItem = styled.div<{ $type: TimelineEntry["type"] }>`
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  padding: 0.25rem 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0.25rem;
+  }
+`;
+
+const TimelineIcon = styled.div<{ $type: TimelineEntry["type"] }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: transparent;
+  color: ${(props) => {
+    switch (props.$type) {
+      case "thought":
+        return "#a855f7";
+      case "tool_call":
+        return "#3b82f6";
+      case "tool_result":
+        return "#22c55e";
+      case "content":
+        return "#f97316";
+      case "sources":
+        return "#5c7c9d";
+      case "status":
+        return "#9ca3af";
+      default:
+        return "#9ca3af";
+    }
+  }};
+
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+`;
+
+const TimelineItemContent = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const TimelineItemTitle = styled.div<{ $expanded?: boolean }>`
+  font-weight: 500;
+  color: ${(props) => (props.$expanded ? "#1f2937" : "#4b5563")};
+  font-size: 0.8125rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  user-select: none;
+
+  &::after {
+    content: ${(props) => (props.$expanded ? '"▼"' : '"▶"')};
+    font-size: 0.5rem;
+    color: #9ca3af;
+    transition: transform 0.2s ease;
+  }
+`;
+
+const TimelineItemText = styled.div`
+  color: #4b5563;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  word-break: break-word;
+  padding-left: 0.25rem;
+`;
+
+const TimelineItemArgs = styled.div`
+  margin-top: 0.25rem;
+  padding: 0.375rem;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 0.375rem;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+  font-size: 0.7rem;
+  color: #374151;
+  overflow-x: auto;
+`;
+
 interface SourceItemProps {
+  messageId: string;
   text: string;
   index: number;
   isSelected: boolean;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
+  availableLabels: AnnotationLabelType[];
+  createAnnotation: (a: ServerTokenAnnotation | ServerSpanAnnotation) => void;
 }
 
 const SourceItem: React.FC<SourceItemProps> = ({
+  messageId,
   text,
   index,
   isSelected,
   onClick,
+  availableLabels,
+  createAnnotation,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [labelMenuOpen, setLabelMenuOpen] = useState(false);
 
+  const chatStateValue = useAtomValue(chatSourcesAtom);
+  const { selectedDocument } = useSelectedDocument();
+
+  // UI handlers
   const toggleExpand = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     setIsExpanded(!isExpanded);
   };
 
+  const handleAnnotateClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setLabelMenuOpen((prev) => !prev);
+  };
+
+  const handleLabelSelect = (label: any) => {
+    const msg = chatStateValue.messages.find(
+      (m: any) => m.messageId === messageId
+    );
+    if (!msg) return setLabelMenuOpen(false);
+    const sourceData = msg.sources[index];
+    if (!sourceData) return setLabelMenuOpen(false);
+
+    try {
+      if (selectedDocument?.fileType?.startsWith("text/")) {
+        if (
+          sourceData.startIndex === undefined ||
+          sourceData.endIndex === undefined
+        )
+          return setLabelMenuOpen(false);
+        const spanJson: SpanAnnotationJson = {
+          start: sourceData.startIndex,
+          end: sourceData.endIndex,
+        };
+        const newAnnot = new ServerSpanAnnotation(
+          sourceData.page ?? 0,
+          label,
+          sourceData.rawText,
+          false,
+          spanJson,
+          [],
+          false,
+          false,
+          false
+        );
+        createAnnotation(newAnnot);
+      } else {
+        const mpJson: MultipageAnnotationJson = {};
+        Object.entries(sourceData.boundsByPage).forEach(([pStr, bounds]) => {
+          const pNum = parseInt(pStr, 10);
+          mpJson[pNum] = {
+            bounds: bounds as BoundingBox,
+            tokensJsons: sourceData.tokensByPage[pNum] || [],
+            rawText: sourceData.rawText,
+          };
+        });
+        const firstPage = Number(Object.keys(mpJson)[0] || 0);
+        const newAnnot = new ServerTokenAnnotation(
+          firstPage,
+          label,
+          sourceData.rawText,
+          false,
+          mpJson,
+          [],
+          false,
+          false,
+          false
+        );
+        createAnnotation(newAnnot);
+      }
+    } catch (err) {
+      /* eslint-disable no-console */
+      console.error("Failed to create annotation from source", err);
+    } finally {
+      setLabelMenuOpen(false);
+    }
+  };
+
   return (
     <SourceChip
-      className="source-chip"
       $isSelected={isSelected}
       onClick={onClick}
+      className="source-chip"
     >
       <SourceHeader>
         <SourceTitle $isSelected={isSelected}>
-          <Pin size={12} />
-          Source {index + 1}
+          <Pin size={12} /> Source {index + 1}
         </SourceTitle>
-        <ExpandButton
-          $isExpanded={isExpanded}
-          onClick={toggleExpand}
-          title={isExpanded ? "Show less" : "Show more"}
-        >
-          {isExpanded ? "Show less" : "Show more"}
-          <ChevronDown />
-        </ExpandButton>
+        <div style={{ display: "flex", gap: "0.25rem" }}>
+          <AnnotateButton title="Annotate" onClick={handleAnnotateClick}>
+            <Plus size={14} /> Annotate
+          </AnnotateButton>
+          <ExpandButton
+            $isExpanded={isExpanded}
+            onClick={toggleExpand}
+            title={isExpanded ? "Show less" : "Show more"}
+          >
+            {isExpanded ? "Show less" : "Show more"}
+            <ChevronDown />
+          </ExpandButton>
+        </div>
       </SourceHeader>
+      {labelMenuOpen && (
+        <LabelMenu>
+          {availableLabels.map((lab) => (
+            <LabelButton key={lab.id} onClick={() => handleLabelSelect(lab)}>
+              <span
+                style={{
+                  marginRight: 6,
+                  width: 8,
+                  height: 8,
+                  background: lab.color || "#1a75bc",
+                  display: "inline-block",
+                  borderRadius: 4,
+                }}
+              />
+              {lab.text}
+            </LabelButton>
+          ))}
+        </LabelMenu>
+      )}
       <SourceText
         $isExpanded={isExpanded}
         initial={false}
@@ -439,15 +832,21 @@ const SourceItem: React.FC<SourceItemProps> = ({
 };
 
 interface SourcePreviewProps {
+  messageId: string;
   sources: Array<{ text: string; onClick?: () => void }>;
   selectedIndex?: number;
   onSourceSelect: (index: number) => void;
+  availableLabels: AnnotationLabelType[];
+  createAnnotation: (a: ServerTokenAnnotation | ServerSpanAnnotation) => void;
 }
 
 const SourcePreview: React.FC<SourcePreviewProps> = ({
+  messageId,
   sources,
   selectedIndex,
   onSourceSelect,
+  availableLabels,
+  createAnnotation,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -480,6 +879,7 @@ const SourcePreview: React.FC<SourcePreviewProps> = ({
               {sources.map((source, index) => (
                 <SourceItem
                   key={index}
+                  messageId={messageId}
                   text={source.text}
                   index={index}
                   isSelected={selectedIndex === index}
@@ -488,6 +888,8 @@ const SourcePreview: React.FC<SourcePreviewProps> = ({
                     onSourceSelect(index);
                     source.onClick?.();
                   }}
+                  availableLabels={availableLabels}
+                  createAnnotation={createAnnotation}
                 />
               ))}
             </SourceList>
@@ -495,6 +897,290 @@ const SourcePreview: React.FC<SourcePreviewProps> = ({
         )}
       </AnimatePresence>
     </SourcePreviewContainer>
+  );
+};
+
+// Helper function to get icon for timeline entry type
+const getTimelineIcon = (type: TimelineEntry["type"]) => {
+  switch (type) {
+    case "thought":
+      return <Zap />;
+    case "tool_call":
+      return <Wrench />;
+    case "tool_result":
+      return <CheckCircle />;
+    case "content":
+      return <MessageSquare />;
+    case "sources":
+      return <Pin />;
+    case "status":
+      return <Activity />;
+    default:
+      return <Clock />;
+  }
+};
+
+// Helper function to get title for timeline entry type
+const getTimelineTitle = (entry: TimelineEntry) => {
+  switch (entry.type) {
+    case "thought":
+      return "Thinking";
+    case "tool_call":
+      return `Calling ${entry.tool || "Tool"}`;
+    case "tool_result":
+      return `${entry.tool || "Tool"} Result`;
+    case "content":
+      return "Generating Response";
+    case "sources":
+      return "Found Sources";
+    case "status":
+      return entry.msg || "Status Update";
+    default:
+      return "Timeline Entry";
+  }
+};
+
+interface TimelinePreviewProps {
+  timeline: TimelineEntry[];
+  collapsed?: boolean;
+  /**
+   * When true, only the most recent entry will start expanded – previous ones start collapsed.
+   * This is useful while the assistant is still streaming and we want a concise view.
+   */
+  expandLatestOnly?: boolean;
+  onToggle?: () => void;
+}
+
+// Separate component so each entry manages its own expand/collapse state
+interface CollapsibleTimelineItemProps {
+  entry: TimelineEntry;
+  initiallyExpanded: boolean;
+}
+
+const CollapsibleTimelineItem: React.FC<CollapsibleTimelineItemProps> = ({
+  entry,
+  initiallyExpanded,
+}) => {
+  const [expanded, setExpanded] = useState(initiallyExpanded);
+
+  // Keep local state in sync if parent decides to change initial expansion (e.g., when newest entry added)
+  useEffect(() => {
+    setExpanded(initiallyExpanded);
+  }, [initiallyExpanded]);
+
+  const handleToggle = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Prevent parent (TimelineHeader) toggle when clicking inside the list
+    e.stopPropagation();
+    setExpanded((prev) => !prev);
+  };
+
+  return (
+    <TimelineItem
+      $type={entry.type}
+      onClick={handleToggle}
+      style={{ cursor: "pointer" }}
+    >
+      <TimelineIcon $type={entry.type}>
+        {getTimelineIcon(entry.type)}
+      </TimelineIcon>
+      <TimelineItemContent>
+        <TimelineItemTitle $expanded={expanded}>
+          {getTimelineTitle(entry)}
+        </TimelineItemTitle>
+        {expanded && (
+          <>
+            {entry.text && <TimelineItemText>{entry.text}</TimelineItemText>}
+            {entry.args && (
+              <TimelineItemArgs>
+                <strong>Arguments:</strong>
+                <pre>{JSON.stringify(entry.args, null, 2)}</pre>
+              </TimelineItemArgs>
+            )}
+            {entry.count !== undefined && (
+              <TimelineItemText>
+                <strong>Count:</strong> {entry.count}
+              </TimelineItemText>
+            )}
+          </>
+        )}
+      </TimelineItemContent>
+    </TimelineItem>
+  );
+};
+
+const TimelinePreview: React.FC<TimelinePreviewProps> = ({
+  timeline,
+  collapsed = true,
+  expandLatestOnly = false,
+  onToggle,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(!collapsed);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isNearBottom, setIsNearBottom] = useState(true);
+  const prevTimelineLengthRef = useRef(timeline.length);
+
+  /* Expansion state per entry ----------------------------------------- */
+  const buildInitialExpandedStates = () =>
+    timeline.map((_, idx) =>
+      expandLatestOnly ? idx === timeline.length - 1 : true
+    );
+
+  const [expandedStates, setExpandedStates] = useState<boolean[]>(
+    buildInitialExpandedStates()
+  );
+
+  // Calculate responsive threshold
+  const getScrollThreshold = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return 50;
+
+    // Use 10% of container height or 100px (whichever is smaller) for desktop
+    // 50px for mobile
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) return 50;
+
+    const tenPercent = container.clientHeight * 0.1;
+    return Math.min(tenPercent, 100);
+  };
+
+  // Check if scrolled near bottom
+  const checkIfNearBottom = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return true;
+
+    const threshold = getScrollThreshold();
+    const isNear =
+      container.scrollHeight - container.scrollTop - container.clientHeight <=
+      threshold;
+    setIsNearBottom(isNear);
+    return isNear;
+  };
+
+  // Handle scroll events to track user scrolling
+  const handleScroll = () => {
+    checkIfNearBottom();
+  };
+
+  // Scroll to bottom manually
+  const scrollToBottom = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop =
+        scrollContainerRef.current.scrollHeight;
+      setIsNearBottom(true);
+    }
+  };
+
+  // Auto-scroll to bottom only when NEW entries are added (if near bottom)
+  useEffect(() => {
+    const hasNewEntries = timeline.length > prevTimelineLengthRef.current;
+
+    if (
+      hasNewEntries &&
+      isNearBottom &&
+      isExpanded &&
+      scrollContainerRef.current
+    ) {
+      // Small delay to ensure DOM has updated
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop =
+            scrollContainerRef.current.scrollHeight;
+        }
+      }, 50);
+    }
+
+    prevTimelineLengthRef.current = timeline.length;
+  }, [timeline.length, isNearBottom, isExpanded]);
+
+  // Initial scroll to bottom when first expanded
+  useEffect(() => {
+    if (isExpanded && scrollContainerRef.current) {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    }
+  }, [isExpanded]);
+
+  // Sync header expansion with `collapsed` prop
+  useEffect(() => {
+    setIsExpanded(!collapsed);
+  }, [collapsed]);
+
+  // Maintain expandedStates length & default for newest entry while streaming
+  useEffect(() => {
+    setExpandedStates((prev) => {
+      if (timeline.length > prev.length) {
+        const additional = timeline.length - prev.length;
+        const newStates = [...prev, ...Array(additional).fill(false)];
+
+        if (expandLatestOnly) {
+          newStates[newStates.length - 1] = true; // latest expanded
+        }
+        return newStates;
+      }
+
+      if (timeline.length < prev.length) {
+        return prev.slice(0, timeline.length);
+      }
+
+      return prev;
+    });
+  }, [timeline.length, expandLatestOnly]);
+
+  const handleHeaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const newVal = !isExpanded;
+    setIsExpanded(newVal);
+    onToggle?.();
+  };
+
+  return (
+    <TimelineContainer
+      className="timeline-container"
+      onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+    >
+      <TimelineHeader onClick={handleHeaderClick}>
+        <TimelineTitle>
+          <Clock size={14} />
+          Timeline ({timeline.length} {timeline.length === 1 ? "step" : "steps"}
+          )
+        </TimelineTitle>
+        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </TimelineHeader>
+      <AnimatePresence>
+        {isExpanded && (
+          <TimelineContent
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <TimelineList>
+              {timeline.map((entry, index) => (
+                <CollapsibleTimelineItem
+                  key={index}
+                  entry={entry}
+                  initiallyExpanded={expandedStates[index]}
+                  // Re-sync when expandedStates updates
+                />
+              ))}
+            </TimelineList>
+            <AutoScrollIndicator
+              $active={isNearBottom}
+              onClick={!isNearBottom ? scrollToBottom : undefined}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <ChevronDown />
+              {isNearBottom ? "Auto-scrolling" : "Scroll to bottom"}
+            </AutoScrollIndicator>
+          </TimelineContent>
+        )}
+      </AnimatePresence>
+    </TimelineContainer>
   );
 };
 
@@ -545,6 +1231,102 @@ const SourceIndicator = styled.div<{ $isSelected?: boolean }>`
   }
 `;
 
+const TimelineIndicator = styled.div<{ $isSelected?: boolean }>`
+  position: absolute;
+  right: ${(props) => (props.$isSelected ? "8rem" : "1rem")};
+  top: 1rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: ${(props) =>
+    props.$isSelected ? "#6B7280" : "rgba(156, 163, 175, 0.1)"};
+  color: ${(props) => (props.$isSelected ? "white" : "#6B7280")};
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transform: none;
+  opacity: 1;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  border: 1px solid
+    ${(props) =>
+      props.$isSelected ? "transparent" : "rgba(156, 163, 175, 0.2)"};
+
+  svg {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    background: ${(props) =>
+      props.$isSelected ? "#4B5563" : "rgba(156, 163, 175, 0.15)"};
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(156, 163, 175, 0.15);
+
+    svg {
+      transform: rotate(-15deg);
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    right: ${(props) => (props.$isSelected ? "6rem" : "1rem")};
+  }
+`;
+
+const ApprovalIndicator = styled.div<{
+  $status: "approved" | "rejected" | "awaiting";
+  $isSelected?: boolean;
+}>`
+  position: absolute;
+  right: ${(props) => (props.$isSelected ? "8rem" : "1rem")};
+  top: ${(props) => (props.$isSelected ? "3.5rem" : "3.5rem")};
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: ${(props) => {
+    if (props.$status === "approved") return "rgba(5, 150, 105, 0.1)";
+    if (props.$status === "rejected") return "rgba(220, 38, 38, 0.1)";
+    return "rgba(245, 158, 11, 0.1)";
+  }};
+  color: ${(props) => {
+    if (props.$status === "approved") return "#059669";
+    if (props.$status === "rejected") return "#dc2626";
+    return "#f59e0b";
+  }};
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transform: none;
+  opacity: 1;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  border: 1px solid
+    ${(props) => {
+      if (props.$status === "approved") return "rgba(5, 150, 105, 0.2)";
+      if (props.$status === "rejected") return "rgba(220, 38, 38, 0.2)";
+      return "rgba(245, 158, 11, 0.2)";
+    }};
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    right: ${(props) => (props.$isSelected ? "6rem" : "1rem")};
+  }
+`;
+
 const Timestamp = styled.div`
   color: #868e96;
   font-size: 0.75rem;
@@ -578,25 +1360,30 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   timestamp,
   isAssistant,
   sources = [],
+  timeline = [],
   hasSources,
+  hasTimeline,
   isSelected,
   onSelect,
+  approvalStatus,
+  isComplete = true,
 }) => {
-  console.log("[ChatMessage] Rendering with props:", {
-    messageId,
-    user,
-    content,
-    timestamp,
-    isAssistant,
-    sources,
-    hasSources,
-    isSelected,
-  });
   const [selectedSourceIndex, setSelectedSourceIndex] = useState<
     number | undefined
   >();
 
+  // Default presence checks if explicit flags not provided
+  const effectiveHasSources = hasSources ?? sources.length > 0;
+  const effectiveHasTimeline = hasTimeline ?? timeline.length > 0;
+
   const setChatState = useSetAtom(chatSourcesAtom);
+  const createAnnotation = useCreateAnnotation();
+  const { humanSpanLabels, humanTokenLabels } = useCorpusState();
+  const { selectedDocument } = useSelectedDocument();
+  const availableLabels = useMemo(() => {
+    if (selectedDocument?.fileType?.startsWith("text/")) return humanSpanLabels;
+    return humanTokenLabels;
+  }, [selectedDocument, humanSpanLabels, humanTokenLabels]);
 
   const handleSourceSelect = (index: number) => {
     setSelectedSourceIndex(index === selectedSourceIndex ? undefined : index);
@@ -609,7 +1396,50 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   };
 
-  console.log("[ChatMessage] About to render. Content:", content);
+  const getApprovalIcon = (status: "approved" | "rejected" | "awaiting") => {
+    switch (status) {
+      case "approved":
+        return <CheckCircle size={14} />;
+      case "rejected":
+        return <XCircle size={14} />;
+      case "awaiting":
+        return <AlertCircle size={14} />;
+      default:
+        return null;
+    }
+  };
+
+  const getApprovalText = (status: "approved" | "rejected" | "awaiting") => {
+    switch (status) {
+      case "approved":
+        return "Approved";
+      case "rejected":
+        return "Rejected";
+      case "awaiting":
+        return "Awaiting Approval";
+      default:
+        return "";
+    }
+  };
+
+  const showTimelineOnly =
+    isAssistant &&
+    effectiveHasTimeline &&
+    (!isComplete || content.trim().length === 0);
+
+  // Local collapse state for timeline when message is COMPLETE.
+  // For short timelines (<=2 steps) we default to expanded even after completion
+  const [tlCollapsed, setTlCollapsed] = useState<boolean>(
+    isComplete && timeline.length > 2
+  );
+
+  // When message transitions to complete, collapse timeline automatically only if long
+  useEffect(() => {
+    if (isComplete) {
+      setTlCollapsed(timeline.length > 2);
+    }
+  }, [isComplete, timeline.length]);
+
   return (
     <MessageContainer
       $isAssistant={isAssistant}
@@ -619,27 +1449,70 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
-      {hasSources && (
-        <SourceIndicator $isSelected={isSelected}>
+      {effectiveHasTimeline && (
+        <TimelineIndicator $isSelected={isSelected}>
+          <Clock size={14} />
+          {timeline.length} {timeline.length === 1 ? "step" : "steps"}
+        </TimelineIndicator>
+      )}
+      {effectiveHasSources && (
+        <SourceIndicator
+          $isSelected={isSelected}
+          data-testid="source-indicator"
+        >
           <Pin size={14} />
           {sources.length > 0 ? `${sources.length} sources` : "View sources"}
         </SourceIndicator>
+      )}
+      {approvalStatus && (
+        <ApprovalIndicator $status={approvalStatus} $isSelected={isSelected}>
+          {getApprovalIcon(approvalStatus)}
+          {getApprovalText(approvalStatus)}
+        </ApprovalIndicator>
       )}
       <Avatar $isAssistant={isAssistant}>
         {isAssistant ? <Bot /> : <User />}
       </Avatar>
       <ContentContainer>
         <UserName>{isAssistant ? "AI Assistant" : user}</UserName>
-        <MessageContent $isAssistant={isAssistant}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-          {sources.length > 0 && (
-            <SourcePreview
-              sources={sources}
-              selectedIndex={selectedSourceIndex}
-              onSourceSelect={handleSourceSelect}
-            />
-          )}
-        </MessageContent>
+        {!showTimelineOnly && (
+          <MessageContent $isAssistant={isAssistant}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+            {approvalStatus && (
+              <div style={{ marginTop: "0.5rem" }}>
+                {getApprovalIcon(approvalStatus)}{" "}
+                {getApprovalText(approvalStatus)}
+              </div>
+            )}
+            {/* Collapsible timeline once message is complete */}
+            {effectiveHasTimeline && (
+              <TimelinePreview
+                timeline={timeline}
+                collapsed={tlCollapsed}
+                onToggle={() => setTlCollapsed(!tlCollapsed)}
+              />
+            )}
+            {/* Sources inside bubble */}
+            {effectiveHasSources && sources.length > 0 && (
+              <SourcePreview
+                messageId={messageId || ""}
+                sources={sources}
+                selectedIndex={selectedSourceIndex}
+                onSourceSelect={handleSourceSelect}
+                availableLabels={availableLabels}
+                createAnnotation={createAnnotation}
+              />
+            )}
+          </MessageContent>
+        )}
+        {/* Streaming timeline only (no bubble) */}
+        {showTimelineOnly && (
+          <TimelinePreview
+            timeline={timeline}
+            collapsed={false}
+            expandLatestOnly={true}
+          />
+        )}
         <Timestamp>{timestamp}</Timestamp>
       </ContentContainer>
     </MessageContainer>

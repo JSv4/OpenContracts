@@ -33,39 +33,212 @@ export const ChatContainer = styled.div`
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   position: relative;
+
+  /* Add smooth transitions for resize */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Enhance visual hierarchy */
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(66, 153, 225, 0.1),
+      transparent
+    );
+  }
 `;
 
 export const ChatInputContainer = styled(motion.div)<{ $isTyping?: boolean }>`
   position: sticky;
   bottom: 0;
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: 1rem;
   background: white;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.02);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+
+  /* Glass morphism effect */
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.98);
+
+  /* Smooth transitions */
+  transition: all 0.2s ease;
+
+  /* Ensure proper containment */
+  box-sizing: border-box;
+  width: 100%;
+  min-height: auto;
+  max-height: 40vh; /* Limit maximum expansion */
+
+  &:focus-within {
+    box-shadow: 0 -2px 20px rgba(66, 153, 225, 0.08);
+    border-top-color: rgba(66, 153, 225, 0.2);
+  }
 `;
 
-export const ChatInput = styled.input`
+export const ChatInputWrapper = styled.div`
   flex: 1;
-  padding: 0.75rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #f8fafb;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
   transition: all 0.2s ease;
-  background: #f7fafc;
+  overflow: hidden;
 
-  &:focus {
-    outline: none;
+  &:hover {
+    border-color: #cbd5e0;
+    background: #f7fafc;
+  }
+
+  &:focus-within {
     border-color: #4299e1;
     background: white;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+  }
+`;
+
+export const ChatInput = styled.textarea`
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: none;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  background: transparent;
+  color: #2d3748;
+  min-height: 44px;
+  max-height: 200px;
+  overflow-y: auto;
+
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+
+    &:hover {
+      background: #a0aec0;
+    }
+  }
+
+  &::placeholder {
+    color: #a0aec0;
+    transition: opacity 0.2s ease;
+  }
+
+  &:focus::placeholder {
+    opacity: 0.6;
   }
 
   &:disabled {
-    background: #edf2f7;
+    background: transparent;
     cursor: not-allowed;
+    opacity: 0.6;
+  }
+`;
+
+export const CharacterCount = styled.div<{ $nearLimit?: boolean }>`
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.75rem;
+  font-size: 0.75rem;
+  color: ${(props) => (props.$nearLimit ? "#e53e3e" : "#a0aec0")};
+  transition: all 0.2s ease;
+  pointer-events: none;
+  opacity: 0.7;
+`;
+
+export const SendButton = styled(motion.button)<{ $hasText?: boolean }>`
+  background: ${(props) => (props.$hasText ? "#4299e1" : "#e2e8f0")};
+  color: ${(props) => (props.$hasText ? "white" : "#a0aec0")};
+  border: none;
+  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ${(props) => (props.$hasText ? "pointer" : "not-allowed")};
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  align-self: flex-end;
+  flex-shrink: 0;
+
+  &:hover {
+    background: ${(props) => (props.$hasText ? "#3182ce" : "#e2e8f0")};
+    transform: ${(props) => (props.$hasText ? "scale(1.05)" : "none")};
+  }
+
+  &:active {
+    transform: ${(props) => (props.$hasText ? "scale(0.95)" : "none")};
+  }
+
+  &:disabled {
+    background: #e2e8f0;
+    color: #a0aec0;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover svg {
+    transform: ${(props) =>
+      props.$hasText ? "translateX(1px) translateY(-1px)" : "none"};
+  }
+`;
+
+export const InputActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.5);
+  background: rgba(249, 250, 251, 0.5);
+`;
+
+export const ActionButton = styled(motion.button)`
+  background: transparent;
+  border: none;
+  color: #718096;
+  padding: 0.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #4a5568;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
   }
 `;
 
@@ -209,34 +382,6 @@ export const ErrorMessage = styled.div`
   padding: 0.5rem 0;
   display: flex;
   align-items: center;
-`;
-
-export const SendButton = styled(motion.button)`
-  background: #4299e1;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: #3182ce;
-  }
-
-  &:disabled {
-    background: #cbd5e0;
-    cursor: not-allowed;
-  }
-
-  svg {
-    width: 18px;
-    height: 18px;
-  }
 `;
 
 interface ConnectionStatusProps {

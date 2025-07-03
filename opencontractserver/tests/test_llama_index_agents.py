@@ -94,21 +94,21 @@ class TestLlamaIndexAgents(TestCase):
                 title="Test Corpus",
                 description="A test corpus for agent testing",
                 creator=cls.user,
-                is_public=True,
+                is_public=False,
             )
 
             cls.doc1 = Document.objects.create(
                 title="Test Document 1",
                 description="First test document",
                 creator=cls.user,
-                is_public=True,
+                is_public=False,
             )
 
             cls.doc2 = Document.objects.create(
                 title="Test Document 2",
                 description="Second test document",
                 creator=cls.user,
-                is_public=True,
+                is_public=False,
             )
 
             # Add documents to corpus
@@ -132,7 +132,7 @@ class TestLlamaIndexAgents(TestCase):
                 creator=cls.user,
                 raw_text="This is the first annotation text about important topics",
                 annotation_label=cls.label_important,
-                is_public=True,
+                is_public=False,
             )
 
             cls.anno2 = Annotation.objects.create(
@@ -141,7 +141,7 @@ class TestLlamaIndexAgents(TestCase):
                 creator=cls.user,
                 raw_text="Another annotation in the same document about different topics",
                 annotation_label=cls.label_summary,
-                is_public=True,
+                is_public=False,
             )
 
             cls.anno3 = Annotation.objects.create(
@@ -150,7 +150,7 @@ class TestLlamaIndexAgents(TestCase):
                 creator=cls.user,
                 raw_text="Annotation text for doc2, also marked as important",
                 annotation_label=cls.label_important,
-                is_public=True,
+                is_public=False,
             )
 
         # Add embeddings to annotations
@@ -477,11 +477,16 @@ class TestLlamaIndexAgents(TestCase):
         config = AgentConfig(user_id=self.user.id, model_name="gpt-4o-mini")
         agent = await LlamaIndexDocumentAgent.create(self.doc1, self.corpus, config)
 
-        # Test that exceptions are properly handled
-        with self.assertRaises(Exception) as cm:
-            await agent.chat("Test query")
+        # Under the new framework semantics the agent should **not** raise –
+        # it should return a UnifiedChatResponse that contains the error
+        # information in its metadata so that front-ends can render a proper
+        # error bubble while keeping the conversation alive.
 
-        self.assertEqual(str(cm.exception), "LLM error")
+        response = await agent.chat("Test query")
+
+        self.assertIsInstance(response, UnifiedChatResponse)
+        self.assertEqual(response.metadata.get("error"), "LLM error")
+        self.assertTrue(response.content.startswith("Error:"))
 
     @patch("opencontractserver.llms.agents.llama_index_agents.OpenAIAgent")
     @patch("opencontractserver.llms.agents.llama_index_agents.VectorStoreIndex")

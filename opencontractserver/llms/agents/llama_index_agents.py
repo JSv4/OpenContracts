@@ -27,12 +27,16 @@ from opencontractserver.llms.agents.core_agents import (
     CorpusAgentContext,
     DocumentAgentContext,
     SourceNode,
-    UnifiedChatResponse,
     UnifiedStreamResponse,
     get_default_config,
 )
 from opencontractserver.llms.embedders.custom_pipeline_embedding import (
     OpenContractsPipelineEmbedding,
+)
+from opencontractserver.llms.tools.core_tools import (
+    get_document_summary,
+    get_document_summary_diff,
+    get_document_summary_versions,
 )
 from opencontractserver.llms.tools.llama_index_tools import (
     get_md_summary_token_length_tool,
@@ -174,8 +178,59 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
             get_partial_note_content_tool,
         ]
 
-        # Add any tools passed from the factory
+        # -------------------------------------------------
+        # Document summary tools (versions, diff, update)
+        # -------------------------------------------------
+
+        # Wrap functions to bind document & corpus
+        def _get_doc_summary_versions(limit: int | None = None):
+            return get_document_summary_versions(
+                document_id=context.document.id,
+                corpus_id=context.corpus.id,
+                limit=limit,
+            )
+
+        def _get_doc_summary_diff(from_version: int, to_version: int):
+            return get_document_summary_diff(
+                document_id=context.document.id,
+                corpus_id=context.corpus.id,
+                from_version=from_version,
+                to_version=to_version,
+            )
+
+        current_tools.extend(
+            [
+                FunctionTool.from_defaults(
+                    fn=lambda truncate_length=None, from_start=True: get_document_summary(
+                        document_id=context.document.id,
+                        corpus_id=context.corpus.id,
+                        truncate_length=truncate_length,
+                        from_start=from_start,
+                    ),
+                    name="get_document_summary",
+                    description="Retrieve latest markdown summary content for the document.",
+                ),
+                FunctionTool.from_defaults(
+                    fn=_get_doc_summary_versions,
+                    name="get_document_summary_versions",
+                    description="Get version history for the document summary.",
+                ),
+                FunctionTool.from_defaults(
+                    fn=_get_doc_summary_diff,
+                    name="get_document_summary_diff",
+                    description="Get unified diff between two summary versions.",
+                ),
+            ]
+        )
+
+        # -------------------------------------------------
+        # Integrate caller-supplied tools (if any)
+        # -------------------------------------------------
         if tools:
+            # Ensure we preserve the default tools while allowing callers to augment
+            # the agent with additional functionality.
+            # Custom tools are simply appended – duplicates are not de-duplicated
+            # to avoid unintentionally masking caller intent.
             current_tools.extend(tools)
 
         # Convert loaded messages to LlamaIndex format
@@ -210,153 +265,67 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
             agent=underlying_agent,
         )
 
-    async def chat(
-        self, message: str, store_messages: bool = True
-    ) -> UnifiedChatResponse:
-        """Send a message and get a complete response."""
-        user_msg_id = None
-        llm_msg_id = None
+    # ------------------------------------------------------------
+    # New core API – implement *_chat_raw* and *_stream_raw*
+    # ------------------------------------------------------------
 
-        try:
-            # Store user message if configured
-            if store_messages and self.conversation_manager.config.store_user_messages:
-                user_msg_id = await self.conversation_manager.store_user_message(
-                    message
-                )
+    async def _chat_raw(
+        self, message: str, **kwargs
+    ) -> tuple[str, list[SourceNode], dict]:
+        """Return raw content, sources, metadata from LlamaIndex."""
 
-            # Create placeholder for LLM message if storing
-            if store_messages and self.conversation_manager.config.store_llm_messages:
-                llm_msg_id = await self.conversation_manager.create_placeholder_message(
-                    "LLM"
-                )
+        response = await self._agent.astream_chat(message)
 
-            # Generate response from LLM (outside transaction to avoid long locks)
-            response = await self._agent.astream_chat(message)
-
-            if isinstance(response, StreamingAgentChatResponse):
-                # Collect all tokens
-                content = ""
-                async for token in response.async_response_gen():
-                    content += str(token)
-            else:
-                content = str(response.response)
-
-            # Extract sources from response using proper SourceNode creation
-            sources = []
-            if hasattr(response, "source_nodes") and response.source_nodes:
-                for node in response.source_nodes:
-                    sources.append(_convert_llama_index_node_to_source_node(node))
-
-            # Complete the message atomically with content and sources
-            if llm_msg_id:
-                await self.conversation_manager.complete_message(
-                    llm_msg_id, content, sources, {"framework": "llama_index"}
-                )
-
-            return UnifiedChatResponse(
-                content=content,
-                sources=sources,
-                user_message_id=user_msg_id,
-                llm_message_id=llm_msg_id,
-                metadata={"framework": "llama_index"},
-            )
-
-        except Exception as e:
-            # Cancel placeholder message on error
-            if llm_msg_id:
-                await self.conversation_manager.cancel_message(
-                    llm_msg_id, f"Error: {str(e)}"
-                )
-            raise
-
-    async def stream(
-        self, message: str, store_messages: bool = True
-    ) -> AsyncGenerator[UnifiedStreamResponse, None]:
-        """Send a message and get a streaming response."""
-        user_msg_id = None
-        llm_msg_id = None
-        accumulated_content = ""
-        sources = []
-
-        try:
-            # Store user message if configured
-            if store_messages and self.conversation_manager.config.store_user_messages:
-                user_msg_id = await self.conversation_manager.store_user_message(
-                    message
-                )
-
-            # Create placeholder for LLM message if storing
-            if store_messages and self.conversation_manager.config.store_llm_messages:
-                llm_msg_id = await self.conversation_manager.create_placeholder_message(
-                    "LLM"
-                )
-
-            # Generate streaming response from LLM
-            response = await self._agent.astream_chat(message)
-
-            # Stream tokens and update message periodically
-            token_count = 0
+        if isinstance(response, StreamingAgentChatResponse):
+            content = ""
             async for token in response.async_response_gen():
-                token_str = str(token)
-                accumulated_content += token_str
-                token_count += 1
+                content += str(token)
+        else:
+            content = str(response.response)
 
-                yield UnifiedStreamResponse(
-                    content=token_str,
-                    accumulated_content=accumulated_content,
-                    sources=sources,
-                    user_message_id=user_msg_id,
-                    llm_message_id=llm_msg_id,
-                    is_complete=False,
-                    metadata={"framework": "llama_index"},
-                )
+        sources: list[SourceNode] = []
+        if hasattr(response, "source_nodes") and response.source_nodes:
+            for node in response.source_nodes:
+                sources.append(_convert_llama_index_node_to_source_node(node))
 
-                # Update message content every 50 tokens to reduce DB writes
-                if llm_msg_id and token_count % 50 == 0:
-                    await self.conversation_manager.update_message_content(
-                        llm_msg_id, accumulated_content
-                    )
+        return content, sources, {"framework": "llama_index"}
 
-            # Extract sources after streaming is complete
-            if hasattr(response, "source_nodes") and response.source_nodes:
-                for node in response.source_nodes:
-                    sources.append(_convert_llama_index_node_to_source_node(node))
+    async def _stream_raw(
+        self, message: str, **kwargs
+    ) -> AsyncGenerator[UnifiedStreamResponse, None]:
+        """Yield UnifiedStreamResponse chunks without any DB side-effects."""
 
-            # Complete the message atomically with final content and sources
-            if llm_msg_id:
-                await self.conversation_manager.complete_message(
-                    llm_msg_id,
-                    accumulated_content,
-                    sources,
-                    {"framework": "llama_index"},
-                )
+        accumulated_content = ""
+        sources: list[SourceNode] = []
 
-            # Send final response with sources
+        response = await self._agent.astream_chat(message)
+
+        token_count = 0
+        async for token in response.async_response_gen():
+            token_str = str(token)
+            accumulated_content += token_str
+            token_count += 1
+
             yield UnifiedStreamResponse(
-                content="",
+                content=token_str,
                 accumulated_content=accumulated_content,
                 sources=sources,
-                user_message_id=user_msg_id,
-                llm_message_id=llm_msg_id,
-                is_complete=True,
+                is_complete=False,
                 metadata={"framework": "llama_index"},
             )
 
-        except Exception as e:
-            # Cancel placeholder message on error
-            if llm_msg_id:
-                await self.conversation_manager.cancel_message(
-                    llm_msg_id, f"Error: {str(e)}"
-                )
-            raise
+        # After streaming tokens, gather sources if available
+        if hasattr(response, "source_nodes") and response.source_nodes:
+            for node in response.source_nodes:
+                sources.append(_convert_llama_index_node_to_source_node(node))
 
-    async def store_user_message(self, content: str) -> int:
-        """Store a user message in the conversation."""
-        return await self.conversation_manager.store_user_message(content)
-
-    async def store_llm_message(self, content: str) -> int:
-        """Store an LLM message in the conversation."""
-        return await self.conversation_manager.store_llm_message(content)
+        yield UnifiedStreamResponse(
+            content="",
+            accumulated_content=accumulated_content,
+            sources=sources,
+            is_complete=True,
+            metadata={"framework": "llama_index"},
+        )
 
 
 class LlamaIndexCorpusAgent(CoreAgentBase):
@@ -413,7 +382,7 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
         for doc in context.documents:
             # Create document agent context
             doc_config = AgentConfig(
-                user_id=None,  # Make sub-document agents anonymous to prevent new conversations
+                user_id=config.user_id,
                 model_name=config.model_name,
                 api_key=config.api_key,
                 embedder_path=config.embedder_path,
@@ -422,6 +391,8 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
                 verbose=config.verbose,
                 temperature=config.temperature,
                 max_tokens=config.max_tokens,
+                store_user_messages=False,
+                store_llm_messages=False,
             )
             doc_agent = await LlamaIndexDocumentAgent.create(
                 doc,
@@ -495,106 +466,58 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
             agent=aggregator_agent,
         )
 
-    async def chat(
-        self, message: str, store_messages: bool = True
-    ) -> UnifiedChatResponse:
-        """Send a message and get a complete response."""
-        raise NotImplementedError("LlamaIndexCorpusAgent.chat is not implemented")
+    async def _chat_raw(
+        self, message: str, **kwargs
+    ) -> tuple[str, list[SourceNode], dict]:
+        response = await self._agent.astream_chat(message)
 
-    async def stream(
-        self, message: str, store_messages: bool = True
-    ) -> AsyncGenerator[UnifiedStreamResponse, None]:
-        """Send a message and get a streaming response."""
-        user_msg_id = None
-        llm_msg_id = None
-        accumulated_content = ""
-        sources = []
-
-        try:
-            # Store user message if configured
-            if store_messages and self.conversation_manager.config.store_user_messages:
-                user_msg_id = await self.conversation_manager.store_user_message(
-                    message
-                )
-
-            # Create placeholder for LLM message if storing
-            if store_messages and self.conversation_manager.config.store_llm_messages:
-                llm_msg_id = await self.conversation_manager.create_placeholder_message(
-                    "LLM"
-                )
-
-            # Generate streaming response from LLM
-            response = await self._agent.astream_chat(message)
-
-            # Stream tokens and update message periodically
-            token_count = 0
+        if isinstance(response, StreamingAgentChatResponse):
+            content = ""
             async for token in response.async_response_gen():
-                token_str = str(token)
-                accumulated_content += token_str
-                token_count += 1
+                content += str(token)
+        else:
+            content = str(response.response)
 
-                yield UnifiedStreamResponse(
-                    content=token_str,
-                    accumulated_content=accumulated_content,
-                    sources=sources,
-                    user_message_id=user_msg_id,
-                    llm_message_id=llm_msg_id,
-                    is_complete=False,
-                    metadata={"framework": "llama_index"},
-                )
+        sources: list[SourceNode] = []
+        if hasattr(response, "source_nodes") and response.source_nodes:
+            for node in response.source_nodes:
+                sources.append(_convert_llama_index_node_to_source_node(node))
 
-                # Update message content every 50 tokens to reduce DB writes
-                if llm_msg_id and token_count % 50 == 0:
-                    await self.conversation_manager.update_message_content(
-                        llm_msg_id, accumulated_content
-                    )
+        return content, sources, {"framework": "llama_index"}
 
-            # Extract sources after streaming is complete
-            if hasattr(response, "source_nodes") and response.source_nodes:
-                for node in response.source_nodes:
-                    sources.append(_convert_llama_index_node_to_source_node(node))
+    async def _stream_raw(
+        self, message: str, **kwargs
+    ) -> AsyncGenerator[UnifiedStreamResponse, None]:
+        accumulated_content = ""
+        sources: list[SourceNode] = []
 
-            # Complete the message atomically with final content and sources
-            if llm_msg_id:
-                await self.conversation_manager.complete_message(
-                    llm_msg_id,
-                    accumulated_content,
-                    sources,
-                    {"framework": "llama_index"},
-                )
+        response = await self._agent.astream_chat(message)
 
-            # Send final response with sources
+        token_count = 0
+        async for token in response.async_response_gen():
+            token_str = str(token)
+            accumulated_content += token_str
+            token_count += 1
+
             yield UnifiedStreamResponse(
-                content="",
+                content=token_str,
                 accumulated_content=accumulated_content,
                 sources=sources,
-                user_message_id=user_msg_id,
-                llm_message_id=llm_msg_id,
-                is_complete=True,
+                is_complete=False,
                 metadata={"framework": "llama_index"},
             )
 
-        except Exception as e:
-            # Cancel placeholder message on error
-            if llm_msg_id:
-                await self.conversation_manager.cancel_message(
-                    llm_msg_id, f"Error: {str(e)}"
-                )
-            raise
+        if hasattr(response, "source_nodes") and response.source_nodes:
+            for node in response.source_nodes:
+                sources.append(_convert_llama_index_node_to_source_node(node))
 
-    async def store_user_message(self, content: str) -> int:
-        """Store a user message in the conversation."""
-        return await self.conversation_manager.store_user_message(content)
-
-    async def store_llm_message(self, content: str) -> int:
-        """Store an LLM message in the conversation."""
-        return await self.conversation_manager.store_llm_message(content)
-
-    async def update_message(
-        self, message_id: int, content: str, metadata: Optional[dict] = None
-    ) -> None:
-        """Update an existing message."""
-        await self.conversation_manager.update_message(message_id, content, metadata)
+        yield UnifiedStreamResponse(
+            content="",
+            accumulated_content=accumulated_content,
+            sources=sources,
+            is_complete=True,
+            metadata={"framework": "llama_index"},
+        )
 
 
 # Backward compatibility - maintain the original OpenContractDbAgent interface

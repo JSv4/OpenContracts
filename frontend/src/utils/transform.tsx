@@ -12,6 +12,7 @@ import {
   RawServerAnnotationType,
   ServerAnnotationType,
 } from "../types/graphql-api";
+import { isSpanAnnotation } from "./annotationGuards";
 
 // https://gist.github.com/JamieMason/0566f8412af9fe6a1d470aa1e089a752
 export function groupBy<T extends Record<string, any>, K extends keyof T>(
@@ -116,7 +117,6 @@ export function convertToServerAnnotation(
   annotation: RawServerAnnotationType,
   allowComments?: boolean
 ): ServerTokenAnnotation | ServerSpanAnnotation {
-  // Process permissions using getPermissions
   const permissions = getPermissions(annotation.myPermissions);
 
   let approved = false;
@@ -128,20 +128,22 @@ export function convertToServerAnnotation(
       Boolean(annotation.userFeedback.edges[0]?.node?.rejected) ?? false;
   }
 
-  if (annotation.annotationType == LabelType.SpanLabel) {
+  if (isSpanAnnotation(annotation)) {
     return new ServerSpanAnnotation(
       annotation.page,
       annotation.annotationLabel,
       annotation.rawText ?? "",
       annotation.structural ?? false,
-      (annotation.json as SpanAnnotationJson) ?? ({} as SpanAnnotationJson),
+      annotation.json,
       permissions,
       approved,
       rejected,
-      allowComments !== undefined ? allowComments : false,
+      allowComments ?? false,
       annotation.id
     );
   }
+
+  // Fallback: treat as token annotation (MultipageAnnotationJson)
   return new ServerTokenAnnotation(
     annotation.page,
     annotation.annotationLabel,
@@ -151,7 +153,7 @@ export function convertToServerAnnotation(
     permissions,
     approved,
     rejected,
-    allowComments !== undefined ? allowComments : false,
+    allowComments ?? false,
     annotation.id
   );
 }

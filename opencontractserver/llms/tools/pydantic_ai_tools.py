@@ -175,6 +175,9 @@ class PydanticAIToolWrapper:
             _anns = dict(getattr(original_func, "__annotations__", {}))
             _anns.setdefault("ctx", RunContext[PydanticAIDependencies])
             async_wrapper.__annotations__ = _anns
+            # Attach reference to the wrapper for approval checking
+            async_wrapper._pydantic_ai_wrapper = self
+            async_wrapper.core_tool = self.core_tool
             return async_wrapper
         else:
             # Convert sync function to async
@@ -200,6 +203,9 @@ class PydanticAIToolWrapper:
             _anns_sync = dict(getattr(original_func, "__annotations__", {}))
             _anns_sync.setdefault("ctx", RunContext[PydanticAIDependencies])
             sync_to_async_wrapper.__annotations__ = _anns_sync
+            # Attach reference to the wrapper for approval checking
+            sync_to_async_wrapper._pydantic_ai_wrapper = self
+            sync_to_async_wrapper.core_tool = self.core_tool
 
             return sync_to_async_wrapper
 

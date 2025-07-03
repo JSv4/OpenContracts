@@ -43,6 +43,11 @@ from opencontractserver.llms.tools.llama_index_tools import (
 from opencontractserver.llms.vector_stores.llama_index_vector_stores import (
     DjangoAnnotationVectorStore,
 )
+from opencontractserver.llms.tools.core_tools import (
+    get_document_summary,
+    get_document_summary_versions,
+    get_document_summary_diff,
+)
 
 # Apply nest_asyncio to enable nested event loops
 nest_asyncio.apply()
@@ -173,9 +178,50 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
             get_partial_note_content_tool,
         ]
 
-        # Add any tools passed from the factory
-        if tools:
-            current_tools.extend(tools)
+        # -------------------------------------------------
+        # Document summary tools (versions, diff, update)
+        # -------------------------------------------------
+
+        # Wrap functions to bind document & corpus
+        def _get_doc_summary_versions(limit: int | None = None):
+            return get_document_summary_versions(
+                document_id=context.document.id,
+                corpus_id=context.corpus.id,
+                limit=limit,
+            )
+
+        def _get_doc_summary_diff(from_version: int, to_version: int):
+            return get_document_summary_diff(
+                document_id=context.document.id,
+                corpus_id=context.corpus.id,
+                from_version=from_version,
+                to_version=to_version,
+            )
+
+        current_tools.extend(
+            [
+                FunctionTool.from_defaults(
+                    fn=lambda truncate_length=None, from_start=True: get_document_summary(
+                        document_id=context.document.id,
+                        corpus_id=context.corpus.id,
+                        truncate_length=truncate_length,
+                        from_start=from_start,
+                    ),
+                    name="get_document_summary",
+                    description="Retrieve latest markdown summary content for the document.",
+                ),
+                FunctionTool.from_defaults(
+                    fn=_get_doc_summary_versions,
+                    name="get_document_summary_versions",
+                    description="Get version history for the document summary.",
+                ),
+                FunctionTool.from_defaults(
+                    fn=_get_doc_summary_diff,
+                    name="get_document_summary_diff",
+                    description="Get unified diff between two summary versions.",
+                ),
+            ]
+        )
 
         # Convert loaded messages to LlamaIndex format
         prefix_messages = [

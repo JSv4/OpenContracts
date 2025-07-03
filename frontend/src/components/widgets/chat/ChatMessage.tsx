@@ -1427,15 +1427,18 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     effectiveHasTimeline &&
     (!isComplete || content.trim().length === 0);
 
-  // Local collapse state for timeline when message is COMPLETE
-  const [tlCollapsed, setTlCollapsed] = useState<boolean>(isComplete);
+  // Local collapse state for timeline when message is COMPLETE.
+  // For short timelines (<=2 steps) we default to expanded even after completion
+  const [tlCollapsed, setTlCollapsed] = useState<boolean>(
+    isComplete && timeline.length > 2
+  );
 
-  // When message transitions to complete, collapse timeline automatically
+  // When message transitions to complete, collapse timeline automatically only if long
   useEffect(() => {
     if (isComplete) {
-      setTlCollapsed(true);
+      setTlCollapsed(timeline.length > 2);
     }
-  }, [isComplete]);
+  }, [isComplete, timeline.length]);
 
   return (
     <MessageContainer
@@ -1453,7 +1456,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         </TimelineIndicator>
       )}
       {effectiveHasSources && (
-        <SourceIndicator $isSelected={isSelected}>
+        <SourceIndicator
+          $isSelected={isSelected}
+          data-testid="source-indicator"
+        >
           <Pin size={14} />
           {sources.length > 0 ? `${sources.length} sources` : "View sources"}
         </SourceIndicator>

@@ -1,0 +1,129 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
+      document analysis and interpretation. Your primary goal is to answer questions
+      accurately based on document ''Test Doc'' (ID: 1).\n\nThis document is described
+      as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou have access to a
+      comprehensive set of tools for document analysis:\n\n1. **Vector Search**: A
+      sophisticated semantic search engine that finds text passages similar to your
+      queries.\n2. **Document Summary Access**: Tools to load and analyze the document''s
+      markdown summary, including:\n   - Loading full or truncated summary content\n   -
+      Calculating token lengths for context management\n3. **Notes Analysis**: Tools
+      to retrieve and examine notes attached to this document:\n   - Listing all notes
+      with metadata\n   - Accessing specific note content\n   - Calculating note token
+      lengths\n\n**Important**: Always check what tools are available to you, as additional
+      specialized tools may be provided dynamically beyond the core set described
+      above. Use the appropriate tools to gather information before answering.\n\n**Guidelines:**\n-
+      Prioritize information retrieved directly from the document using these tools\n-
+      We intentionally did not give you the entire document initially. \n  Try doing
+      some vector search to get more information initially and then iteratively \n  identifying
+      which parts of the document to review.  \n- Do not rely solely on the summary
+      or your general knowledge\n- Use multiple tools when necessary for comprehensive
+      answers\n- Present your findings in clear, helpful markdown format\n- Avoid
+      repeating instructions or disclaimers in your responses"},{"role":"user","content":"Extract
+      document information"}],"model":"gpt-4o-mini","stream":false,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"Simple
+      model for testing.","parameters":{"properties":{"title":{"description":"Document
+      title","type":"string"},"page_count":{"description":"Number of pages","type":"integer"}},"required":["title","page_count"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2098'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=bDQscFKx0trnIiGDucQAvj2X09tRmOlTzQs.13GhTqA-1751724215-1.0.1.1-apAUjlK_ny3mZfJcI7PXy3gZiYZ09FScEe8B6gNdyiev_djryPjNwzSd9vK90fIV77Blk83UHGYPT79jdHcHgYvvln0tleL5bkaqYY_si2c;
+        _cfuvid=0bYiFw6eGpn6KpRBWhYxvWZ9.4aVe4KLfbU3FPzvYek-1751724215352-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '1'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//3FTBbtswDL37KwSe4yF2sibNccbareiADl0wdEthqDLtqJElTaK3ZkH+
+        fZDTxE66AT3PB8Pi4yMfaVKbiDGQBcwYiCUnUVsVv7NP9SMRNpcm89dP2Wqlvt3+uMnk9OvFZxgE
+        hnl4REF71hthaquQpNE7WDjkhCFqMnmbTNJxOk5aoDYFqkCrLMVjE9dSyzgdpuN4OImT6TN7aaRA
+        DzP2PWKMsU37Djp1gU8wY8PB3lKj97xCmB2cGANnVLAA91564ppg0IHCaEIdpOtGqR5AxqhccKW6
+        xLtn0/vumsWVytd31fV18T4TeHMxXZ9fNHhz+fH36EMv3y702raCykaLQ5N6+ME+O0nGGGhe77hS
+        c5U79I2iEz5jwF3V1KgpaIfNAkiSwgXM2ALmtxn7Eo4sYTHLltwSOpYsYMAWYHmFuTCNpuA83MJR
+        4G3vtB28qiV36VSsrtZzuvo1z4wpdVGtCvNJ/pctOXzf9+bIYdl4rl4OGNfaEA9FtRN2H500FpSp
+        rDMP/oQa6pR+mTvkvm1If1SjvZBWAjRH2wDWmdpSTmaFbdLR2fkuKnQb26GT570CMsRVZx+P9qyj
+        eHmBxGW7LocNFVwsseio3abyppCmB0S92l+q+VvsXf1SV68J3wFCoCUscuuwkOK44s7NYbjQ/uV2
+        6HIrGDy6n1JgThJd+B8Flnw/g+DXnrDOS6krdNbJ9q6B0uZnKU9HfJpgCdE2+gMAAP//AwC7vJW/
+        eQUAAA==
+    headers:
+      CF-RAY:
+      - 95a768ba6b57477f-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 05 Jul 2025 14:04:02 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '1042'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '1045'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999589'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 6ms
+      x-request-id:
+      - req_84411a9cd0006b3d22822accbf8e3497
+    status:
+      code: 200
+      message: OK
+version: 1

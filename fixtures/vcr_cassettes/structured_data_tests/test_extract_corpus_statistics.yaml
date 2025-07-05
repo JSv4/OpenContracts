@@ -1,0 +1,131 @@
+interactions:
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are an expert assistant
+      designed to analyze and answer queries about a collection of documents called
+      'Test Corpus'.\\n\\n**Available Tools:**\\nYou have access to comprehensive
+      tools for analyzing documents in this corpus:\\n\\n1. **Document-Specific Tools**
+      \u2013 available *per* document via the `ask_document` helper:\\n   - Vector
+      search inside that document\\n   - Summary & note access\\n   - Annotation manipulation
+      (subject to approval)\\n   - Token length calculations for context management\\n2.
+      **Corpus-Level Coordination Tools** \u2013 orchestrate multi-document reasoning:\\n
+      \  - `list_documents()`\u2003\u2192 returns `[{document_id, title, description}]`
+      for discovery\\n   - `ask_document(document_id, question)`\u2003\u2192 runs
+      a **document agent** and yields a rich object:\\n       \u2022 `answer`\u2003str
+      \u2013 the assistant's final answer\\n       \u2022 `sources`\u2003list \u2013
+      flattened citation objects (annotation_id, page, rawText \u2026)\\n       \u2022
+      `timeline`\u2003list \u2013 detailed reasoning & tool calls from the sub-agent
+      run\\n   Use these keys to compile thorough, well-cited corpus-level answers.\\n3.
+      **Cross-Document Vector Search** \u2013 semantic search across the entire corpus
+      for broad context\\n\\n**Important**: Always check what tools are available
+      to you, as additional specialized tools may be provided dynamically beyond the
+      core set. The exact tools available will depend on the documents in this corpus.\\n\\n**Guidelines:**\\n-
+      Always use the provided tools to gather information before answering\\n- Do
+      not rely on prior knowledge about the documents\\n- When appropriate, search
+      across multiple documents for comprehensive answers\\n- Cite specific documents
+      and sources when presenting information\\n- Prefer using `sources` returned
+      by `ask_document` or vector search to justify claims\\n- Present your findings
+      in clear, well-structured markdown format, using footnote-style citations\"},{\"role\":\"user\",\"content\":\"Calculate
+      statistics for this document collection.\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"tool_choice\":\"required\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"final_result\",\"description\":\"The
+      final response which ends this conversation\",\"parameters\":{\"properties\":{\"document_count\":{\"type\":\"integer\"},\"total_pages\":{\"type\":\"integer\"},\"average_document_length\":{\"type\":\"number\"},\"most_common_document_type\":{\"type\":\"string\"}},\"required\":[\"document_count\",\"total_pages\",\"average_document_length\",\"most_common_document_type\"],\"type\":\"object\"}}}]}"
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2499'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=0Ea.z3BX0CBrZL.OXDWb0vOLxvzEIYMFHnyDW6SEKqE-1751723136-1.0.1.1-TEZLlYj3eKhq9dnY9LqQP7gLLGHpmOc4KbGeBKioVsQPCz6gw7ruRvQjHYh8kNwVyrZnQC6vtEQMglU9LrMCWTpBZPkw2ZaYT5RWOS1Ni0g;
+        _cfuvid=I4jOcaxaCbrHDNI7susMuLCMENIMfuZ5cqfibCXYs84-1751723136772-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '1'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFPbbtpAEH33V6zmGSowNFDemlZRpUqR2iL1RrSarAezyd60uyZQxL9X
+        awfbIVSqHyx7zpyZs2dmDxljIAtYMBAbjEI7Nbx2u+8/t4+f/e3TzZdf3ixHHx924cf7r3JWeBgk
+        hr1/IBFPrDfCaqcoSmsaWHjCSKnqePZ2PMsn+WReA9oWpBKtdHE4tUMtjRzmo3w6HM2G4/kze2Ol
+        oAAL9jtjjLFD/U46TUE7WLDR4BTRFAKWBIs2iTHwVqUIYAgyRDQRBh0orIlkknRTKdUDorWKC1Sq
+        a9w8h953ZxYqxSs7farizdWn/RLxlr59+KOXk2u97/VrSu9dLWhdGdGa1MPb+OKsGWNgUDdcaVBx
+        T6FS8YzPGKAvK00mJu1wWEFhRf3Pha1MXNWesRVEG1FxhyWFNoZb8lgSbymKTBk3La5tSGW0tqbL
+        SSdKGStYwRFeqDlml77vek57WlcB1esRoDE2YnKinsHdM3Jsx61s6by9D2fUZI4MG+4JQ+1if5jZ
+        SUgtAaoX+wLOW+0ij/aR6qbTad5UhW6ne+i7Z7AxshcfDy7U4wVFlPVCtTssUGyo6KjdLmNVSNsD
+        st7ZX6u5VLs5vzTl/5TvACHIRSq481RI8fLEXZqndOX/lda6XAuGQH4rBfEoyad5FLTG0+JC2IdI
+        mq+lKck7L+vbCGvHr3LMJzgf0xqyY/YXAAD//wMAoN5f35sEAAA=
+    headers:
+      CF-RAY:
+      - 95a75042dc4072ff-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 05 Jul 2025 13:47:19 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '890'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '896'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999520'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 7ms
+      x-request-id:
+      - req_dd3447628170359715a208a3f2fa2294
+    status:
+      code: 200
+      message: OK
+version: 1

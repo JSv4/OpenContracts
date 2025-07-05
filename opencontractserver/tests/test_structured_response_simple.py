@@ -3,6 +3,7 @@ Simple test to verify the structured response API implementation.
 """
 
 import pytest
+import vcr
 from pydantic import BaseModel, Field
 
 from opencontractserver.llms import agents
@@ -20,6 +21,10 @@ class SimpleExtraction(BaseModel):
 class TestStructuredResponseBasic(BaseFixtureTestCase):
     """Basic tests for structured response API."""
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_basic_string_extraction.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_basic_string_extraction(self):
         """Test basic string extraction."""
         agent = await agents.for_document(
@@ -42,6 +47,10 @@ class TestStructuredResponseBasic(BaseFixtureTestCase):
         # Should return None or a string
         assert result is None or isinstance(result, str)
         
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_pydantic_model_extraction.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_pydantic_model_extraction(self):
         """Test Pydantic model extraction."""
         agent = await agents.for_document(
@@ -63,6 +72,10 @@ class TestStructuredResponseBasic(BaseFixtureTestCase):
             assert isinstance(result.title, str)
             assert isinstance(result.page_count, int)
             
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_llama_index_returns_none.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_llama_index_returns_none(self):
         """Test that LlamaIndex implementation returns None."""
         agent = await agents.for_document(

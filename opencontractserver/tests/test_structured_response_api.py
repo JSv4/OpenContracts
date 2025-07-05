@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import List, Optional
 
 import pytest
+import vcr
 from asgiref.sync import sync_to_async
 from pydantic import BaseModel, Field
 
@@ -81,6 +82,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
     
     # Basic type extraction tests
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_extract_string_from_document.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_extract_string_from_document(self):
         """Test extracting a simple string from a document."""
         agent = await agents.for_document(
@@ -98,6 +103,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         if result:
             assert len(result) > 0
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_extract_integer_from_document.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_extract_integer_from_document(self):
         """Test extracting an integer value from a document."""
         agent = await agents.for_document(
@@ -115,6 +124,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         if result:
             assert result > 0
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_extract_float_from_document.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_extract_float_from_document(self):
         """Test extracting a float value from a document."""
         agent = await agents.for_document(
@@ -130,6 +143,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         assert isinstance(result, float) or result is None
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_extract_boolean_from_document.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_extract_boolean_from_document(self):
         """Test extracting a boolean value from a document."""
         agent = await agents.for_document(
@@ -145,6 +162,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         assert isinstance(result, bool) or result is None
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_extract_list_from_document.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_extract_list_from_document(self):
         """Test extracting a list from a document."""
         agent = await agents.for_document(
@@ -164,6 +185,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
     
     # Complex Pydantic model extraction tests
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_extract_contract_dates.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_extract_contract_dates(self):
         """Test extracting structured date information from a contract."""
         agent = await agents.for_document(
@@ -188,6 +213,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
                 assert isinstance(date.description, str)
                 assert isinstance(date.is_deadline, bool)
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_extract_contract_parties.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_extract_contract_parties(self):
         """Test extracting party information from a contract."""
         agent = await agents.for_document(
@@ -208,6 +237,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
                 assert party.name
                 assert party.role
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_extract_comprehensive_analysis.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_extract_comprehensive_analysis(self):
         """Test extracting a comprehensive contract analysis."""
         agent = await agents.for_document(
@@ -227,6 +260,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             assert len(result.parties) > 0
             assert isinstance(result.key_obligations, list)
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_extract_payment_terms.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_extract_payment_terms(self):
         """Test extracting payment terms from a document."""
         agent = await agents.for_document(
@@ -249,6 +286,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
     
     # Corpus-level extraction tests
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_extract_corpus_insights.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_extract_corpus_insights(self):
         """Test extracting insights from an entire corpus."""
         # Add multiple documents to corpus
@@ -272,6 +313,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             assert isinstance(result.most_frequent_parties, list)
             assert isinstance(result.key_risks, list)
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_extract_corpus_statistics.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_extract_corpus_statistics(self):
         """Test extracting statistical information from a corpus."""
         agent = await agents.for_corpus(
@@ -298,6 +343,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
     
     # Parameter override tests
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_with_custom_system_prompt.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_with_custom_system_prompt(self):
         """Test extraction with a custom system prompt."""
         agent = await agents.for_document(
@@ -314,6 +363,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         assert isinstance(result, str) or result is None
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_with_custom_temperature.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_with_custom_temperature(self):
         """Test extraction with custom temperature setting."""
         agent = await agents.for_document(
@@ -331,6 +384,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         assert isinstance(result, bool) or result is None
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_with_custom_model.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_with_custom_model(self):
         """Test extraction with a different model."""
         agent = await agents.for_document(
@@ -347,6 +404,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         assert isinstance(result, str) or result is None
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_with_max_tokens_limit.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_with_max_tokens_limit(self):
         """Test extraction with token limit."""
         agent = await agents.for_document(
@@ -368,6 +429,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
     
     # Error handling tests
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_returns_none_on_llm_error.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_returns_none_on_llm_error(self):
         """Test that the method returns None on LLM errors."""
         agent = await agents.for_document(
@@ -385,6 +450,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         assert result is None
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_returns_none_on_parsing_error.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_returns_none_on_parsing_error(self):
         """Test that the method returns None when response can't be parsed."""
         agent = await agents.for_document(
@@ -408,6 +477,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
     
     # Framework comparison tests
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_pydantic_ai_structured_response.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_pydantic_ai_structured_response(self):
         """Test structured response with PydanticAI framework."""
         agent = await agents.for_document(
@@ -423,6 +496,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         assert isinstance(result, str) or result is None
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_llama_index_structured_response_returns_none.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_llama_index_structured_response_returns_none(self):
         """Test that LlamaIndex returns None (not implemented)."""
         agent = await agents.for_document(
@@ -441,6 +518,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
     
     # Ephemeral nature tests
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_no_conversation_persistence.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_no_conversation_persistence(self):
         """Test that structured responses don't create conversation history."""
         agent = await agents.for_document(
@@ -466,6 +547,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         assert final_count == initial_count
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_multiple_extractions_independent.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_multiple_extractions_independent(self):
         """Test that multiple extractions are independent."""
         agent = await agents.for_document(
@@ -495,6 +580,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
     
     # Edge cases and advanced scenarios
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_nested_pydantic_models.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_nested_pydantic_models(self):
         """Test extraction with deeply nested Pydantic models."""
         agent = await agents.for_document(
@@ -526,6 +615,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         if result:
             assert isinstance(result.address, Address)
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_optional_fields_handling.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_optional_fields_handling(self):
         """Test extraction with many optional fields."""
         agent = await agents.for_document(
@@ -553,6 +646,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             # At least title should be present
             assert result.title
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_enum_extraction.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_enum_extraction(self):
         """Test extraction with enum types."""
         from enum import Enum
@@ -584,6 +681,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             assert isinstance(result.doc_type, DocumentType)
             assert 0 <= result.confidence <= 1
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_concurrent_extractions.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_concurrent_extractions(self):
         """Test multiple concurrent structured extractions."""
         agent = await agents.for_document(
@@ -612,6 +713,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
 class TestStructuredResponseAPIConvenience(BaseFixtureTestCase):
     """Test the convenience methods in AgentAPI for structured responses."""
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_get_structured_response_from_document.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_get_structured_response_from_document(self):
         """Test the direct API method for document extraction."""
         from opencontractserver.llms.api import AgentAPI
@@ -627,6 +732,10 @@ class TestStructuredResponseAPIConvenience(BaseFixtureTestCase):
         
         assert isinstance(result, str) or result is None
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_get_structured_response_from_corpus.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_get_structured_response_from_corpus(self):
         """Test the direct API method for corpus extraction."""
         from opencontractserver.llms.api import AgentAPI
@@ -647,6 +756,10 @@ class TestStructuredResponseAPIConvenience(BaseFixtureTestCase):
         if result:
             assert result >= 0
     
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_convenience_with_all_overrides.yaml",
+        filter_headers=["authorization"],
+    )
     async def test_convenience_with_all_overrides(self):
         """Test convenience method with all parameter overrides."""
         from opencontractserver.llms.api import AgentAPI

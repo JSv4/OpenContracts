@@ -1,0 +1,133 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
+      document analysis and interpretation. Your primary goal is to answer questions
+      accurately based on document ''Test Doc'' (ID: 1).\n\nThis document is described
+      as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou have access to a
+      comprehensive set of tools for document analysis:\n\n1. **Vector Search**: A
+      sophisticated semantic search engine that finds text passages similar to your
+      queries.\n2. **Document Summary Access**: Tools to load and analyze the document''s
+      markdown summary, including:\n   - Loading full or truncated summary content\n   -
+      Calculating token lengths for context management\n3. **Notes Analysis**: Tools
+      to retrieve and examine notes attached to this document:\n   - Listing all notes
+      with metadata\n   - Accessing specific note content\n   - Calculating note token
+      lengths\n\n**Important**: Always check what tools are available to you, as additional
+      specialized tools may be provided dynamically beyond the core set described
+      above. Use the appropriate tools to gather information before answering.\n\n**Guidelines:**\n-
+      Prioritize information retrieved directly from the document using these tools\n-
+      We intentionally did not give you the entire document initially. \n  Try doing
+      some vector search to get more information initially and then iteratively \n  identifying
+      which parts of the document to review.  \n- Do not rely solely on the summary
+      or your general knowledge\n- Use multiple tools when necessary for comprehensive
+      answers\n- Present your findings in clear, helpful markdown format\n- Avoid
+      repeating instructions or disclaimers in your responses"},{"role":"user","content":"Extract
+      all important dates from this contract."}],"model":"gpt-4o-mini","stream":false,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"All
+      important dates found in a contract.","parameters":{"properties":{"effective_date":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Contract
+      effective date"},"expiration_date":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Contract
+      expiration date"},"key_dates":{"description":"Other important dates","items":{"$ref":"#/$defs/ContractDate"},"type":"array"}},"type":"object","$defs":{"ContractDate":{"description":"A
+      single important date in a contract.","properties":{"date":{"description":"Date
+      in ISO format (YYYY-MM-DD)","type":"string"},"description":{"description":"What
+      this date represents","type":"string"},"is_deadline":{"description":"Whether
+      this is a deadline","type":"boolean"}},"required":["date","description","is_deadline"],"type":"object"}}}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2676'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=0Ea.z3BX0CBrZL.OXDWb0vOLxvzEIYMFHnyDW6SEKqE-1751723136-1.0.1.1-TEZLlYj3eKhq9dnY9LqQP7gLLGHpmOc4KbGeBKioVsQPCz6gw7ruRvQjHYh8kNwVyrZnQC6vtEQMglU9LrMCWTpBZPkw2ZaYT5RWOS1Ni0g;
+        _cfuvid=I4jOcaxaCbrHDNI7susMuLCMENIMfuZ5cqfibCXYs84-1751723136772-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '1'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFPLjtowFN3nK6y7JhUJzJCya6Wh08csuqCqNKDI49wEg2NbtkNBiH+v
+        4pAHMJWaRWTd43PPuQ+fAkKAZzAnwDbUsVKL8LM+/DLPyXK5P3x7ep5soxdNfyymx+VCyx2MaoZ6
+        2yJzLesDU6UW6LiSDcwMUod11mj2EM3iSfTxwQOlylDUtEK7cKrCkksexuN4Go5nYZRc2BvFGVqY
+        k9eAEEJO/l/7lBkeYE7GozZSorW0QJh3lwgBo0QdAWott45KB6MeZEo6lLV1WQkxAJxSImVUiF64
+        +U6Dc98sKkT6tIxfku+401/xy+/J4tP2MWZ/RPJzoNekPmpvKK8k65o0wLv4/EaMEJC0bLhcUpEa
+        tJVwN3xCgJqiKlG62jucVoB5jszxPaYZdbhqqyUrwIPmhtZqd9AOjz5m6+Dr+gxXKufgvfN60EGD
+        eWWpuG8tlVI5r+l7u74g526MQhXaqDd7Q62L5naTGqTWd2c4pKA14i1AdbUHoI0qtUud2qEXnU6S
+        Jiv0uzpALxsFTjkqBvFZy7rKl2boKPeL0u0mo2yDWU/td5RWGVcDIBjUfu/mvdxN/VwW/5O+BxhD
+        7TBLtcGMs+uK+2sG66f8r2tdl71hsGj2nGHqOJp6HhnmtF1IsEfrsExzLgs02nD/yiDX6WNM4wlN
+        IswhOAd/AQAA//8DAHNdozxzBAAA
+    headers:
+      CF-RAY:
+      - 95a74f325ae1f036-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 05 Jul 2025 13:46:36 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '881'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '887'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999584'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 6ms
+      x-request-id:
+      - req_f9c6d03a3311ecc872ced67863f0413f
+    status:
+      code: 200
+      message: OK
+version: 1

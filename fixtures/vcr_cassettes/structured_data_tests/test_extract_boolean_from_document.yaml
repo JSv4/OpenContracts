@@ -25,22 +25,27 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Does this document contain confidentiality clauses?\"\n3. VERIFY:
-      Before outputting, internally validate your extraction by:\n   - Cross-referencing
+      requested in: \"Does this document establish the process for presidential impeachment?\"\n3.
+      VERIFY: Before outputting, internally validate your extraction by:\n   - Confirming
+      the requested information ACTUALLY EXISTS in the document\n   - Cross-referencing
       multiple sources if available\n   - Checking for logical consistency (dates
       in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
       values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
       text actually appears in the source material\n   - For lists/collections: searching
       again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
-      data is not found after thorough search, return null/empty rather than guessing\n-
+      the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
       If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON boolean value (true or false)\n\nNo explanations, no
-      process description, no confidence scores - just the final verified JSON.\n\nJSON
-      Schema for your response:\n```json\n{\n  \"type\": \"boolean\"\n}\n```"},{"role":"user","content":"Does
-      this document contain confidentiality clauses?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON boolean value (true or false)\n\nNo
+      explanations, no process description, no confidence scores - just the final
+      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"type\": \"boolean\"\n}\n```"},{"role":"user","content":"Does
+      this document establish the process for presidential impeachment?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"type":"boolean"}},"required":["response"],"type":"object"},"strict":true}}]}'
     headers:
       accept:
@@ -50,12 +55,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3619'
+      - '4078'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -83,19 +88,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//zFRNc5swEL3zKzR7Nh1DXOPhmKnTQzNTZ9qmX8kwG7FgtUKSJdE68fi/
-        d4AYsJN2ciwHBvbp7b63WmkXMAYih5QBX6PnlZHhuXn4ZJPtl+1mZYpVtVmVn2VR5vny/BpXMGkY
-        +u4HcX9gveK6MpK80KqDuSX01GSNktdRcjZdxFELVDon2dBK48OZDiuhRBhP41k4TcJo8chea8HJ
-        Qcq+B4wxtmvfjU6V0xZSNp0cIhU5hyVB2i9iDKyWTQTQOeE8Kg+TAeRaeVKNdFVLOQK81jLjKOVQ
-        uHt2o++hWShldk31+3dJ/Xt5NZ87sfmAlpON7NtRvS71vWkFFbXifZNGeB9PT4oxBgqrjisUysyS
-        q6U/4TMGaMu6IuUb7bC7AUvOaOXoBlJWoHS0hyPKfvS3n7zI7NfLN2tVJt/uhblczhfLCx7rq48X
-        +H+Z9bb+p9f++3a09ZaK2qF8OhOolPbYqG2H4jY46RhIXRqr79wJtTEg3DqzhK51Op6u4CCklQD1
-        0QCDsboyPvP6J7VF5/NFlxWGQzags9kj6LVHOcSTKJ48ky/LyaNoJ7w/VBz5mvKBOhwurHOhR0Aw
-        8v5UzXO5O/9ClS9JPwCck/GUZ8ZSLvix42GZpeYO+tuyvsutYHBkfwlOmRdkm/3IqcDDcIG7d56q
-        rBCqJGusaK8HKEw2jzE+w0VEBQT74A8AAAD//wMAe5e1HiwFAAA=
+        H4sIAAAAAAAAAwAAAP//jFNRa9swEH73rxD3HI/YSePUb+va0QzCYBsMthZzlc+ONllSJLmsC/nv
+        xXZiO2kG84MR9+m7++670y5gDEQOKQO+Qc8rI8Ob7XQ9+25+/C1c+SV5v8L4Y3l/e7daxPXWw6Rh
+        6KdfxP2R9Y7rykjyQqsO5pbQU5M1Sq6iZDaPousWqHROsqGVxodzHVZCiTCexvNwmoTR8sDeaMHJ
+        Qcp+Bowxtmv/jU6V0x9I2XRyjFTkHJYEaX+JMbBaNhFA54TzqDrNB5Br5Uk10lUt5QjwWsuMo5RD
+        4e7bjc6DWShl9vn5/o4+iGJ9vVS3Nyv3dRt9+ubW5ahel/rFtIKKWvHepBHex9OzYoyBwqrjCoUy
+        s+Rq6c/4jAHasq5I+UY77B7AkjNaOXqAtEDpaA8njH1w6fw4csNSUTuUb21CpbTHRm3r0+MB2fcj
+        kbo0Vj+5M2rTgHCbzBK6ttOx4cFRSCsB6pOZgrG6Mj7z+je1RZOrWZcVhr0b0Gh+AL32KEesRTK5
+        kC/LyaNoh97vGUe+oXygDvuGdS70CAhGvb9Vcyl3179Q5f+kHwDOyXjKM2MpF/y04+GapeZZ/uta
+        73IrGBzZZ8Ep84JsM4+cCjwuF7gX56nKCqFKssaK9sVAYbJFjPEMlxEVEOyDVwAAAP//AwBeF7DC
+        PwQAAA==
     headers:
       CF-RAY:
-      - 95a8095d9d2c460c-DFW
+      - 95a859e54de66b4f-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -103,7 +108,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:53:41 GMT
+      - Sat, 05 Jul 2025 16:48:39 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -119,13 +124,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '686'
+      - '496'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '690'
+      - '500'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -133,13 +138,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999215'
+      - '3999102'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 11ms
+      - 13ms
       x-request-id:
-      - req_ba06e053975a173f477b67eaf8816592
+      - req_d2b6a922b12d5bdfbb2264346110f831
     status:
       code: 200
       message: OK

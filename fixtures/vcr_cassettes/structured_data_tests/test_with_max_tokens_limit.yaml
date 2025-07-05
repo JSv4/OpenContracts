@@ -26,19 +26,24 @@ interactions:
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
       requested in: \"Describe this document.\"\n3. VERIFY: Before outputting, internally
-      validate your extraction by:\n   - Cross-referencing multiple sources if available\n   -
+      validate your extraction by:\n   - Confirming the requested information ACTUALLY
+      EXISTS in the document\n   - Cross-referencing multiple sources if available\n   -
       Checking for logical consistency (dates in order, numbers reasonable, etc.)\n   -
       Ensuring no placeholder or generic values (like \"N/A\" unless actually in the
       document)\n   - Confirming extracted text actually appears in the source material\n   -
       For lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
-      RULES:\n- If data is not found after thorough search, return null/empty rather
+      RULES:\n- If the requested information does not exist or is not applicable to
+      this document, return null\n- If a question doesn''t make sense for this document
+      type, return null\n- NEVER invent, guess, or infer data that isn''t explicitly
+      present\n- If data is not found after thorough search, return null/empty rather
       than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON string value\n\nNo explanations, no process description,
-      no confidence scores - just the final verified JSON.\n\nJSON Schema for your
-      response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"Describe
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON string value\n\nNo explanations,
+      no process description, no confidence scores - just the final verified JSON.\n\nJSON
+      Schema for your response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"Describe
       this document."}],"model":"gpt-4o-mini","max_completion_tokens":50,"stream":false,"temperature":0.7}'
     headers:
       accept:
@@ -48,12 +53,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3275'
+      - '3696'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -81,17 +86,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xSwW7bMAy9+ysInuMhdrymzbFFhx12GdqiwObCVmXaUStLgkQPy4L8+2A7jd2u
-        A3rRgY/v6T2S+wgAVYUbQLkVLFun40v3R6RGfrXX68tv9+2Xu+83y9vni6bb3f+4wEXPsI9PJPmF
-        9Una1mliZc0IS0+CqVdN1p+T9SpJsnQAWluR7mmN4zizcauMitNlmsXLdZycH9lbqyQF3MDPCABg
-        P7y9T1PRb9zAcvFSaSkE0RBuTk0A6K3uKyhCUIGFYVxMoLSGyQzWy7J8CtbkZp8bgBx55yjHDeR4
-        d3MFt4o1QQIxXG2FY/KQ5JibQ27Kspwreqq7IPpUptN6BghjLIt+KkOWhyNyOLnXtnHePoY3VKyV
-        UWFbeBLBmt5pYOtwQA8RwMMwpe5VcHTeto4Lts80fHeWrkY9nJYzoWlyBNmy0DNWli3e0SsqYqF0
-        mM0ZpZBbqibqtBTRVcrOgGiW+l8372mPyZVpPiI/AVKSY6oK56lS8nXiqc1Tf7v/aztNeTCMgfwv
-        JalgRb7fREW16PR4URh2gaktamUa8s6r8axqV5ylIl2J84RqjA7RXwAAAP//AwBjqu1+ZAMAAA==
+        H4sIAAAAAAAAA4xSwW6cMBS88xXWOy8VsDRsOUaKek17qFqVCDn2g3VibK/9qLpa7b9Xhs1C0lTq
+        xQfPm/HM+J0SxkBJqBmIPScxOJ3eHrKvxy+Hz0LpEnNe/Xh++i7u7+S37f1BwCYy7OMTCnphfRB2
+        cBpJWTPDwiMnjKp59TGvtmW5u5mAwUrUkdY7SkubDsqotMiKMs2qNN9d2HurBAao2c+EMcZO0xl9
+        Gom/oWbZ5uVmwBB4j1BfhxgDb3W8AR6CCsQNwWYBhTWEZrJ+agxjDdDRYQM1ayCQV6ZvoDHnNcVj
+        NwYebZtR6xXAjbHEY+zJ7MMFOV/tads7bx/DGyp0yqiwbz3yYE20Esg6mNBzwtjDVMP4Khk4bwdH
+        LdlnnJ6rsmLWg6X9Bf10wcgS1ytSnm/ekWslElc6rHoEwcUe5UJdSuejVHYFJKvQf5t5T3sOrkz/
+        P/ILIAQ6Qtk6j1KJ14GXMY9xN/81di15MgwB/S8lsCWFPn6ExI6Pet4YCMdAOLSdMj1659W8Np1r
+        bwpebPkuxw6Sc/IHAAD//wMAyG9QHUQDAAA=
     headers:
       CF-RAY:
-      - 95a81136de242c8a-DFW
+      - 95a862d93882f0a2-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -99,7 +104,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:59:02 GMT
+      - Sat, 05 Jul 2025 16:54:46 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -115,13 +120,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '478'
+      - '339'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '481'
+      - '342'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -129,13 +134,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999234'
+      - '3999129'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 11ms
+      - 13ms
       x-request-id:
-      - req_284b47fcf74e38e4871546f200d241e1
+      - req_030420b767bf9a9c67d21030b748dcb1
     status:
       code: 200
       message: OK

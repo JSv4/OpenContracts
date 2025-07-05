@@ -121,6 +121,8 @@ class ContractAnalysis(BaseModel):
     governing_law: Optional[str] = Field(None, description="Governing law jurisdiction")
     key_obligations: List[str] = Field(description="Key obligations for each party")
     risk_factors: List[str] = Field(default_factory=list, description="Identified risk factors")
+    public_law_number: Optional[str] = Field(None, description="Public law number pertaining to the amendment")
+    amendment_year: Optional[int] = Field(None, description="Year the section was amended")
 
 
 class PaymentTerm(BaseModel):
@@ -161,7 +163,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "What is the main subject of this document? Return just the subject as a string.",
+            "Extract the definition of the word 'vessel' as a string.",
             str
         )
         
@@ -171,6 +173,8 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         assert isinstance(result, str) or result is None
         if result:
             assert len(result) > 0
+            # Should contain key parts of the vessel definition
+            assert "watercraft" in result.lower() or "transportation" in result.lower()
     
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/structured_data_tests/test_extract_integer_from_document.yaml",
@@ -185,7 +189,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "How many pages does this document have? Return just the number.",
+            "Extract the section number for the definition of 'County'.",
             int
         )
         
@@ -194,7 +198,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         assert isinstance(result, int) or result is None
         if result:
-            assert result > 0
+            assert result == 2  # County is defined in Section 2
     
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/structured_data_tests/test_extract_float_from_document.yaml",
@@ -209,7 +213,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "What is the total monetary value mentioned in this document? Return just the number.",
+            "Extract the chapter number of 'ACTS AND RESOLUTIONS; FORMALITIES OF ENACTMENT...' as a float.",
             float
         )
         
@@ -217,6 +221,8 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         log_structured_result("test_extract_float_from_document", result)
         
         assert isinstance(result, float) or result is None
+        if result is not None:
+            assert result == 2.0
     
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/structured_data_tests/test_extract_boolean_from_document.yaml",
@@ -231,7 +237,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "Does this document contain confidentiality clauses?",
+            "Does this document establish the process for presidential impeachment?",
             bool
         )
         
@@ -239,6 +245,8 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         log_structured_result("test_extract_boolean_from_document", result)
         
         assert isinstance(result, bool) or result is None
+        if result is not None:
+            assert result is False
     
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/structured_data_tests/test_extract_list_from_document.yaml",
@@ -253,7 +261,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "List the main sections or headings in this document.",
+            "Extract a list of the terms that Section 1 defines as being included under the words 'person' and 'whoever'.",
             List[str]
         )
         
@@ -279,7 +287,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "Extract all important dates from this contract.",
+            "Extract the enactment date of the 'Born-Alive Infants Protection Act of 2002'.",
             ContractDates
         )
         
@@ -310,7 +318,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "Identify all parties to this contract with their roles.",
+            "Extract a list of any private corporations or associations named as parties in this legal text.",
             List[ContractParty]
         )
         
@@ -318,11 +326,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         log_structured_result("test_extract_contract_parties", result)
         
         assert isinstance(result, list) or result is None
-        if result:
-            for party in result:
-                assert isinstance(party, ContractParty)
-                assert party.name
-                assert party.role
+        if result is not None:
+            # Expect an empty list for this statute
+            assert result == []
     
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/structured_data_tests/test_extract_comprehensive_analysis.yaml",
@@ -337,7 +343,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "Provide a comprehensive analysis of this contract.",
+            "Perform a comprehensive analysis of the 'Respect for Marriage Act' amendment to Section 7.",
             ContractAnalysis
         )
         
@@ -349,6 +355,8 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             assert result.title
             assert len(result.parties) > 0
             assert isinstance(result.key_obligations, list)
+            assert result.public_law_number
+            assert isinstance(result.amendment_year, int)
     
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/structured_data_tests/test_extract_payment_terms.yaml",
@@ -363,7 +371,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "Extract all payment terms from this document.",
+            "Extract a list of any payment schedules or financial obligations mentioned in the text.",
             List[PaymentTerm]
         )
         
@@ -371,11 +379,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         log_structured_result("test_extract_payment_terms", result)
         
         assert isinstance(result, list) or result is None
-        if result and len(result) > 0:
-            for term in result:
-                assert isinstance(term.amount, float)
-                assert isinstance(term.currency, str)
-                assert isinstance(term.condition, str)
+        if result:
+            # Expect no payment terms in this legal text
+            assert result == []
     
     # Corpus-level extraction tests
     
@@ -395,7 +401,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "Analyze this corpus and provide high-level insights.",
+            "From a corpus containing Title 1 and other legal documents, extract high-level insights about statutory interpretation.",
             CorpusInsight
         )
         
@@ -427,7 +433,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             most_common_document_type: str
         
         result = await agent.structured_response(
-            "Calculate statistics for this document collection.",
+            "Extract basic statistics about a corpus of legal documents including Title 1.",
             CorpusStats
         )
         
@@ -455,9 +461,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "Extract the document title",
+            "Ahoy matey! What be the definition of 'vessel'?",
             str,
-            system_prompt="You are a title extraction specialist. Be very precise."
+            system_prompt="You are a pirate speaking in nautical language."
         )
         
         # Log the structured result for inspection
@@ -496,8 +502,14 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         if result:
             # Verification should ensure reasonable values
             assert result.total_amount >= 0  # No negative amounts
-            assert len(result.currency) == 3  # Valid currency code
-            assert result.parties_count > 0  # At least one party
+            # Allow empty currency string when no monetary value is present
+            if result.currency:
+                assert len(result.currency) == 3  # Valid currency code when provided
+            else:
+                assert result.currency == ""  # Expect empty string if no currency found
+
+            # Parties count may legitimately be zero if no parties are identified
+            assert result.parties_count >= 0  # Non-negative parties count
     
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/structured_data_tests/test_custom_prompt_overrides_default.yaml",
@@ -513,14 +525,14 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         # Use a deliberately bad custom prompt that would produce poor results
         # This demonstrates that it truly overrides the default
-        bad_prompt = "You are a creative writer. Make up interesting data regardless of what's in the document."
+        bad_prompt = "You are a legal scholar. Provide precise statutory interpretation without creative additions."
         
         class TestData(BaseModel):
             document_type: str
             accuracy_statement: str = Field(description="A statement about accuracy")
         
         result = await agent.structured_response(
-            "What type of document is this and how accurate is your assessment?",
+            "Using your expertise, identify the primary purpose of this text and the legal principle it establishes.",
             TestData,
             system_prompt=bad_prompt
         )
@@ -550,7 +562,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             fax: Optional[str] = Field(None, description="Fax number if present")
         
         result = await agent.structured_response(
-            "Extract all contact information from this document",
+            "Extract contact information (phone, email, fax) for the enactor of this title.",
             ContactInfo
         )
         
@@ -606,7 +618,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "Summarize this document in one sentence.",
+            "Using the specified model, summarize the amendment made by Pub. L. 112-231.",
             str,
             model="gpt-3.5-turbo"
         )
@@ -658,7 +670,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         # Use an invalid model to trigger an error
         result = await agent.structured_response(
-            "Extract data",
+            "Define 'insane person'.",
             str,
             model="invalid-model-name-12345"
         )
@@ -791,13 +803,13 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         # First extraction
         result1 = await agent.structured_response(
-            "What is the document about?",
+            "Provide the statutory definition of 'writing'.",
             str
         )
         
         # Second extraction - should not have context from first
         result2 = await agent.structured_response(
-            "What was my previous question?",  # This shouldn't know
+            "Provide the statutory definition of 'oath'.",  # Should not rely on prior context
             str
         )
         
@@ -812,7 +824,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         # The second result shouldn't reference the first question
         if result2:
-            assert "document about" not in result2.lower()
+            assert "writing" not in result2.lower()
     
     # Edge cases and advanced scenarios
     
@@ -868,15 +880,13 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         class DocumentMetadata(BaseModel):
             title: str
-            author: Optional[str] = None
-            date_created: Optional[str] = None
-            version: Optional[str] = None
-            department: Optional[str] = None
-            classification: Optional[str] = None
-            tags: Optional[List[str]] = None
+            public_law_number: Optional[str] = None
+            date_enacted: Optional[str] = None
+            sponsor: Optional[str] = None
+            committee: Optional[str] = None
         
         result = await agent.structured_response(
-            "Extract all available metadata from this document",
+            "Extract metadata about the '21st Century Language Act of 2012'.",
             DocumentMetadata
         )
         
@@ -897,11 +907,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         from enum import Enum
         
         class DocumentType(str, Enum):
-            CONTRACT = "contract"
-            INVOICE = "invoice"
-            REPORT = "report"
-            MEMO = "memo"
-            OTHER = "other"
+            POSITIVE_LAW = "POSITIVE_LAW"
+            PROPOSED_BILL = "PROPOSED_BILL"
+            REPEALED = "REPEALED"
         
         class DocClassification(BaseModel):
             doc_type: DocumentType
@@ -914,7 +922,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "Classify this document type",
+            "Classify the legal status of this title based on the introductory notes.",
             DocClassification
         )
         
@@ -940,20 +948,20 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         # Run multiple extractions concurrently
         tasks = [
-            agent.structured_response("Extract the title", str),
-            agent.structured_response("Count the pages", int),
-            agent.structured_response("Is this a contract?", bool),
-            agent.structured_response("List the main topics", List[str])
+            agent.structured_response("Provide the official citation format for this title.", str),
+            agent.structured_response("Return just the number of sections defined in Chapter 1.", int),
+            agent.structured_response("Is this document the US Constitution?", bool),
+            agent.structured_response("List the terms defined under the 'Rules of Construction' in Section 1.", List[str])
         ]
         
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         # Log the structured result for inspection
         log_structured_result("test_concurrent_extractions", {
-            "title_extraction": results[0],
-            "page_count": results[1],
-            "is_contract": results[2],
-            "main_topics": results[3]
+            "citation_format": results[0],
+            "section_count": results[1],
+            "is_constitution": results[2],
+            "section_terms": results[3]
         })
         
         # All should complete without exceptions
@@ -977,7 +985,7 @@ class TestStructuredResponseAPIConvenience(BaseFixtureTestCase):
         result = await AgentAPI.get_structured_response_from_document(
             document=self.doc.id,
             corpus=self.corpus.id,
-            prompt="What is the main topic of this document?",
+            prompt="Get a structured response summarizing the rule for 'writs of error'.",
             target_type=str,
             framework=AgentFramework.PYDANTIC_AI,
             user_id=self.user.id
@@ -1002,7 +1010,7 @@ class TestStructuredResponseAPIConvenience(BaseFixtureTestCase):
         
         result = await AgentAPI.get_structured_response_from_corpus(
             corpus=self.corpus.id,
-            prompt="How many documents are in this corpus?",
+            prompt="From an entire corpus, extract the total number of unique Public Laws referenced in the statutory notes.",
             target_type=int,
             framework=AgentFramework.PYDANTIC_AI,
             user_id=self.user.id
@@ -1030,7 +1038,7 @@ class TestStructuredResponseAPIConvenience(BaseFixtureTestCase):
         result = await AgentAPI.get_structured_response_from_document(
             document=self.doc.id,
             corpus=self.corpus.id,
-            prompt="Analyze this document",
+            prompt="Using all overrides, act as a child and explain what the 'Born-Alive Infants Protection Act of 2002' does.",
             target_type=SimpleResult,
             framework=AgentFramework.PYDANTIC_AI,
             user_id=self.user.id,

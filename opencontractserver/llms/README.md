@@ -34,6 +34,21 @@ print(f"Message ID: {response.llm_message_id}")
 # Stream responses
 async for chunk in agent.stream("Summarize the main obligations"):
     print(chunk.content, end="")
+
+# NEW: Structured data extraction (one-shot, no conversation persistence)
+from pydantic import BaseModel, Field
+
+class ContractDates(BaseModel):
+    effective_date: str = Field(description="Contract effective date")
+    expiration_date: str = Field(description="Contract expiration date")
+
+dates = await agent.structured_response(
+    "Extract the contract dates",
+    ContractDates
+)
+if dates:
+    print(f"Effective: {dates.effective_date}")
+    print(f"Expires: {dates.expiration_date}")
 ```
 
 ## Core Concepts
@@ -42,7 +57,7 @@ async for chunk in agent.stream("Summarize the main obligations"):
 
 The `opencontractserver.llms` module provides several high-level API entry points:
 
-- **`agents`**: (`AgentAPI`) For creating and interacting with document and corpus agents. This is the most common entry point.
+- **`agents`**: (`AgentAPI`) For creating and interacting with document and corpus agents. This is the most common entry point. Also provides convenience methods for structured data extraction.
 - **`embeddings`**: (`EmbeddingAPI`) For generating text embeddings.
 - **`vector_stores`**: (`VectorStoreAPI`) For creating and interacting with vector stores for similarity search.
 - **`tools`**: (`ToolAPI`) For creating and managing `CoreTool` instances.
@@ -62,6 +77,24 @@ custom_tool = tools.create_from_function(
     description="A demonstration tool."
 )
 # This custom_tool can then be passed to an agent.
+
+# Example: Using AgentAPI convenience methods for structured extraction
+result = await agents.get_structured_response_from_document(
+    document=123,
+    corpus=1,
+    prompt="Extract key contract terms",
+    target_type=ContractTerms,
+    framework=AgentFramework.PYDANTIC_AI,
+    user_id=456  # Optional
+)
+
+# Or extract from an entire corpus
+insights = await agents.get_structured_response_from_corpus(
+    corpus=1,
+    prompt="Analyze patterns across all contracts",
+    target_type=CorpusInsights,
+    framework=AgentFramework.PYDANTIC_AI
+)
 ```
 
 ### Agents
@@ -72,6 +105,7 @@ Agents are the primary interface for interacting with documents and corpora. The
 - **Corpus Agents**: Work with collections of documents.
 - **Framework Flexibility**: Choose between LlamaIndex, PydanticAI, or future frameworks.
 - **Conversation Persistence**: Automatic conversation management and message storage.
+- **Structured Data Extraction**: One-shot typed data extraction without conversation persistence.
 - **Nested Streaming**: Real-time visibility into child agent execution through stream observers.
 
 #### Creating Agents
@@ -100,7 +134,7 @@ agent = await agents.for_document(
     document=123, # Use actual document ID or object
     corpus=1,     # Use actual corpus ID or object
     user_id=789,
-    system_prompt="You are a legal contract analyzer...",
+    system_prompt="You are a legal contract analyzer...",  # Note: Completely overrides default prompt
     model="gpt-4",
     temperature=0.1,
     tools=["load_md_summary", "get_notes_for_document_corpus"]
@@ -198,6 +232,93 @@ for source in response.sources:
     source_dict = source.to_dict()  # Returns flattened dict for storage/transmission
 
 # Note: conversation_id is available via agent.get_conversation_id()
+```
+
+#### Structured Data Extraction
+
+The framework provides a powerful **structured response API** for one-shot data extraction without conversation persistence. This is perfect for:
+- Form filling and data extraction pipelines
+- API endpoints that need structured output
+- Batch processing where conversation context isn't needed
+- Integration with external systems expecting specific data schemas
+
+```python
+from pydantic import BaseModel, Field
+from typing import List, Optional
+
+# Define your target schema
+class ContractParty(BaseModel):
+    name: str = Field(description="Full legal name")
+    role: str = Field(description="Role (e.g., 'Buyer', 'Seller')")
+    address: Optional[str] = Field(None, description="Address if mentioned")
+
+class ContractAnalysis(BaseModel):
+    title: str = Field(description="Contract title or type")
+    parties: List[ContractParty] = Field(description="All parties")
+    total_value: Optional[float] = Field(None, description="Total value")
+    governing_law: Optional[str] = Field(None, description="Governing law")
+
+# Extract structured data - no conversation persistence
+result = await agent.structured_response(
+    "Analyze this contract and extract key information",
+    ContractAnalysis
+)
+
+if result:
+    print(f"Contract: {result.title}")
+    print(f"Value: ${result.total_value:,.2f}" if result.total_value else "No value specified")
+    for party in result.parties:
+        print(f"- {party.name} ({party.role})")
+```
+
+**Key Features:**
+
+1. **Type Safety**: Supports `str`, `int`, `float`, `bool`, `List[T]`, and Pydantic models
+2. **No Persistence**: Messages are not stored in the database (ephemeral)
+3. **Error Handling**: Returns `None` on failure instead of raising exceptions
+4. **Parameter Overrides**: Supports per-call customization:
+   ```python
+   result = await agent.structured_response(
+       prompt="Extract payment terms",
+       target_type=PaymentTerms,
+       system_prompt="You are a financial analyst. Be precise.",
+       model="gpt-4",
+       temperature=0.1,
+       max_tokens=1000
+   )
+   ```
+
+5. **Default Verification Behavior**: The default system prompt includes verification steps to:
+   - Ensure accurate extraction from the actual document content
+   - Prevent placeholder values (e.g., "N/A", "Not Available") unless they actually appear in the document
+   - Return `None` for missing data rather than inventing values
+   - This behavior can be overridden with a custom `system_prompt`
+
+**Framework Support:**
+- ✅ **PydanticAI**: Fully implemented with native `output_type` support
+- ⚠️ **LlamaIndex**: Returns `None` (not yet implemented)
+
+**Best Practices:**
+
+```python
+# Always check for None (indicates extraction failure)
+result = await agent.structured_response("Extract dates", DateInfo)
+if result is None:
+    # Handle extraction failure
+    logger.warning("Failed to extract dates")
+    return
+
+# Use specific prompts for better results
+result = await agent.structured_response(
+    "Extract the effective date and termination date from Section 3.1",
+    ContractDates
+)
+
+# For simple types, be explicit about format
+page_count = await agent.structured_response(
+    "How many pages does this document have? Return only the number.",
+    int
+)
 ```
 
 #### Source Structure
@@ -792,6 +913,7 @@ The framework follows a layered architecture that separates concerns and enables
 
 1. **Beautiful API (`api.py`)**:
    - `agents.for_document(document=123, corpus=1)` provides the elegant entry point.
+   - `agents.get_structured_response_from_document()` and `agents.get_structured_response_from_corpus()` provide convenience methods for one-shot structured extraction.
    - Handles parameter validation, type conversion, and defaults.
    - Routes to the appropriate factory based on framework choice.
    - Similar entry points exist for `embeddings`, `vector_stores`, and `tools`.
@@ -807,9 +929,10 @@ The framework follows a layered architecture that separates concerns and enables
    - Returns a framework-specific agent that implements the `CoreAgent` protocol.
 
 4. **CoreAgent Protocol (`agents/core_agents.py`)**:
-   - The returned agent object (e.g., an instance of `LlamaIndexDocumentAgent`) inherits from `CoreAgentBase`, which provides universal `chat()` and `stream()` wrappers that handle all database persistence, approval gating, and message lifecycle management.
-   - Framework adapters only implement low-level `_chat_raw()` and `_stream_raw()` methods that return pure content without any database side-effects.
+   - The returned agent object (e.g., an instance of `LlamaIndexDocumentAgent`) inherits from `CoreAgentBase`, which provides universal `chat()`, `stream()`, and `structured_response()` wrappers that handle all database persistence, approval gating, and message lifecycle management.
+   - Framework adapters only implement low-level `_chat_raw()`, `_stream_raw()`, and `_structured_response_raw()` methods that return pure content without any database side-effects.
    - When you call `await agent.chat("Your query")`, the `CoreAgentBase` wrapper automatically handles user message storage, LLM placeholder creation, calling the adapter's `_chat_raw()` method, and completing the stored message with results.
+   - The `structured_response()` method provides ephemeral, typed data extraction without any database persistence—perfect for one-shot extractions.
    - This architecture ensures that adapters cannot "forget" to persist conversations or handle approval flows—all database operations are centralized and automatic.
    - **Approval Flow**: When a tool requiring approval is called, the framework automatically pauses execution, emits `ApprovalNeededEvent`, and waits for `resume_with_approval()` to be called.
    - **Resume Capability**: The `resume_with_approval()` method allows continuation of paused executions, emitting `ApprovalResultEvent` and `ResumeEvent` before resuming normal agent flow.
@@ -894,10 +1017,10 @@ async for event in pydantic_agent.stream("Analyze contract"):
 
 Choose your framework based on your needs:
 
-| Framework | Best For | Streaming Type | Visibility |
-|-----------|----------|----------------|------------|
-| **LlamaIndex** | Simple integration, stable API | Traditional (START/CONTENT/FINISH) | Basic content streaming |
-| **PydanticAI** | Rich observability, debugging UIs | Event-based (thought/content/sources/final) | Full execution graph visibility |
+| Framework | Best For | Streaming Type | Structured Response | Visibility |
+|-----------|----------|----------------|---------------------|------------|
+| **LlamaIndex** | Simple integration, stable API | Traditional (START/CONTENT/FINISH) | ❌ Not implemented | Basic content streaming |
+| **PydanticAI** | Rich observability, debugging UIs | Event-based (thought/content/sources/final) | ✅ Full support | Full execution graph visibility |
 
 ```python
 # Specify framework explicitly
@@ -927,12 +1050,17 @@ config = AgentConfig(
     model="gpt-4-turbo",
     temperature=0.2,
     max_tokens=2000,
-    system_prompt="You are an expert legal analyst...",
+    system_prompt="You are an expert legal analyst...",  # Note: Completely replaces any default prompt
     embedder_path="sentence-transformers/all-MiniLM-L6-v2",
     tools=["load_md_summary", "get_notes_for_document_corpus"], # Ensure tools are appropriate for context
     verbose=True,
     stream_observer=my_observer_function  # Optional: receive nested agent events
 )
+
+# Important: Custom system_prompt behavior
+# - For chat/stream: Adds context about document analysis
+# - For structured_response: Default includes verification steps to prevent hallucination
+# - Any custom system_prompt completely replaces these defaults
 
 # The '''corpus''' parameter is required for document agents.
 agent = await agents.for_document(document=123, corpus=1, config=config) # Use actual document/corpus IDs
@@ -1354,6 +1482,36 @@ async def test_conversation_persistence(db, document_factory, corpus_factory, us
     # assert info is not None
     # assert info.get('''message_count''', 0) >= 4  # 2 user + 2 LLM messages
     pass # Placeholder for actual test structure
+
+@pytest.mark.asyncio
+async def test_structured_response(db, document_factory, corpus_factory): # Assuming factories
+    # from pydantic import BaseModel, Field
+    # 
+    # class ContractDates(BaseModel):
+    #     effective_date: str = Field(description="Effective date")
+    #     expiration_date: Optional[str] = Field(None, description="Expiration date")
+    # 
+    # test_corpus = await corpus_factory.create()
+    # test_document = await document_factory.create(corpus=test_corpus)
+    # agent = await agents.for_document(
+    #     document=test_document.id,
+    #     corpus=test_corpus.id
+    # )
+    # 
+    # # Test structured extraction
+    # result = await agent.structured_response(
+    #     "Extract the contract dates",
+    #     ContractDates
+    # )
+    # 
+    # # Verify result
+    # assert result is None or isinstance(result, ContractDates)
+    # if result:
+    #     assert result.effective_date  # Required field
+    # 
+    # # Verify no conversation persistence
+    # assert agent.get_conversation_id() is None  # Anonymous agent
+    pass # Placeholder for actual test structure
 ```
 
 ## Contributing
@@ -1386,11 +1544,13 @@ To add support for a new LLM framework (e.g., LangChain, Haystack):
    
    ```python
    # agents/langchain_agents.py
-   from typing import AsyncGenerator # For Python < 3.9, else from collections.abc import AsyncGenerator
+   from typing import AsyncGenerator, Type, TypeVar, Optional # For Python < 3.9, else from collections.abc import AsyncGenerator
    from opencontractserver.llms.agents.core_agents import (
        CoreAgentBase, SourceNode, AgentConfig, 
        UnifiedStreamEvent, ThoughtEvent, ContentEvent, FinalEvent
     )
+   
+   T = TypeVar("T")
     # from opencontractserver.documents.models import Document
     # from opencontractserver.corpuses.models import Corpus
 
@@ -1425,6 +1585,23 @@ To add support for a new LLM framework (e.g., LangChain, Haystack):
             # CoreAgentBase wrapper will handle message storage and incremental updates automatically
             # Call self._emit_observer_event(event) to forward events to any configured observer
             pass
+        
+        async def _structured_response_raw(
+            self, 
+            prompt: str, 
+            target_type: Type[T],
+            *,
+            system_prompt: Optional[str] = None,
+            model: Optional[str] = None,
+            tools: Optional[list] = None,
+            temperature: Optional[float] = None,
+            max_tokens: Optional[int] = None,
+            **kwargs
+        ) -> Optional[T]:
+            # Implement structured data extraction using your framework
+            # Return instance of target_type or None on failure
+            # No DB operations - this is ephemeral extraction
+            pass
     ```
 
 3. **Integrate into `UnifiedAgentFactory`**:
@@ -1458,8 +1635,8 @@ To add support for a new LLM framework (e.g., LangChain, Haystack):
 
 6. **Testing**:
    - Create comprehensive tests following the patterns in existing test files (e.g., `test_llama_index_agents.py`, `test_pydantic_ai_agents.py`).
-   - Test the public `chat()` and `stream()` methods (which are provided by `CoreAgentBase`), conversation management, tool usage, and error handling.
-   - Note that `_chat_raw()` and `_stream_raw()` methods are internal implementation details and typically don't require separate testing—the public API tests exercise them indirectly.
+   - Test the public `chat()`, `stream()`, and `structured_response()` methods (which are provided by `CoreAgentBase`), conversation management, tool usage, and error handling.
+   - Note that `_chat_raw()`, `_stream_raw()`, and `_structured_response_raw()` methods are internal implementation details and typically don't require separate testing—the public API tests exercise them indirectly.
 
 By following these steps, you can extend the OpenContracts LLM framework to support new LLM technologies while maintaining the consistent, rich API with conversation management, source tracking, and structured responses.
 

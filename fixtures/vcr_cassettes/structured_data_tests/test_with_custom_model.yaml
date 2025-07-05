@@ -25,22 +25,27 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Summarize this document in one sentence.\"\n3. VERIFY: Before
-      outputting, internally validate your extraction by:\n   - Cross-referencing
-      multiple sources if available\n   - Checking for logical consistency (dates
-      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
-      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
-      text actually appears in the source material\n   - For lists/collections: searching
-      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
-      data is not found after thorough search, return null/empty rather than guessing\n-
+      requested in: \"Using the specified model, summarize the amendment made by Pub.
+      L. 112-231.\"\n3. VERIFY: Before outputting, internally validate your extraction
+      by:\n   - Confirming the requested information ACTUALLY EXISTS in the document\n   -
+      Cross-referencing multiple sources if available\n   - Checking for logical consistency
+      (dates in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or
+      generic values (like \"N/A\" unless actually in the document)\n   - Confirming
+      extracted text actually appears in the source material\n   - For lists/collections:
+      searching again with different queries to ensure completeness\n\nCRITICAL RULES:\n-
+      If the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
       If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON string value\n\nNo explanations, no process description,
-      no confidence scores - just the final verified JSON.\n\nJSON Schema for your
-      response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"Summarize
-      this document in one sentence."}],"model":"gpt-3.5-turbo","stream":false,"temperature":0.7}'
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON string value\n\nNo explanations,
+      no process description, no confidence scores - just the final verified JSON.\n\nJSON
+      Schema for your response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"Using
+      the specified model, summarize the amendment made by Pub. L. 112-231."}],"model":"gpt-3.5-turbo","stream":false,"temperature":0.7}'
     headers:
       accept:
       - application/json
@@ -49,12 +54,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3284'
+      - '3775'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -82,18 +87,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJNPb9swDMXv/hSEzkkQJ0sD5NgAO+yyP00P21wYikTb6mRRkOhgTZDv
-        PlhpY7frgF180I/vmXyUThmAMFpsQKhGsmq9nd7644+vhy+rtf78eGwW3572x11z+3358dMCF2LS
-        K2j/iIpfVDNFrbfIhtwFq4CSsXfN16t8vczz+YcEWtJoe1ntebqcrabchT1N5/li9axsyCiMYgM/
-        MwCAU/r2PTqNv8UG5pOXkxZjlDWKzbUIQASy/YmQMZrI0rGYDFCRY3Sp7VPhAApxf7eFnWGLkMMU
-        to30jAHyQmygELsGQZPqWnQMig4YInCDEDqLEaTT4AMp1F3ACBWFBCnU0pmj7MMAqtLZvTOMGu5Y
-        MkbYksZZIQp3HvcWsOqi7LNxnbUjIJ0jTnYplYdncr7mYKn2gfbxjVRUxpnYlAFlJNfPHJm8SPSc
-        ATykvLtXEQofqPVcMv3C9LubZX7xE8OKB3qFTCztSHWzmLzjV2pkaWwcbUwoqRrUg3RYr+y0oRHI
-        RlP/3c173pfJjav/x34ASqFn1KUPqI16PfFQFrB/Af8qu6acGhYRw8EoLNlg6DehsZKdvdxNEZ8i
-        Y1tWxtUYfDDpgvabzM7ZHwAAAP//AwBDRUABnwMAAA==
+        H4sIAAAAAAAAAwAAAP//jFPLbtswELzrKxa8+GIbluVHrVvTnowETZMGPdSBQJMrmQ1FquQqjWv4
+        3wvKDympi/YiCJyZ5SxndxcBMCVZCkxsOImy0oOrH6O75GV5vUSVxLbm737dLT/PF18nzzc/c9YP
+        Crv+joJOqqGwZaWRlDUHWDjkhKFqPJ/G82QyGS8aoLQSdZAVFQ2S4XRAtVvbwSgeT4/KjVUCPUvh
+        WwQAsGu+waOR+MJSGPVPJyV6zwtk6ZkEwJzV4YRx75Unboj1W1BYQ2ga27uVCUcrdluvh3A9hDge
+        D8ZJDO9LNLJEQ3BflyV32xVLL9B4oKEEjyK0DfEsBpvDF0UaofmlDcKDUYQS7okTevhgJcJ6C56c
+        elKmAFsT9D7luRIYFLfovDUGNdxwwwsMLnrAjQRlPDoKkn/QG3a4+aNyKMi6k5NW9oZ8VcsCqTdc
+        sZXZdx/LYV57HsIytdYdgBtjiYeum5gej8j+HIy2ReXs2r+RslwZ5TeZQ+6tCSF4shVr0H0E8NgM
+        QP0qU1Y5W1aUkX3C5rp5Eh/qsXbmWnQ2PYJkieuOajHrX6iXSSSutO+MEBNcbFC20nbeeC2V7QBR
+        p+s/3VyqfehcmeJ/yreAEFgRyqxyKJV43XFLcxhW8m+08ys3hplH96wEZqTQhSQk5rzWh2VhfusJ
+        yyxXpkBXOdVsTEgy2ke/AQAA//8DAJuh5iswBAAA
     headers:
       CF-RAY:
-      - 95a81049cf29345b-DFW
+      - 95a86175ce2ae9bd-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -101,7 +107,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:58:24 GMT
+      - Sat, 05 Jul 2025 16:53:49 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -117,13 +123,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '504'
+      - '650'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '507'
+      - '653'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -131,13 +137,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999225'
+      - '3999104'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 11ms
+      - 13ms
       x-request-id:
-      - req_4bedb640a84b3ba1e0e4bc081852e10e
+      - req_ff7ab82941d650d22e1a833586416121
     status:
       code: 200
       message: OK

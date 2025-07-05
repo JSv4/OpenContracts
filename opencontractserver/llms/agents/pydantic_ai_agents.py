@@ -119,6 +119,7 @@ EXTRACTION METHODOLOGY:
 1. GATHER: Use available tools (similarity_search, load_document_md_summary, etc.) to find ALL relevant information
 2. EXTRACT: Identify the specific data requested in: "{prompt}"
 3. VERIFY: Before outputting, internally validate your extraction by:
+   - Confirming the requested information ACTUALLY EXISTS in the document
    - Cross-referencing multiple sources if available
    - Checking for logical consistency (dates in order, numbers reasonable, etc.)
    - Ensuring no placeholder or generic values (like "N/A" unless actually in the document)
@@ -126,11 +127,15 @@ EXTRACTION METHODOLOGY:
    - For lists/collections: searching again with different queries to ensure completeness
 
 CRITICAL RULES:
+- If the requested information does not exist or is not applicable to this document, return null
+- If a question doesn't make sense for this document type, return null
+- NEVER invent, guess, or infer data that isn't explicitly present
 - If data is not found after thorough search, return null/empty rather than guessing
 - If multiple conflicting values exist, choose the most authoritative/recent
-- For numeric values, verify they make sense in context (e.g., page count > 0)
-- For dates, ensure they follow logical chronology
+- For numeric values, verify they make sense in context
+- For dates, ensure they follow logical chronology and are actually present
 - For names/entities, verify exact spelling from the source
+- For boolean questions, only return true/false if you can definitively answer based on document content
 
 Your response must be ONLY the extracted data in the format of: {type_description}
 

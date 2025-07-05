@@ -25,29 +25,34 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Classify this document type\"\n3. VERIFY: Before outputting,
-      internally validate your extraction by:\n   - Cross-referencing multiple sources
-      if available\n   - Checking for logical consistency (dates in order, numbers
-      reasonable, etc.)\n   - Ensuring no placeholder or generic values (like \"N/A\"
-      unless actually in the document)\n   - Confirming extracted text actually appears
-      in the source material\n   - For lists/collections: searching again with different
-      queries to ensure completeness\n\nCRITICAL RULES:\n- If data is not found after
-      thorough search, return null/empty rather than guessing\n- If multiple conflicting
-      values exist, choose the most authoritative/recent\n- For numeric values, verify
-      they make sense in context (e.g., page count > 0)\n- For dates, ensure they
-      follow logical chronology\n- For names/entities, verify exact spelling from
-      the source\n\nYour response must be ONLY the extracted data in the format of:
-      a JSON object matching the ''DocClassification'' model structure\n\nNo explanations,
-      no process description, no confidence scores - just the final verified JSON.\n\nJSON
-      Schema for your response:\n```json\n{\n  \"$defs\": {\n    \"DocumentType\":
-      {\n      \"enum\": [\n        \"contract\",\n        \"invoice\",\n        \"report\",\n        \"memo\",\n        \"other\"\n      ],\n      \"title\":
+      requested in: \"Classify the legal status of this title based on the introductory
+      notes.\"\n3. VERIFY: Before outputting, internally validate your extraction
+      by:\n   - Confirming the requested information ACTUALLY EXISTS in the document\n   -
+      Cross-referencing multiple sources if available\n   - Checking for logical consistency
+      (dates in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or
+      generic values (like \"N/A\" unless actually in the document)\n   - Confirming
+      extracted text actually appears in the source material\n   - For lists/collections:
+      searching again with different queries to ensure completeness\n\nCRITICAL RULES:\n-
+      If the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON object matching the ''DocClassification''
+      model structure\n\nNo explanations, no process description, no confidence scores
+      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"$defs\":
+      {\n    \"DocumentType\": {\n      \"enum\": [\n        \"POSITIVE_LAW\",\n        \"PROPOSED_BILL\",\n        \"REPEALED\"\n      ],\n      \"title\":
       \"DocumentType\",\n      \"type\": \"string\"\n    }\n  },\n  \"properties\":
       {\n    \"doc_type\": {\n      \"$ref\": \"#/$defs/DocumentType\"\n    },\n    \"confidence\":
       {\n      \"maximum\": 1,\n      \"minimum\": 0,\n      \"title\": \"Confidence\",\n      \"type\":
       \"number\"\n    }\n  },\n  \"required\": [\n    \"doc_type\",\n    \"confidence\"\n  ],\n  \"title\":
       \"DocClassification\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Classify
-      this document type"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
-      final response which ends this conversation","parameters":{"properties":{"doc_type":{"$ref":"#/$defs/DocumentType"},"confidence":{"maximum":1,"minimum":0,"type":"number"}},"required":["doc_type","confidence"],"type":"object","$defs":{"DocumentType":{"enum":["contract","invoice","report","memo","other"],"type":"string"}}}}}]}'
+      the legal status of this title based on the introductory notes."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      final response which ends this conversation","parameters":{"properties":{"doc_type":{"$ref":"#/$defs/DocumentType"},"confidence":{"maximum":1,"minimum":0,"type":"number"}},"required":["doc_type","confidence"],"type":"object","$defs":{"DocumentType":{"enum":["POSITIVE_LAW","PROPOSED_BILL","REPEALED"],"type":"string"}}}}}]}'
     headers:
       accept:
       - application/json
@@ -56,12 +61,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '4319'
+      - '4800'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -89,19 +94,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xTXWvbMBR9968Q9zkujuM0rh9HWcYYZAQGo0sxinztqJMlTZK7ZiH/fchObCfN
-        YH4w4h6dc8/90CEgBHgBGQG2o47VWoQf9J9vbFH+/riKotWbmj88JZ9nv5bx/tOySWDiGWr7gsyd
-        WXdM1Vqg40p2MDNIHXrV6WI+XcyiNLpvgVoVKDyt0i5MVFhzycM4ipMwWoTT9MTeKc7QQkZ+BIQQ
-        cmj/3qcs8A0yEk3OkRqtpRVC1l8iBIwSPgLUWm4dlQ4mA8iUdCi9ddkIMQKcUiJnVIghcfcdRueh
-        WVSIvH6JqXiyq9f19svy69MaH5P0cf29HuXrpPe6NVQ2kvVNGuF9PLtKRghIWndcLqnIDdpGuCs+
-        IUBN1dQonfcOhw0UiuU+6wYysgHldmg2MCEbX37JC5SshaK79AgXWsfg1vl51CeDZWOpeN9AKqVy
-        1NfRdvD5hBz7YQlVaaO29orqS+N2lxuktu3BeBTB2UhrAZqLaYM2qtYud+ontknTJO1UYdjIAZ0t
-        TqBTjooRK51PbujlBTrK23XoN5BRtsNioA6bSJuCqxEQjGp/7+aWdlc/l9X/yA8AY6gdFrk2WHB2
-        WfFwzaB/sP+61ne5NQwWzStnmDuOxs+jwJKe1w7s3jqs85LLCo02vH1LUOr8PqbxjKZTLCE4Bn8B
-        AAD//wMA+bFeb1kEAAA=
+        H4sIAAAAAAAAA4xT0W6bMBR95yus+xwmoGmT8dZVi5StWztlah+WCjnmQlyMTWwzJYry75UhAZJ2
+        0nhAlo/PueceX+89QoCnEBNga2pZWQn/yya4L4rbpzy83u5mchrNaPp9cff8WIRTCiPHUKtXZPbE
+        +sRUWQm0XMkWZhqpRacaTq7DydU4DIIGKFWKwtHyyvpj5Zdccj8KorEfTPxwemSvFWdoICZ/PEII
+        2Td/51OmuIWYNFrNTonG0Bwh7g4RAloJtwPUGG4slRZGPciUtCiddVkLMQCsUiJhVIi+cPvtB+s+
+        LCpEEnzbLF5vZpsfd4Utfm30Jt/+pKv5w6BeK72rGkNZLVkX0gDv9uOLYoSApGXL5ZKKRKOphb3g
+        EwJU53WJ0jrvsF9Cqljiqi4hXsLjw2L+e/70Nbm/fV7CaOkyyHiKkjk8PMCZ2sH7aP0ySEpjVhsq
+        3kdIpVSWuk6aDF+OyKG7LqHySquVuaC65rhZJxqpaVIYXoZ3MtJYgPrsvqHSqqxsYlWBTdHP42mr
+        Cv1M9mgUHUGrLBUD1uQ4Uud6SYqW8mYguhlklK0x7an9LNI65WoAeIPe37v5SLvtn8v8f+R7gDGs
+        LKZJpTHl7Lzj/phG92T/daxLuTEMBvVfzjCxHLW7jxQzeho8MDtjsUwyLnPUlebNa4KsSm4iGl3R
+        aYgZeAfvDQAA//8DAGdESoJbBAAA
     headers:
       CF-RAY:
-      - 95a809012bd0f078-DFW
+      - 95a8596eedae6b14-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -109,7 +114,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:53:27 GMT
+      - Sat, 05 Jul 2025 16:48:21 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -125,13 +130,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1603'
+      - '641'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1609'
+      - '662'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -139,13 +144,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999095'
+      - '3998973'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 13ms
+      - 15ms
       x-request-id:
-      - req_1588407ffe4eb3d3f37dfdae7211ada6
+      - req_316fa2585c62e8d036b1226d35f0e037
     status:
       code: 200
       message: OK

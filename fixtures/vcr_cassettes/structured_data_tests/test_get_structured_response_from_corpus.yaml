@@ -427,7 +427,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:59:30 GMT
+      - Sat, 05 Jul 2025 16:55:16 GMT
       Server:
       - gunicorn
     status:
@@ -861,7 +861,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:59:31 GMT
+      - Sat, 05 Jul 2025 16:55:16 GMT
       Server:
       - gunicorn
     status:
@@ -1295,7 +1295,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:59:31 GMT
+      - Sat, 05 Jul 2025 16:55:17 GMT
       Server:
       - gunicorn
     status:
@@ -1330,22 +1330,29 @@ interactions:
       are a highly-intelligent data extraction system with advanced verification capabilities.\\n\\nEXTRACTION
       METHODOLOGY:\\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\\n2. EXTRACT: Identify the specific data
-      requested in: \\\"How many documents are in this corpus?\\\"\\n3. VERIFY: Before
-      outputting, internally validate your extraction by:\\n   - Cross-referencing
-      multiple sources if available\\n   - Checking for logical consistency (dates
-      in order, numbers reasonable, etc.)\\n   - Ensuring no placeholder or generic
-      values (like \\\"N/A\\\" unless actually in the document)\\n   - Confirming
-      extracted text actually appears in the source material\\n   - For lists/collections:
-      searching again with different queries to ensure completeness\\n\\nCRITICAL
-      RULES:\\n- If data is not found after thorough search, return null/empty rather
-      than guessing\\n- If multiple conflicting values exist, choose the most authoritative/recent\\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\\n-
-      For dates, ensure they follow logical chronology\\n- For names/entities, verify
-      exact spelling from the source\\n\\nYour response must be ONLY the extracted
+      requested in: \\\"From an entire corpus, extract the total number of unique
+      Public Laws referenced in the statutory notes.\\\"\\n3. VERIFY: Before outputting,
+      internally validate your extraction by:\\n   - Confirming the requested information
+      ACTUALLY EXISTS in the document\\n   - Cross-referencing multiple sources if
+      available\\n   - Checking for logical consistency (dates in order, numbers reasonable,
+      etc.)\\n   - Ensuring no placeholder or generic values (like \\\"N/A\\\" unless
+      actually in the document)\\n   - Confirming extracted text actually appears
+      in the source material\\n   - For lists/collections: searching again with different
+      queries to ensure completeness\\n\\nCRITICAL RULES:\\n- If the requested information
+      does not exist or is not applicable to this document, return null\\n- If a question
+      doesn't make sense for this document type, return null\\n- NEVER invent, guess,
+      or infer data that isn't explicitly present\\n- If data is not found after thorough
+      search, return null/empty rather than guessing\\n- If multiple conflicting values
+      exist, choose the most authoritative/recent\\n- For numeric values, verify they
+      make sense in context\\n- For dates, ensure they follow logical chronology and
+      are actually present\\n- For names/entities, verify exact spelling from the
+      source\\n- For boolean questions, only return true/false if you can definitively
+      answer based on document content\\n\\nYour response must be ONLY the extracted
       data in the format of: a JSON integer value\\n\\nNo explanations, no process
       description, no confidence scores - just the final verified JSON.\\n\\nJSON
-      Schema for your response:\\n```json\\n{\\n  \\\"type\\\": \\\"integer\\\"\\n}\\n```\"},{\"role\":\"user\",\"content\":\"How
-      many documents are in this corpus?\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"temperature\":0.7,\"tool_choice\":\"required\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"final_result\",\"description\":\"The
+      Schema for your response:\\n```json\\n{\\n  \\\"type\\\": \\\"integer\\\"\\n}\\n```\"},{\"role\":\"user\",\"content\":\"From
+      an entire corpus, extract the total number of unique Public Laws referenced
+      in the statutory notes.\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"temperature\":0.7,\"tool_choice\":\"required\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"final_result\",\"description\":\"The
       final response which ends this conversation\",\"parameters\":{\"additionalProperties\":false,\"properties\":{\"response\":{\"type\":\"integer\"}},\"required\":[\"response\"],\"type\":\"object\"},\"strict\":true}}]}"
     headers:
       accept:
@@ -1355,12 +1362,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3832'
+      - '4385'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -1388,18 +1395,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xTXWvbMBR9968Q97kecZLWwW8N7KkwOkg3urWYW/naUSJLQpJH0pD/PiwntpN2
-        MD8YoXPPued+6BAxBqKAjAFfo+e1kfHSvOPT++Oy3Mvt7nG147+e+cO9fL51G76Cm5ah3zbE/Zn1
-        hevaSPJCqw7mltBTq5qkt0k6S5J0EoBaFyRbWmV8PNdxLZSIp5PpPJ6kcbI4sddacHKQsd8RY4wd
-        wr/1qQraQcaCVripyTmsCLI+iDGwWrY3gM4J51F5uBlArpUn1VpXjZQjwGstc45SDom77zA6D81C
-        KfNvSm8W3xPLlfpZ/1hVT8vtw9fdLB3l66T3JhgqG8X7Jo3w/j67SsYYKKw7rlAoc0uukf6Kzxig
-        rZqalG+9w+EFLDmjlaMXyCZHuIg+Rp+dX0edsFQ2DuXHFqFS2mPrNPTo9YQc+3FIXRmr39wVtTUv
-        3Dq3hC5UOW52dDYSLEBzMU8wVtfG515vKSRNp3edKgw7N6DJ/AR67VGOWPPTylzq5QV5FGHg/Y5x
-        5GsqBuqwa9gUQo+AaFT7RzefaXf1C1X9j/wAcE7GU5EbS4XglxUPYZbaJ/mvsL7LwTA4sn8Ep9wL
-        su08CirxvFjg9s5TnZdCVWSNFeG1QGnyuylOZ7hIqIToGP0FAAD//wMAzydklTsEAAA=
+        H4sIAAAAAAAAAwAAAP//jFNdb9swDHz3rxD4HA926iyZH4cWWLdh2bC0A/oBg5VpR60sqZK8rQjy
+        3wvbie2kGTA/GIKORx6P1CZgDEQOKQO+Rs8rI8OPz9HP1RWKZRJdr86tu/n2ZckvK/nEf7jPMGkY
+        +uGRuN+z3nFdGUleaNXB3BJ6arLG81k8P0tm8bwFKp2TbGil8WGiw0ooEU6jaRJG8zBe7NhrLTg5
+        SNltwBhjm/bf6FQ5/YWURZP9TUXOYUmQ9kGMgdWyuQF0TjiPysNkALlWnlQjXdVSjgCvtcw4SjkU
+        7r7N6DyYhVJmy4viYhW7mjj+ml1fPn84/3P1/eunx1G9LvWLaQUVteK9SSO8v0+PijEGCquOKxTK
+        zJKrpT/iMwZoy7oi5RvtsLkDS85o5egO0mgLB9Hb4NT5fuSEpaJ2KN9ahEppj43S1qP7HbLtxyF1
+        aax+cEfURrxw68wSurbLsdnBXkgrAeqDeYKxujI+8/qJ2qKL6bzLCsPODWic7ECvPcoRK4knJ/Jl
+        OXkU7cD7HePI15QP1GHXsM6FHgHBqPe3ak7l7voXqvyf9APAORlPeWYs5YIfdjyEWWqe5L/Cepdb
+        weDI/hacMi/INvPIqcD9YoF7cZ6qrBCqJGusaF8LFCZ7P8XpGS5iKiDYBq8AAAD//wMAh8qTwDsE
+        AAA=
     headers:
       CF-RAY:
-      - 95a811e7cb80f069-DFW
+      - 95a8639bff04f065-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1407,7 +1415,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:59:31 GMT
+      - Sat, 05 Jul 2025 16:55:17 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -1423,13 +1431,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '543'
+      - '411'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '552'
+      - '417'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -1437,13 +1445,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999161'
+      - '3999025'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 12ms
+      - 14ms
       x-request-id:
-      - req_161e6e619327461f8dac08c3ffb1f89c
+      - req_fd5a734c8c21a6b0ecc3e400a56a3a8d
     status:
       code: 200
       message: OK

@@ -25,22 +25,28 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"What is the total monetary value mentioned in this document?
-      Return just the number.\"\n3. VERIFY: Before outputting, internally validate
-      your extraction by:\n   - Cross-referencing multiple sources if available\n   -
+      requested in: \"Extract the chapter number of ''ACTS AND RESOLUTIONS; FORMALITIES
+      OF ENACTMENT...'' as a float.\"\n3. VERIFY: Before outputting, internally validate
+      your extraction by:\n   - Confirming the requested information ACTUALLY EXISTS
+      in the document\n   - Cross-referencing multiple sources if available\n   -
       Checking for logical consistency (dates in order, numbers reasonable, etc.)\n   -
       Ensuring no placeholder or generic values (like \"N/A\" unless actually in the
       document)\n   - Confirming extracted text actually appears in the source material\n   -
       For lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
-      RULES:\n- If data is not found after thorough search, return null/empty rather
+      RULES:\n- If the requested information does not exist or is not applicable to
+      this document, return null\n- If a question doesn''t make sense for this document
+      type, return null\n- NEVER invent, guess, or infer data that isn''t explicitly
+      present\n- If data is not found after thorough search, return null/empty rather
       than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON number value\n\nNo explanations, no process description,
-      no confidence scores - just the final verified JSON.\n\nJSON Schema for your
-      response:\n```json\n{\n  \"type\": \"number\"\n}\n```"},{"role":"user","content":"What
-      is the total monetary value mentioned in this document? Return just the number."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON number value\n\nNo explanations,
+      no process description, no confidence scores - just the final verified JSON.\n\nJSON
+      Schema for your response:\n```json\n{\n  \"type\": \"number\"\n}\n```"},{"role":"user","content":"Extract
+      the chapter number of ''ACTS AND RESOLUTIONS; FORMALITIES OF ENACTMENT...''
+      as a float."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"type":"number"}},"required":["response"],"type":"object"},"strict":true}}]}'
     headers:
       accept:
@@ -50,12 +56,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3666'
+      - '4105'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -83,18 +89,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xTTY+bMBC98yusOYeKQBqy3Lo9dKtt1Us/InVXaGIGcNbYlm1Wu43y3ytIAiSb
-        SuWALL95M2/ejHcBYyAKyBjwGj1vjAxvzZ9ft19xW3/0dSzb5O7nvVy75sNnuVkqmHUMvdkS9yfW
-        O64bI8kLfYS5JfTUZZ2n7+dpEt1ESQ80uiDZ0Srjw4UOG6FEGEfxIozScL46smstODnI2O+AMcZ2
-        /b/TqQp6gYxFs9NNQ85hRZANQYyB1bK7AXROOI/Kw2wEuVaeVCddtVJOAK+1zDlKORY+fLvJeTQL
-        pcx5sr2n7+sf0VN6R5/SdZI+f/H228uk3iH1q+kFla3ig0kTfLjPLooxBgqbA1colLkl10p/wWcM
-        0FZtQ8p32mH3AJac0crRA2TRHs6i98G18+PECUtl61C+tQiV0h47pb1Hj0dkP4xD6spYvXEX1E68
-        cHVuCV3f5dTs4CSklwDt2TzBWN0Yn3v9RH3R5So+ZIVx50Z0vjiCXnuUE9bNcnYlX16QR9EPfNgx
-        jrymYqSOu4ZtIfQECCa9v1VzLfehf6Gq/0k/ApyT8VTkxlIh+HnHY5il7kn+K2xwuRcMjuyz4JR7
-        QbabR0ElnhYL3Kvz1OSlUBVZY0X/WqA0+TLGOMHVnEoI9sFfAAAA//8DADSqhpk7BAAA
+        H4sIAAAAAAAAAwAAAP//jFNdb9swDHz3rxD4HBd2Pls/DsOADm2HDi2WYS0MRqYdLbKkSnK7Ish/
+        H2wntpNmwPxgCDoeeTxS24AxEBkkDPgaPS+NDD+9RHffP88f5cMdvn2Lbu5fb6ON04/x7c39EkY1
+        Q69+E/cH1gXXpZHkhVYtzC2hpzprvJjFi8l0HM0aoNQZyZpWGB9OdVgKJcJxNJ6G0SKML/fstRac
+        HCTsV8AYY9vmX+tUGf2BhEWjw01JzmFBkHRBjIHVsr4BdE44j8rDqAe5Vp5ULV1VUg4Ar7VMOUrZ
+        F26/7eDcm4VSpg8rOcmW2dLG6u16iV83c33948vPl0G9NvW7aQTlleKdSQO8u09OijEGCsuWKxTK
+        1JKrpD/hMwZoi6ok5WvtsH0CS85o5egJkvgi2sFR/C44d34eeGEprxzKjyahUtpjrbVx6XmP7LqB
+        SF0Yq1fuhFrLF26dWkLX9Dm0OzgIaSRAdTRRMFaXxqdeb6gpulhctVmh37oejed70GuPcsC6mo3O
+        5Esz8iiakXdbxpGvKeup/bZhlQk9AIJB7x/VnMvd9i9U8T/pe4BzMp6y1FjKBD/uuA+zVD/Kf4V1
+        LjeCwZF9FZxSL8jW88gox8NqgXt3nso0F6oga6xo3gvkJp2PcTzBy5hyCHbBXwAAAP//AwA4X4bM
+        PQQAAA==
     headers:
       CF-RAY:
-      - 95a80b618ffb3464-DFW
+      - 95a85bffda6e4790-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -102,7 +109,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:55:03 GMT
+      - Sat, 05 Jul 2025 16:50:05 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -118,13 +125,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '378'
+      - '469'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '381'
+      - '476'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -132,13 +139,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999202'
+      - '3999095'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 11ms
+      - 13ms
       x-request-id:
-      - req_d30820bb450f146603ddd6e03689d31a
+      - req_ad4d339838c41ac88e1901a6e1dd0630
     status:
       code: 200
       message: OK

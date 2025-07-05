@@ -26,20 +26,25 @@ interactions:
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
       requested in: \"Extract financial and signature information from this document\"\n3.
-      VERIFY: Before outputting, internally validate your extraction by:\n   - Cross-referencing
+      VERIFY: Before outputting, internally validate your extraction by:\n   - Confirming
+      the requested information ACTUALLY EXISTS in the document\n   - Cross-referencing
       multiple sources if available\n   - Checking for logical consistency (dates
       in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
       values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
       text actually appears in the source material\n   - For lists/collections: searching
       again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
-      data is not found after thorough search, return null/empty rather than guessing\n-
+      the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
       If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON object matching the ''VerifiableData'' model structure\n\nNo
-      explanations, no process description, no confidence scores - just the final
-      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON object matching the ''VerifiableData''
+      model structure\n\nNo explanations, no process description, no confidence scores
+      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
       {\n    \"total_amount\": {\n      \"description\": \"Total monetary amount\",\n      \"title\":
       \"Total Amount\",\n      \"type\": \"number\"\n    },\n    \"currency\": {\n      \"description\":
       \"Currency code (e.g., USD, EUR)\",\n      \"title\": \"Currency\",\n      \"type\":
@@ -63,12 +68,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '4711'
+      - '5132'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -96,20 +101,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA+RUTVPbMBC9+1do9px0nA9wklvDoQOlw4VOSxpGI6S1I5AlIckpNJP/3pFNbBPo
-        DPf64JH36e0+Pe9qlxACUsCCAN+wwEurhkv7Z5V+O5mcPWY/HqfbYG+urk7PH+4vL0fLCQwiw9zd
-        Iw8H1iduSqswSKMbmDtkAWPWUXYyyiajNJvVQGkEqkgrbBhOzbCUWg7H6Xg6TLPhaPbC3hjJ0cOC
-        /EoIIWRXv6NOLfAJFiQdHCIles8KhEW7iRBwRsUIMO+lD0wHGHQgNzqgjtJ1pVQPCMYoyplSXeHm
-        2fXWnVlMKTrZentnpxfV1KzS+eos+50uH7Nl2avXpH62taC80rw1qYe38cVRMUJAs7LhSs0Udegr
-        FY74hABzRVWiDlE77NYQTGCKstJUOqxrx8gaeOUcav4cA2tYQ4xJT70sNIoYzJnyGKOWuSDRU97y
-        9/Cq5L73tR98yCz25UKc/yy/Xm7F53xZ3nznYmWerq//M7Pa9W2v9xzmlWfqbVMyrU1g8bh1V94m
-        R5aDMoV15s4fUaMD0m+oQ+Zrq/rtnRyE1BKgejVBYJ0pbaDBPGBddDbPmqzQTXmHZuMXsDGxjc9P
-        54N38lGBgcl6xNqp5oxvUHTUbrpZJaTpAUnv7G/VvJe7Ob/UxUfSdwDnaAMKah0KyV+fuNvmMF6C
-        /9rWulwLBo9uKznSINHF/yEwZ4fuBP/sA5Y0l7pAZ52s7yfILT0ds/GEzUaYQ7JP/gIAAP//AwAS
-        7qhKrQUAAA==
+        H4sIAAAAAAAAAwAAAP//jFPLbtswELzrK4g9x4UtO5Hjoy9J0UeQ5tAGdUBsqJXMhCJZkmrrGP73
+        gJItyU4KVAeBmOHsDofLbcIYyBwWDMQag6isGi1/jW9/ULa8ppecNp9fbr6bJ1ze311dX41v4Cwq
+        zOMTiXBQfRCmsoqCNLqlhSMMFKtOsvNJNp1NL7OGqExOKspKG0YzM6qklqN0nM5G42w0me/VayMF
+        eViwnwljjG2bf/Spc/oLCzY+OyAVeY8lwaLbxBg4oyIC6L30AXWAs54URgfS0bqulRoQwRjFBSrV
+        N26/7WDdh4VKcSe/2vP5ZOpvxd3HNMs/pc/f5n++3A/6taU3tjFU1Fp0IQ34Dl+cNGMMNFatVmpU
+        3JGvVTjRMwboyroiHaJ32K4gmICKY2VqHVZNYmwFonaOtNhEYAUriJj03MtSUx7BApWniFp0QZLn
+        otPv4KjlLnlv/TCI01FRe1Rvc0atTcB43Cbohz2z6+5UmdI68+hPpDEB6dfcEfomquGNJQcjjQWo
+        j4YCrDOVDTyYZ2qaXmYXbVXoB7dnZ7M92YbY4ZNxuh+844I8p4CyGZtuUgWKNeW9tp9YrHNpBkQy
+        OPxbO+/VbgOQuvyf8j0hBNlAObeOcimOj9xvcxQf9r+2dTE3hsGT+y0F8SDJxQvJqcDDeILf+EAV
+        L6QuyVknmzcHheUXKaZTnE+ogGSXvAIAAP//AwCqY2RzgQQAAA==
     headers:
       CF-RAY:
-      - 95a80f9ff9b33aac-DFW
+      - 95a860ac6971f089-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -117,7 +121,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:57:59 GMT
+      - Sat, 05 Jul 2025 16:53:17 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -133,13 +137,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1876'
+      - '811'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1883'
+      - '815'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -147,13 +151,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999036'
+      - '3998931'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 14ms
+      - 16ms
       x-request-id:
-      - req_d82f63c969736669cf5d52926e704017
+      - req_b280d889a3ba7380221d2d56f0fc8178
     status:
       code: 200
       message: OK

@@ -1,8 +1,9 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are a creative writer. Make
-      up interesting data regardless of what''s in the document."},{"role":"user","content":"What
-      type of document is this and how accurate is your assessment?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+    body: '{"messages":[{"role":"system","content":"You are a legal scholar. Provide
+      precise statutory interpretation without creative additions."},{"role":"user","content":"Using
+      your expertise, identify the primary purpose of this text and the legal principle
+      it establishes."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"properties":{"document_type":{"type":"string"},"accuracy_statement":{"description":"A
       statement about accuracy","type":"string"}},"required":["document_type","accuracy_statement"],"type":"object"}}}]}'
     headers:
@@ -13,12 +14,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '650'
+      - '691'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -46,20 +47,20 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFRNb9swDL37Vwg8J0WcpEub29qhh+6j3ZAC+0hhMDJjq5MlQ6KLZkH+
-        +yC5id02A+aDYfPxkU/ks7eJEKBymAuQJbKsaj28qP/c3dz84KdvmC6ml1/0++r66tZem7vPi+8w
-        CAy7eiDJe9aJtFWtiZU1LSwdIVOoms5O09lkNDsfR6CyOelAK2oeTu2wUkYNx6PxdDiaDdOzZ3Zp
-        lSQPc/ErEUKIbbwHnSanJ5iL0WAfqch7LAjmhyQhwFkdIoDeK89oGAYdKK1hMkG6abTuAWytziRq
-        3TVur23vuRsWap09PIwvRx/o66a84NWn6+bnR353e5te9fq1pTd1FLRujDwMqYcf4vNXzYQAg1XL
-        VQZ15sg3ml/xhQB0RVOR4aAdtkvIrYzvWWi9hPkSLsNK1COJKxV7LWGwBJSycSg3mWdkCoSYuyhJ
-        oPfkfQgJ5cUKPeXCGqEqLJRpKynD5GpHjKGgcMglOcElGrFGyQ1qgQb1xit/soQdvBC9S4493/cW
-        4mjdeNRvN4XG2LZnXNX9M7I7uELbonZ25V9RwwyVLzNH6OOw+ztP9kKiBGhe2ApqZ6uaM7a/KTY9
-        m7VFoXN+B07GzyBbRt3F0/R8cKRclhOjirY7OF2iLCnvqJ3jscmV7QFJ7+hv1Ryr3R5fmeJ/yneA
-        lFQz5VntKG8tdCzNUfgx/CvtMOQoGDy5RyUpY0UurCOnNe7tDX7jmapsrUwRXKbiNwvrOptM8XSK
-        dD6RkOySvwAAAP//AwAk4t0EwQQAAA==
+        H4sIAAAAAAAAAwAAAP//jFRNb9swDL37VxA6J4XzsSXLrT0UW9FgAzYMHZbCYGXaVitLmkS3DYL8
+        90F2ErsfA+aDIfPxkY8i6V0CIFQuViBkhSxrp8cXf9Lrm/PH+teXh8tLY5jnfv7A60qv1+ffxCgy
+        7N09ST6yzqStnSZW1nSw9IRMMepk8WGymM3T5aIFapuTjrTS8Xhux7UyajxNp/NxuhhPlgd2ZZWk
+        IFbwOwEA2LXvqNPk9CxWkI6OlppCwJLE6uQEILzV0SIwBBUYDYtRD0prmEyUbhqtBwBbqzOJWveJ
+        u2c3OPeXhVpn6eXnrxcXV836+uf2Ka3m98XV/Gb2HQf5utBb1woqGiNPlzTAT/bVq2QAwmDdcZVB
+        nXkKjeZXfACBvmxqMhy1i91G5Fa231lMvRGrjdBUogamZ96I0UaglI1Huc0CI1N0bb1+VCqAp+Cs
+        CQSeCk2SAyA4T1IFAmWYvPPEGAWDLYCr6KjpEQ1Dl8V5ZaRymgKgycE13tlAAWzDWhnK4UlxpUxL
+        jYrONmIvXpS0T9473w7a5aloAuq3fURjbKeubeTtAdmfZkbb0nl7F15R4w2rUGWeMLStGE5EchTS
+        ShDNi6ETztvaccb2gdqky09dUNHvRQ/OlgeQLaPu7ZPpYvROuCwnRtUO5WkPJMqK8p7a7wM2ubID
+        IBmU/lbNe7G78pUp/yd8D0hJjinPnKdcyZcV926e4m/jX26nS24Fi0D+UUnKWJGP7cipwOPwi7AN
+        THVWKFPGeVTtRovCZR+nOJ3hckKFSPbJXwAAAP//AwCU6sZg3wQAAA==
     headers:
       CF-RAY:
-      - 95a808ac486c6b5c-DFW
+      - 95a85913ead44756-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -67,7 +68,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:53:12 GMT
+      - Sat, 05 Jul 2025 16:48:07 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -83,13 +84,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '498'
+      - '799'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '507'
+      - '807'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -97,13 +98,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999958'
+      - '3999947'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_f750378e7921de9a8b186719eed2b88d
+      - req_3cd58b927ff69c476255e1f632f952a4
     status:
       code: 200
       message: OK

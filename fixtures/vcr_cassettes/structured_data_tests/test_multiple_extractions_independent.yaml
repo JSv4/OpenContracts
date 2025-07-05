@@ -25,21 +25,27 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"What is the document about?\"\n3. VERIFY: Before outputting,
-      internally validate your extraction by:\n   - Cross-referencing multiple sources
-      if available\n   - Checking for logical consistency (dates in order, numbers
-      reasonable, etc.)\n   - Ensuring no placeholder or generic values (like \"N/A\"
-      unless actually in the document)\n   - Confirming extracted text actually appears
-      in the source material\n   - For lists/collections: searching again with different
-      queries to ensure completeness\n\nCRITICAL RULES:\n- If data is not found after
-      thorough search, return null/empty rather than guessing\n- If multiple conflicting
-      values exist, choose the most authoritative/recent\n- For numeric values, verify
-      they make sense in context (e.g., page count > 0)\n- For dates, ensure they
-      follow logical chronology\n- For names/entities, verify exact spelling from
-      the source\n\nYour response must be ONLY the extracted data in the format of:
-      a JSON string value\n\nNo explanations, no process description, no confidence
-      scores - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"type\":
-      \"string\"\n}\n```"},{"role":"user","content":"What is the document about?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
+      requested in: \"Provide the statutory definition of ''writing''.\"\n3. VERIFY:
+      Before outputting, internally validate your extraction by:\n   - Confirming
+      the requested information ACTUALLY EXISTS in the document\n   - Cross-referencing
+      multiple sources if available\n   - Checking for logical consistency (dates
+      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
+      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
+      text actually appears in the source material\n   - For lists/collections: searching
+      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
+      the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON string value\n\nNo explanations,
+      no process description, no confidence scores - just the final verified JSON.\n\nJSON
+      Schema for your response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"Provide
+      the statutory definition of ''writing''."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
     headers:
       accept:
       - application/json
@@ -48,12 +54,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3256'
+      - '3715'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -81,19 +87,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPBbtswDL3nKwid7SJO0ybNbesOBYbt0K7DsLlwFIl21MmUINHduiL/
-        PshJY3frgF0EQY/vkXykniYAwmixAqG2klXrbf7W//py3V7F5ed314V+8/Vi3lx9+Ggv3zta3oss
-        MdzmHhU/s06Ua71FNo72sAooGZNqsTgrFqfTi2XRA63TaBOt8ZzPXd4aMvlsOpvn00VeLA/srTMK
-        o1jBtwkAwFN/pjpJ40+xgmn2/NJijLJBsToGAYjgbHoRMkYTWRKLbACVI0bqS1+v1/fRUUlPJQGU
-        gh89lmIFpbi9uYRPhi1CATlcbqVnDFCA69gawgi8RWiQMEgLPrgHE42jCAFt6hvY9RFW/ojg6v5+
-        SyYhNywZYwaGlO20oQY01oZM8i5mIL23RsmNsYYfM5Cke3Lk0CnuAia1GnWfN7LkjjGelKKkXUnr
-        9XrcaMC6izKZTZ21I0ASOZZ9wmTx3QHZHU21rvHBbeIfVJHqjNsqoIyOkoGRnRc9upsA3PXD617M
-        Q/jgWs8Vu+/YpzufLfZ6YtiZAZ2fHUB2LO2ItZhlr+hVGlkaG0fjF0qqLeqBOuyK7LRxI2Ay6vrv
-        al7T3nduqPkf+QFQCj2jrnxAbdTLjoewgOlL/Svs6HJfsIgYHozCig2GNAmNtezsftFFfIyMbVUb
-        ajD4YPbbXvvqfCZnp3JZYC0mu8lvAAAA//8DAJxDL5T7AwAA
+        H4sIAAAAAAAAA4ySQW+cMBCF7/wKa85LBexm2e4x6a2VGqnHJgLHDODEeFx7qFpF+98rw2YhbSrl
+        4oO/eeP3xvOcCAG6gaMA1UtWgzPp9Y/sK3/5hCr7fPh222O3v70xdL198q3ewiYq6OERFb+oPiga
+        nEHWZGesPErG2DUvr/Jyuys+Xk1goAZNlHWO0x2lg7Y6LbJil2Zlmh/O6p60wgBH8T0RQojn6Yw+
+        bYO/4CiyzcvNgCHIDuF4KRICPJl4AzIEHVhahs0CFVlGO1mv6/oxkL2zdjTmztZ1vS702I5BRrMR
+        r4C0lljGsJPF+zM5XUwZ6pynh/CXFFptdegrjzKQjQYCk4OJnhIh7qfw46s84DwNjiumJ5yeK/N8
+        7gfLzBe6PzMmlmYtKjdvtKsaZKlNWE0PlFQ9Not0GbUcG00rkKxC/2vmrd5zcG2797RfgFLoGJvK
+        eWy0eh14KfMYN/J/ZZchT4YhoP+pFVas0cePaLCVo5n3BMLvwDhUrbYdeuf1vCytq/aFLLbykGML
+        ySn5AwAA//8DABQatt86AwAA
     headers:
       CF-RAY:
-      - 95a80d4aaf5b2cc7-DFW
+      - 95a85e31193ee7f3-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -101,7 +105,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:56:23 GMT
+      - Sat, 05 Jul 2025 16:51:35 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -117,13 +121,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1531'
+      - '317'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1539'
+      - '322'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -131,13 +135,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999231'
+      - '3999118'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 11ms
+      - 13ms
       x-request-id:
-      - req_0e93a9d27469be10bf5e7933910d0924
+      - req_7ad111eea01a0628667fca3147807df6
     status:
       code: 200
       message: OK
@@ -167,21 +171,27 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"What was my previous question?\"\n3. VERIFY: Before outputting,
-      internally validate your extraction by:\n   - Cross-referencing multiple sources
-      if available\n   - Checking for logical consistency (dates in order, numbers
-      reasonable, etc.)\n   - Ensuring no placeholder or generic values (like \"N/A\"
-      unless actually in the document)\n   - Confirming extracted text actually appears
-      in the source material\n   - For lists/collections: searching again with different
-      queries to ensure completeness\n\nCRITICAL RULES:\n- If data is not found after
-      thorough search, return null/empty rather than guessing\n- If multiple conflicting
-      values exist, choose the most authoritative/recent\n- For numeric values, verify
-      they make sense in context (e.g., page count > 0)\n- For dates, ensure they
-      follow logical chronology\n- For names/entities, verify exact spelling from
-      the source\n\nYour response must be ONLY the extracted data in the format of:
-      a JSON string value\n\nNo explanations, no process description, no confidence
-      scores - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"type\":
-      \"string\"\n}\n```"},{"role":"user","content":"What was my previous question?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
+      requested in: \"Provide the statutory definition of ''oath''.\"\n3. VERIFY:
+      Before outputting, internally validate your extraction by:\n   - Confirming
+      the requested information ACTUALLY EXISTS in the document\n   - Cross-referencing
+      multiple sources if available\n   - Checking for logical consistency (dates
+      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
+      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
+      text actually appears in the source material\n   - For lists/collections: searching
+      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
+      the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON string value\n\nNo explanations,
+      no process description, no confidence scores - just the final verified JSON.\n\nJSON
+      Schema for your response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"Provide
+      the statutory definition of ''oath''."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
     headers:
       accept:
       - application/json
@@ -190,12 +200,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3262'
+      - '3709'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -223,17 +233,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJBbtswELzrFcSercKSXNvRsQFyaFq0hxYoWgUSQ61kuhTJkqsiqeG/
-        F5QcS05TIBcdODujmdk9RIyBrCFnIHacRGdV/M7++fbl5iPdfF89fLpdr8XnbO9vP2T2+v3XX7AI
-        DHO/R0FPrDfCdFYhSaNHWDjkhEE12bxNNtnyapsNQGdqVIHWWopXJu6klnG6TFfxchMn2xN7Z6RA
-        Dzn7ETHG2GH4Bp+6xgfI2XLx9NKh97xFyM9DjIEzKrwA91564ppgMYHCaEI9WK+qau+NLvSh0IwV
-        QI8WC8hZAZ6c1G0BhT4WuqqquYDDpvc8hNC9UjOAa22IhxIG63cn5Hg2q0xrnbn3z6jQSC39rnTI
-        vdHBmCdjYUCPEWN3Qyn9RU6wznSWSjI/cfjdOt2MejDtYkKT7ASSIa5mrNWpyku9skbiUvlZrSC4
-        2GE9Uacd8L6WZgZEs9T/unlJe0wudfsa+QkQAi1hXVqHtRSXiacxh+FU/zd2bnkwDB7dbymwJIku
-        bKLGhvdqPCDwj56wKxupW3TWyfGKGluuU55mfJtgA9Ex+gsAAP//AwDaiBNVUwMAAA==
+        H4sIAAAAAAAAAwAAAP//jJJBb9swDIXv/hWCzvEQO2nT5rh15wEbMGBbC5uRaEeZLKoSPSwr8t8H
+        2Wnsbh2wiw76+Kj3KD5lQkij5VZItQdWnbf528flB/5iPh/fl3efPqr++M5D/7XY3cGvw6NcJAXt
+        Dqj4WfVGUectsiE3YhUQGFPXYnNVbFbr8vZqAB1ptEnWes7XlHfGmbxclut8ucmLm7N6T0ZhlFvx
+        LRNCiKfhTD6dxp9yK5aL55sOY4QW5fZSJIQMZNONhBhNZHAsFxNU5BjdYL2u60Mkd+9cb+29q+t6
+        Xhiw6SMkswnPADhHDCnsYPHhTE4XU5ZaH2gX/5DKxjgT91VAiOSSgcjk5UBPmRAPQ/j+RR7pA3We
+        K6bvODy3KVZjPznNfKLXZ8bEYOei28Ur7SqNDMbG2fSkArVHPUmnUUOvDc1ANgv9t5nXeo/BjWv/
+        p/0ElELPqCsfUBv1MvBUFjBt5L/KLkMeDMuI4YdRWLHBkD5CYwO9HfdExmNk7KrGuBaDD2ZclsZX
+        1yWUK7gpsJHZKfsNAAD//wMAad+UjToDAAA=
     headers:
       CF-RAY:
-      - 95a80d54bda72cc7-DFW
+      - 95a85e33bbdbe7f3-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -241,7 +251,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:56:23 GMT
+      - Sat, 05 Jul 2025 16:51:36 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -257,13 +267,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '448'
+      - '431'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '453'
+      - '440'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -271,13 +281,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999229'
+      - '3999120'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 11ms
+      - 13ms
       x-request-id:
-      - req_3b1467c014eadbbf2d964cae9166bbcc
+      - req_1366ad5ecb302429c76e9f5fc5f3c2f8
     status:
       code: 200
       message: OK

@@ -25,39 +25,39 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Extract all available metadata from this document\"\n3. VERIFY:
-      Before outputting, internally validate your extraction by:\n   - Cross-referencing
+      requested in: \"Extract metadata about the ''21st Century Language Act of 2012''.\"\n3.
+      VERIFY: Before outputting, internally validate your extraction by:\n   - Confirming
+      the requested information ACTUALLY EXISTS in the document\n   - Cross-referencing
       multiple sources if available\n   - Checking for logical consistency (dates
       in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
       values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
       text actually appears in the source material\n   - For lists/collections: searching
       again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
-      data is not found after thorough search, return null/empty rather than guessing\n-
+      the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
       If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON object matching the ''DocumentMetadata'' model structure\n\nNo
-      explanations, no process description, no confidence scores - just the final
-      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
-      {\n    \"title\": {\n      \"title\": \"Title\",\n      \"type\": \"string\"\n    },\n    \"author\":
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON object matching the ''DocumentMetadata''
+      model structure\n\nNo explanations, no process description, no confidence scores
+      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
+      {\n    \"title\": {\n      \"title\": \"Title\",\n      \"type\": \"string\"\n    },\n    \"public_law_number\":
       {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
-      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Author\"\n    },\n    \"date_created\":
-      {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
-      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Date
-      Created\"\n    },\n    \"version\": {\n      \"anyOf\": [\n        {\n          \"type\":
+      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Public
+      Law Number\"\n    },\n    \"date_enacted\": {\n      \"anyOf\": [\n        {\n          \"type\":
       \"string\"\n        },\n        {\n          \"type\": \"null\"\n        }\n      ],\n      \"default\":
-      null,\n      \"title\": \"Version\"\n    },\n    \"department\": {\n      \"anyOf\":
+      null,\n      \"title\": \"Date Enacted\"\n    },\n    \"sponsor\": {\n      \"anyOf\":
       [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
-      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Department\"\n    },\n    \"classification\":
+      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Sponsor\"\n    },\n    \"committee\":
       {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
-      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Classification\"\n    },\n    \"tags\":
-      {\n      \"anyOf\": [\n        {\n          \"items\": {\n            \"type\":
-      \"string\"\n          },\n          \"type\": \"array\"\n        },\n        {\n          \"type\":
-      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Tags\"\n    }\n  },\n  \"required\":
+      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Committee\"\n    }\n  },\n  \"required\":
       [\n    \"title\"\n  ],\n  \"title\": \"DocumentMetadata\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Extract
-      all available metadata from this document"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
-      final response which ends this conversation","parameters":{"properties":{"title":{"type":"string"},"author":{"anyOf":[{"type":"string"},{"type":"null"}]},"date_created":{"anyOf":[{"type":"string"},{"type":"null"}]},"version":{"anyOf":[{"type":"string"},{"type":"null"}]},"department":{"anyOf":[{"type":"string"},{"type":"null"}]},"classification":{"anyOf":[{"type":"string"},{"type":"null"}]},"tags":{"anyOf":[{"items":{"type":"string"},"type":"array"},{"type":"null"}]}},"required":["title"],"type":"object"}}}]}'
+      metadata about the ''21st Century Language Act of 2012''."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      final response which ends this conversation","parameters":{"properties":{"title":{"type":"string"},"public_law_number":{"anyOf":[{"type":"string"},{"type":"null"}]},"date_enacted":{"anyOf":[{"type":"string"},{"type":"null"}]},"sponsor":{"anyOf":[{"type":"string"},{"type":"null"}]},"committee":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["title"],"type":"object"}}}]}'
     headers:
       accept:
       - application/json
@@ -66,12 +66,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '5565'
+      - '5382'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -99,20 +99,20 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFTBbtswDL37KwSe4yF20ibLsR2GbcC6DV3RdXNhsDLtqJUlQaKLdUH+
-        fbBTx07aAcshsPn4yKdHyptICFAFrATINbKsnY7P3J+bpT2bf7i6+Vl8/vEx5esv8zK9v7DNDGHS
-        MuzdPUnuWW+krZ0mVtbsYOkJmdqqyeIkWcySaTrvgNoWpFta5Tie27hWRsXpNJ3H00WcLJ/Za6sk
-        BViJX5EQQmy6/1anKeg3rMR00kdqCgErgtU+SQjwVrcRwBBUYDQMkwGU1jCZVrpptB4BbK3OJWo9
-        NN79NqPnwSzUOr+4lqU9uX8krvjb/P3l1+LTw7u3y5NRv13pJ9cJKhsj9yaN8H18ddRMCDBY77jK
-        oM49hUbzEV8IQF81NRlutcMmA1asKYOVyODq8lx8b19FImJxvkbH5EWSwURkgA2vrc96N0QGBTLl
-        z/Mbxx/JB2XNQSo59Ny2HUelbn0vlUQ+ymesQv++hYMjbKPXnm9H4/FUNgH1y7mhMZa7Xt3gbp+R
-        7X5HtK2ct3fhiNo6qsI694Shs368AVEvpJMAzcGSgfO2dpyzfaCuaTJdzHZlYbgJA3zag2wZ9YiW
-        zE4nr1TMC2JU3R7uV1+iXFMxcIcrgE2h7AiIRqd/Kee12jsHlKn+p/wASEmOqcidp0LJwyMPaZ7a
-        L8W/0vY+d4IhkH9UknJW5NuJFFRiv+8QngJTnZfKVOSdV90lhtLlpymmM1wmVEK0jf4CAAD//wMA
-        Ie6yVNIEAAA=
+        H4sIAAAAAAAAA4xU227bMAx991cIfE4Gx0mbzm9bsBYYil2LIttcGIxEO1plyZPoLUWQfx/sXOxe
+        BswPhsDDQx4d0t5GQoBWkAqQa2RZ1Wb89lf86Tuu3oUmudmoxKuNWn6JrzZysfp2C6OW4VY/SfKR
+        9Uq6qjbE2tk9LD0hU1t1Mj+bzKez6XTeAZVTZFpaWfN45saVtnqcxMlsHM/Hk4sDe+20pACp+BEJ
+        IcS2e7c6raINpCIeHSMVhYAlQXpKEgK8M20EMAQdGC3DqAels0y2lW4bYwYAO2dyicb0jffPdnDu
+        zUJjcr+8/Lr8TB/Ollc31x/D9fn9+cXl+8Vi0G9f+qHuBBWNlSeTBvgpnj5pJgRYrPZcbdHknkJj
+        +AlfCEBfNhVZbrXDNgPWbCiDNINkElgsyHLjH8Q12rLBksQbycIVIoknSQajDOpmZbTMDf7JbVOt
+        yGeQdv5koJApJ4uSSfXRUDsb3CBNuqrSzESH0A4eadxFL53vBv57KpqA5vlg0FrH2PrTTebugOxO
+        S2BcWXu3Ck+orWU6rHNPGDpvhyOOjkI6CdA82iKovatqztndU9d0Ep9N92WhX/Uens0OIDtGM6S9
+        no9eqJgrYtTdop12W6Jck+q5/Y5jo7QbANHg9s/lvFR774C25f+U7wEpqWZSee1Jafn4yn2ap/ZX
+        8K+0k8+dYAjkf2tJOWvy7UQUFXhcaAgPganKC21L8rXX3VcKRZ2fJ5hM8WJCBUS76C8AAAD//wMA
+        6inTkLMEAAA=
     headers:
       CF-RAY:
-      - 95a80e537f9db650-DFW
+      - 95a85f350df56b6d-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -120,7 +120,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:57:05 GMT
+      - Sat, 05 Jul 2025 16:52:18 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -136,13 +136,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1076'
+      - '909'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1080'
+      - '912'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -150,13 +150,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3998863'
+      - '3998861'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
       - 17ms
       x-request-id:
-      - req_ec51687fb7e57ebd319d3aa6f4b61ffb
+      - req_31fea21e48635f88269646e15d7c316e
     status:
       code: 200
       message: OK

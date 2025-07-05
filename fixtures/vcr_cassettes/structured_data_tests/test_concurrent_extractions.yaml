@@ -25,312 +25,28 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Count the pages\"\n3. VERIFY: Before outputting, internally
-      validate your extraction by:\n   - Cross-referencing multiple sources if available\n   -
-      Checking for logical consistency (dates in order, numbers reasonable, etc.)\n   -
-      Ensuring no placeholder or generic values (like \"N/A\" unless actually in the
-      document)\n   - Confirming extracted text actually appears in the source material\n   -
-      For lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
-      RULES:\n- If data is not found after thorough search, return null/empty rather
-      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON integer value\n\nNo explanations, no process description,
-      no confidence scores - just the final verified JSON.\n\nJSON Schema for your
-      response:\n```json\n{\n  \"type\": \"integer\"\n}\n```"},{"role":"user","content":"Count
-      the pages"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
-      final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"type":"integer"}},"required":["response"],"type":"object"},"strict":true}}]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '3531'
-      content-type:
-      - application/json
-      host:
-      - api.openai.com
-      user-agent:
-      - pydantic-ai/0.2.16
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - async:asyncio
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 1.81.0
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.11
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNRa9swEH73rxD3HI84SevgtxY6BmMrGbQM1mKu8tlRI0tCksvSkP8+
-        ZCe2k6YwPxih776777477SLGQBSQMeBr9Lw2Mr417w833+RWb5Y3K0vuzq3WD9V2bn+UbwYmgaFf
-        Xon7I+sL17WR5IVWHcwtoaeQNUmvknQ+TdNlC9S6IBlolfHxQse1UCKeTWeLeJrGyfLAXmvByUHG
-        /kSMMbZr/0GnKugvZGw6Od7U5BxWBFkfxBhYLcMNoHPCeVQeJgPItfKkgnTVSDkCvNYy5yjlULj7
-        dqPzYBZKma/kV+F/36XvS/n4/fHX9udrfX9fbG5H9brUW9MKKhvFe5NGeH+fnRVjDBTWHVcolLkl
-        10h/xmcM0FZNTcoH7bB7AkvOaOXoCbLpHk6i99Gl8/PICUtl41B+tAiV0h6D0taj5wOy78chdWWs
-        fnFn1CBeuHVuCV3b5djs6CiklQDNyTzBWF0bn3u9obbo9VXaZYVh5wY0WRxArz3KEStNJhfy5QV5
-        FO3A+x3jyNdUDNRh17AphB4B0aj3j2ou5e76F6r6n/QDwDkZT0VuLBWCn3Y8hFkKT/KzsN7lVjA4
-        sm+CU+4F2TCPgko8Lha4rfNU56VQFVljRftaoDT59Qxnc1wmVEK0j/4BAAD//wMAk8029TsEAAA=
-    headers:
-      CF-RAY:
-      - 95a80856d8483168-DFW
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 05 Jul 2025 15:52:59 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
-      - __cf_bm=GQjUuXimTnmYbPUl1q.A08ZVSHnfjIJGvxepfK9oB1c-1751730779-1.0.1.1-ns.I6NnX08lSocKJ.xHwyAYQQzSeEyqeo.buyVu1WH0ILlwOxm21C7JdAjUtF_Glt1iNWvMa2HVy3w8kXZqCp2kR.9i7ZxWPF_QUtxNf0r8;
-        path=/; expires=Sat, 05-Jul-25 16:22:59 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=i9RR4RpWI4dc6JV9W0hs_VfWmhiBNK.2e1FYUPoxHuA-1751730779276-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - user-54labie7aicgek5urzpgydpm
-      openai-processing-ms:
-      - '514'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-envoy-upstream-service-time:
-      - '519'
-      x-ratelimit-limit-requests:
-      - '5000'
-      x-ratelimit-limit-tokens:
-      - '4000000'
-      x-ratelimit-remaining-requests:
-      - '4999'
-      x-ratelimit-remaining-tokens:
-      - '3999236'
-      x-ratelimit-reset-requests:
-      - 12ms
-      x-ratelimit-reset-tokens:
-      - 11ms
-      x-request-id:
-      - req_d9dcdddadb2e1c54bacf52905873c186
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
-      an expert assistant for document analysis and interpretation. Your primary goal
-      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
-      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
-      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
-      Search**: A sophisticated semantic search engine that finds text passages similar
-      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
-      the document''s markdown summary, including:\n   - Loading full or truncated
-      summary content\n   - Calculating token lengths for context management\n3. **Notes
-      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
-      Listing all notes with metadata\n   - Accessing specific note content\n   -
-      Calculating note token lengths\n\n**Important**: Always check what tools are
-      available to you, as additional specialized tools may be provided dynamically
-      beyond the core set described above. Use the appropriate tools to gather information
-      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
-      from the document using these tools\n- We intentionally did not give you the
-      entire document initially. \n  Try doing some vector search to get more information
-      initially and then iteratively \n  identifying which parts of the document to
-      review.  \n- Do not rely solely on the summary or your general knowledge\n-
-      Use multiple tools when necessary for comprehensive answers\n- Present your
-      findings in clear, helpful markdown format\n- Avoid repeating instructions or
-      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
-      data extraction system with advanced verification capabilities.\n\nEXTRACTION
-      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
-      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Is this a contract?\"\n3. VERIFY: Before outputting, internally
-      validate your extraction by:\n   - Cross-referencing multiple sources if available\n   -
-      Checking for logical consistency (dates in order, numbers reasonable, etc.)\n   -
-      Ensuring no placeholder or generic values (like \"N/A\" unless actually in the
-      document)\n   - Confirming extracted text actually appears in the source material\n   -
-      For lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
-      RULES:\n- If data is not found after thorough search, return null/empty rather
-      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON boolean value (true or false)\n\nNo explanations, no
-      process description, no confidence scores - just the final verified JSON.\n\nJSON
-      Schema for your response:\n```json\n{\n  \"type\": \"boolean\"\n}\n```"},{"role":"user","content":"Is
-      this a contract?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
-      final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"type":"boolean"}},"required":["response"],"type":"object"},"strict":true}}]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '3555'
-      content-type:
-      - application/json
-      host:
-      - api.openai.com
-      user-agent:
-      - pydantic-ai/0.2.16
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - async:asyncio
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 1.81.0
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.11
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNNb9swDL37Vwg8x4OdenHiY9GhW7d2l+wDWAuDlWlHrSwJkjwsC/Lf
-        C9uN7aQZMB8MgU+PfHykdgFjIArIGPANel4bGV6av98u3Vpvb74k8e2dMbf4dHfz8fNXsfpUwaxl
-        6Mcn4v7Aesd1bSR5oVUPc0voqc0ap+/j9CJK01UH1Log2dIq48NEh7VQIpxH8ySM0jBevrI3WnBy
-        kLFfAWOM7bp/q1MV9AcyFs0OkZqcw4ogGy4xBlbLNgLonHAelYfZCHKtPKlWumqknABea5lzlHIs
-        3H+7yXk0C6XMk3Wkn79frZM6NdHV6sd18mHxc5NcT+r1qbemE1Q2ig8mTfAhnp0UYwwU1j1XKJS5
-        JddIf8JnDNBWTU3Kt9phdw+WnNHK0T1kJUpHezhi7INz54eJG5bKxqF8axMqpT22ajufHl6R/TAS
-        qStj9aM7obYNCLfJLaHrOp0aHhyEdBKgOZopGKtr43Ovn6krulgkfVYY925E4wPotUc5YaXL2Zl8
-        eUEeRTf0Yc848g0VI3XcN2wKoSdAMOn9rZpzufv+har+J/0IcE7GU5EbS4Xgxx2P1yy1z/Jf1waX
-        O8HgyP4WnHIvyLbzKKjEw3KB2zpPdV4KVZE1VnQvBkqTL+Y4v8BlTCUE++AFAAD//wMAl8LxiT8E
-        AAA=
-    headers:
-      CF-RAY:
-      - 95a80856cb94e901-DFW
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 05 Jul 2025 15:52:59 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
-      - __cf_bm=o8BAFj6zi0uoXabqdqkYQoNjf4U7RrzKwYd4rYnifrc-1751730779-1.0.1.1-OrvCiyWTwygB7SXbX.7HHWIh9uQV0.E_onQWIal1r.Xqr_EF49zGtY698jw0SHXqwuoxCRgsA0PiHAuUMm8Rq0CpmKABlnwKaqkrXGTn7t4;
-        path=/; expires=Sat, 05-Jul-25 16:22:59 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=ptfAgwf4Xdkk.wv6WcOw6ED9ONOixsTuN_fpPdMDBpA-1751730779486-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - user-54labie7aicgek5urzpgydpm
-      openai-processing-ms:
-      - '489'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-envoy-upstream-service-time:
-      - '494'
-      x-ratelimit-limit-requests:
-      - '5000'
-      x-ratelimit-limit-tokens:
-      - '4000000'
-      x-ratelimit-remaining-requests:
-      - '4999'
-      x-ratelimit-remaining-tokens:
-      - '3999231'
-      x-ratelimit-reset-requests:
-      - 12ms
-      x-ratelimit-reset-tokens:
-      - 11ms
-      x-request-id:
-      - req_5f4e50e536b18c73e1130451f1fcffff
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
-      an expert assistant for document analysis and interpretation. Your primary goal
-      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
-      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
-      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
-      Search**: A sophisticated semantic search engine that finds text passages similar
-      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
-      the document''s markdown summary, including:\n   - Loading full or truncated
-      summary content\n   - Calculating token lengths for context management\n3. **Notes
-      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
-      Listing all notes with metadata\n   - Accessing specific note content\n   -
-      Calculating note token lengths\n\n**Important**: Always check what tools are
-      available to you, as additional specialized tools may be provided dynamically
-      beyond the core set described above. Use the appropriate tools to gather information
-      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
-      from the document using these tools\n- We intentionally did not give you the
-      entire document initially. \n  Try doing some vector search to get more information
-      initially and then iteratively \n  identifying which parts of the document to
-      review.  \n- Do not rely solely on the summary or your general knowledge\n-
-      Use multiple tools when necessary for comprehensive answers\n- Present your
-      findings in clear, helpful markdown format\n- Avoid repeating instructions or
-      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
-      data extraction system with advanced verification capabilities.\n\nEXTRACTION
-      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
-      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"List the main topics\"\n3. VERIFY: Before outputting, internally
-      validate your extraction by:\n   - Cross-referencing multiple sources if available\n   -
-      Checking for logical consistency (dates in order, numbers reasonable, etc.)\n   -
-      Ensuring no placeholder or generic values (like \"N/A\" unless actually in the
-      document)\n   - Confirming extracted text actually appears in the source material\n   -
-      For lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
-      RULES:\n- If data is not found after thorough search, return null/empty rather
-      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON array of str values\n\nNo explanations, no process
-      description, no confidence scores - just the final verified JSON.\n\nJSON Schema
-      for your response:\n```json\n{\n  \"items\": {\n    \"type\": \"string\"\n  },\n  \"type\":
-      \"array\"\n}\n```"},{"role":"user","content":"List the main topics"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      requested in: \"List the terms defined under the ''Rules of Construction'' in
+      Section 1.\"\n3. VERIFY: Before outputting, internally validate your extraction
+      by:\n   - Confirming the requested information ACTUALLY EXISTS in the document\n   -
+      Cross-referencing multiple sources if available\n   - Checking for logical consistency
+      (dates in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or
+      generic values (like \"N/A\" unless actually in the document)\n   - Confirming
+      extracted text actually appears in the source material\n   - For lists/collections:
+      searching again with different queries to ensure completeness\n\nCRITICAL RULES:\n-
+      If the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON array of str values\n\nNo
+      explanations, no process description, no confidence scores - just the final
+      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"items\": {\n    \"type\":
+      \"string\"\n  },\n  \"type\": \"array\"\n}\n```"},{"role":"user","content":"List
+      the terms defined under the ''Rules of Construction'' in Section 1."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"items":{"type":"string"},"type":"array"}},"required":["response"],"type":"object"},"strict":true}}]}'
     headers:
       accept:
@@ -340,7 +56,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3617'
+      - '4138'
       content-type:
       - application/json
       host:
@@ -370,19 +86,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNNb9swDL37Vwg8x0O+Gic+BhtyGAZ0W4t1awODlWlHrSxpklykDfLf
-        C9uJ7aQZMB8MQY+PfHykdgFjIFKIGfANel4YGS7N2+3y6c/V3c1f//3513blcfLlm5bTzR1mMKgY
-        +vGJuD+yPnFdGEleaNXA3BJ6qrKOoqtRNBlG0aIGCp2SrGi58eFUh4VQIhwPx9NwGIWj+YG90YKT
-        g5jdB4wxtqv/lU6V0hZiNhwcbwpyDnOCuA1iDKyW1Q2gc8J5VB4GHci18qQq6aqUsgd4rWXCUcqu
-        cPPteufOLJQyWbjZze3WrvLCXi+vP7+ttj++/vz9onv1mtSvphaUlYq3JvXw9j4+K8YYKCwarlAo
-        E0uulP6MzxigzcuClK+0w+4BLDmjlaMHiO/XezgJ3weXzuueFZay0qH86BEqpT1WUmuT1gdk385D
-        6txY/ejOqJV64TaJJXR1m323g6OQWgKUJwMFY3VhfOL1M9VFZ9GsyQrd0nXoaHIAvfYoe6z5YnAh
-        X5KSR1FPvF0yjnxDaUftlg3LVOgeEPR6/6jmUu6mf6Hy/0nfAZyT8ZQmxlIq+GnHXZil6k3+K6x1
-        uRYMjuyL4JR4QbaaR0oZHjcL3KvzVCSZUDlZY0X9XCAzyWyM4wnOR5RBsA/eAQAA//8DABpsmso8
-        BAAA
+        H4sIAAAAAAAAAwAAAP//jFNRa9swEH73rxD3HI84SevUj+tCVtjoRlfCaINRpbOjVpZUSd5WQv77
+        kJ3YTprB/GCEvvvuvvvutI0IAcEhI8A21LPKyPjj6/jL59Xi7vuNv737enP/zFe3an7x45qb+1cY
+        BYZ+ekbmD6wPTFdGohdatTCzSD2GrEl6kaTT2ThNGqDSHGWglcbHMx1XQol4Mp7M4nEaJ/M9e6MF
+        QwcZeYgIIWTb/INOxfEPZGQ8OtxU6BwtEbIuiBCwWoYboM4J56nyMOpBppVHFaSrWsoB4LWWOaNS
+        9oXbbzs492ZRKXP16WW1WCW/Fz+X3y6vZ8uXZWGuTLEa1GtTv5lGUFEr1pk0wLv77KQYIaBo1XKF
+        ojK36GrpT/iEALVlXaHyQTtsH8GiM1o5fITsYb2Do/BddO68Hlhhsagdle89okppT4PUxqT1Htl1
+        85C6NFY/uRNqUC/cJrdIXdPm0O3oIKSRAPXRQMFYXRmfe/2CTdE0nbdZoV+6Hk2me9BrT+WAdZWM
+        zuTLOXoqmol3S8Yo2yDvqf2y0ZoLPQCiQe/v1ZzL3fYvVPk/6XuAMTQeeW4scsGOO+7DLIY3+a+w
+        zuVGMDi0vwTD3Au0YR4cC3rYLHBvzmOVF0KVaI0VzXOBwuSXEzqZ0nmCBUS76C8AAAD//wMA45zj
+        /zwEAAA=
     headers:
       CF-RAY:
-      - 95a80856ddfa479d-DFW
+      - 95a858ba996f6b9a-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -390,14 +106,318 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:52:59 GMT
+      - Sat, 05 Jul 2025 16:47:52 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=dBT7aebNfb.GxNBXRou1I3KZ_7hj2kwpdATONpGskGw-1751730779-1.0.1.1-62oE2Aqq2TUlpuXpAbwPmYNAyhDXUU2KhbipToSP5xQNsnIF3IEUV8BNW7kAqj.8Bi8O1X1EHj2oVTxzM2WoOMAW9NQ2EFGISZFT2Q62h8U;
-        path=/; expires=Sat, 05-Jul-25 16:22:59 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=uAoGvcvatvHbv1yfd.KH.9uNCMlQNbDIt6QLJTiMIIs-1751734072-1.0.1.1-44tgrwTnrDWcXJxWUHwKasT3CfY0AS.K.u5gsFJ0G65v6sAn9uGqLadPLAApg.of9FyucYMU16NHgjVoyFUJvt7Jp9cy_SOuyH7l9qOL6F8;
+        path=/; expires=Sat, 05-Jul-25 17:17:52 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=ZzKtG72Znv7k1a3zsCrPE_lK9k94p31EuJ4UilClChI-1751730779510-0.0.1.1-604800000;
+      - _cfuvid=dSL_rhSSiznFIPMeHYos9HqURnJT9L1E7UfSoIa7Fmc-1751734072157-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '429'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '433'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999095'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 13ms
+      x-request-id:
+      - req_80f4657981e4fcdd43b4b76e41cec039
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
+      an expert assistant for document analysis and interpretation. Your primary goal
+      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
+      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
+      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
+      Search**: A sophisticated semantic search engine that finds text passages similar
+      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
+      the document''s markdown summary, including:\n   - Loading full or truncated
+      summary content\n   - Calculating token lengths for context management\n3. **Notes
+      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
+      Listing all notes with metadata\n   - Accessing specific note content\n   -
+      Calculating note token lengths\n\n**Important**: Always check what tools are
+      available to you, as additional specialized tools may be provided dynamically
+      beyond the core set described above. Use the appropriate tools to gather information
+      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
+      from the document using these tools\n- We intentionally did not give you the
+      entire document initially. \n  Try doing some vector search to get more information
+      initially and then iteratively \n  identifying which parts of the document to
+      review.  \n- Do not rely solely on the summary or your general knowledge\n-
+      Use multiple tools when necessary for comprehensive answers\n- Present your
+      findings in clear, helpful markdown format\n- Avoid repeating instructions or
+      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
+      data extraction system with advanced verification capabilities.\n\nEXTRACTION
+      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
+      requested in: \"Return just the number of sections defined in Chapter 1.\"\n3.
+      VERIFY: Before outputting, internally validate your extraction by:\n   - Confirming
+      the requested information ACTUALLY EXISTS in the document\n   - Cross-referencing
+      multiple sources if available\n   - Checking for logical consistency (dates
+      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
+      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
+      text actually appears in the source material\n   - For lists/collections: searching
+      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
+      the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON integer value\n\nNo explanations,
+      no process description, no confidence scores - just the final verified JSON.\n\nJSON
+      Schema for your response:\n```json\n{\n  \"type\": \"integer\"\n}\n```"},{"role":"user","content":"Return
+      just the number of sections defined in Chapter 1."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"type":"integer"}},"required":["response"],"type":"object"},"strict":true}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4034'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNRb5swEH7nV1j3HCYIpFS8bam2VpraSXva1gq55iBOje3ZZm0a5b9P
+        hgRImkrlAVn+7rv77rvzNiAEeAk5AbaijjVahF/+Rt+vb5bPrzd3YikTdb34WqXrp1+/N1f6M8w8
+        Qz2ukbkD6xNTjRbouJI9zAxShz5rnC3iLEmjLO6ARpUoPK3WLkxV2HDJw3k0T8MoC+PLPXulOEML
+        OfkTEELItvt7nbLEF8hJNDvcNGgtrRHyIYgQMEr4G6DWcuuodDAbQaakQ+mly1aICeCUEgWjQoyF
+        +287OY9mUSGK20USPSc/mm9uvYxf75KXpb79ye3VpF6feqM7QVUr2WDSBB/u85NihICkTc/lkorC
+        oG2FO+ETAtTUbYPSee2wvQeDVitp8R7yaAdH0bvg3Plh4oTBqrVUvLWISqkc9Uo7jx72yG4Yh1C1
+        NurRnlC9eG5XhUFquy6nZgcHIZ0EaI/mCdqoRrvCqSfsimaLpM8K486NaJzuQaccFRPWRTY7k68o
+        0VHeDXzYMUbZCsuROu4abUuuJkAw6f2tmnO5+/65rD+SfgQYQ+2wLLTBkrPjjscwg/5Jvhc2uNwJ
+        BovmH2dYOI7Gz6PEih4WC+zGOmyKissajTa8ey1Q6eJiTucJvYyxgmAX/AcAAP//AwBa0hLqOwQA
+        AA==
+    headers:
+      CF-RAY:
+      - 95a858ba99aefc87-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 05 Jul 2025 16:47:52 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=U5a0nm_W7U5HtdK5yvp9tLilQQIcMwdjrDq4gEKIqGA-1751734072-1.0.1.1-bn0cpyU8Q44gmScqiv7kZFz14MVLNGngYRIXku7V9PkMOB5.a5e_cwVNTYYmOrkIOoENr2GhGt3UMrZinurYcfQRlXuqL26wrMyCUxdbKvI;
+        path=/; expires=Sat, 05-Jul-25 17:17:52 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=UkgAphS5GLTQaQO3_kD6zX6Ex12oEdf.9GDeKTJ9B08-1751734072282-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '474'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '481'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999113'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 13ms
+      x-request-id:
+      - req_00bdfb1844ed3b05973c086703e99497
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
+      an expert assistant for document analysis and interpretation. Your primary goal
+      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
+      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
+      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
+      Search**: A sophisticated semantic search engine that finds text passages similar
+      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
+      the document''s markdown summary, including:\n   - Loading full or truncated
+      summary content\n   - Calculating token lengths for context management\n3. **Notes
+      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
+      Listing all notes with metadata\n   - Accessing specific note content\n   -
+      Calculating note token lengths\n\n**Important**: Always check what tools are
+      available to you, as additional specialized tools may be provided dynamically
+      beyond the core set described above. Use the appropriate tools to gather information
+      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
+      from the document using these tools\n- We intentionally did not give you the
+      entire document initially. \n  Try doing some vector search to get more information
+      initially and then iteratively \n  identifying which parts of the document to
+      review.  \n- Do not rely solely on the summary or your general knowledge\n-
+      Use multiple tools when necessary for comprehensive answers\n- Present your
+      findings in clear, helpful markdown format\n- Avoid repeating instructions or
+      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
+      data extraction system with advanced verification capabilities.\n\nEXTRACTION
+      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
+      requested in: \"Is this document the US Constitution?\"\n3. VERIFY: Before outputting,
+      internally validate your extraction by:\n   - Confirming the requested information
+      ACTUALLY EXISTS in the document\n   - Cross-referencing multiple sources if
+      available\n   - Checking for logical consistency (dates in order, numbers reasonable,
+      etc.)\n   - Ensuring no placeholder or generic values (like \"N/A\" unless actually
+      in the document)\n   - Confirming extracted text actually appears in the source
+      material\n   - For lists/collections: searching again with different queries
+      to ensure completeness\n\nCRITICAL RULES:\n- If the requested information does
+      not exist or is not applicable to this document, return null\n- If a question
+      doesn''t make sense for this document type, return null\n- NEVER invent, guess,
+      or infer data that isn''t explicitly present\n- If data is not found after thorough
+      search, return null/empty rather than guessing\n- If multiple conflicting values
+      exist, choose the most authoritative/recent\n- For numeric values, verify they
+      make sense in context\n- For dates, ensure they follow logical chronology and
+      are actually present\n- For names/entities, verify exact spelling from the source\n-
+      For boolean questions, only return true/false if you can definitively answer
+      based on document content\n\nYour response must be ONLY the extracted data in
+      the format of: a JSON boolean value (true or false)\n\nNo explanations, no process
+      description, no confidence scores - just the final verified JSON.\n\nJSON Schema
+      for your response:\n```json\n{\n  \"type\": \"boolean\"\n}\n```"},{"role":"user","content":"Is
+      this document the US Constitution?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"type":"boolean"}},"required":["response"],"type":"object"},"strict":true}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4012'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNRb9MwEH7Pr7DuuUFNW5qSxzHYEJVAkxAINkU3+5KaObaxHdRR9b+j
+        JG2SdkUiD5F1n7+777477yLGQArIGPANBl5ZFV/9mq5vb66/f33C0r/5tFzjXG7F1NHb628WJg3D
+        PP4kHo6sV9xUVlGQRncwd4SBmqxJ+jpJ54tpmrRAZQSphlbaEC9MXEkt49l0toinaZysDuyNkZw8
+        ZOxHxBhju/bf6NSCtpCx6eQYqch7LAmy/hJj4IxqIoDeSx9QB5gMIDc6kG6k61qpERCMUTlHpYbC
+        3bcbnQezUKl8++Hq9k58fLc2N/6L2N6p95//FCu1HNXrUj/bVlBRa96bNML7eHZWjDHQWHVcqVHl
+        jnytwhmfMUBX1hXp0GiH3T048tZoT/eQFag87eGEsY8unR9Gbjgqao/qpU2otQnYqG19ejgg+34k
+        ypTWmUd/Rm0akH6TO0Lfdjo2PDoKaSVAfTJTsM5UNuTBPFFbNF2kXVYY9m5Ak8UBDCagGrGWyeRC
+        vlxQQNkOvd8zjnxDYqAO+4a1kGYERKPeX6q5lLvrX+ryf9IPAOdkA4ncOhKSn3Y8XHPUPMt/Xetd
+        bgWDJ/dbcsqDJNfMQ1CBx+UC/+wDVXkhdUnOOtm+GChsvpzhbI6rhAqI9tFfAAAA//8DAH4Xk1c/
+        BAAA
+    headers:
+      CF-RAY:
+      - 95a858ba9ad8ead1-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 05 Jul 2025 16:47:52 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=fntm7dq3xlDUwtRdNrpAJHUa8zxCDFW17.Uosq3ViAM-1751734072-1.0.1.1-TaFNrIs81XCARrddAIKoLS761CZPuydB375nAFxte0uepDvTr82lBTtqh66VEM1Ydm.ltfeDzUSfLbXvJ8GkarqR16dNLWGfBrQPTWKXmpY;
+        path=/; expires=Sat, 05-Jul-25 17:17:52 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=6K5PbgR3D28fGxzwKnYmB72OUopJ24JRsAQKM.SByqc-1751734072295-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -418,21 +438,21 @@ interactions:
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '492'
+      - '495'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
       - '4000000'
       x-ratelimit-remaining-requests:
-      - '4999'
+      - '4997'
       x-ratelimit-remaining-tokens:
-      - '3999224'
+      - '3998199'
       x-ratelimit-reset-requests:
-      - 12ms
+      - 24ms
       x-ratelimit-reset-tokens:
-      - 11ms
+      - 27ms
       x-request-id:
-      - req_30b0d1d064131e4e0adb19c387cbe816
+      - req_c82823701e495f47aa83b82b0f411398
     status:
       code: 200
       message: OK
@@ -462,21 +482,27 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Extract the title\"\n3. VERIFY: Before outputting, internally
-      validate your extraction by:\n   - Cross-referencing multiple sources if available\n   -
-      Checking for logical consistency (dates in order, numbers reasonable, etc.)\n   -
-      Ensuring no placeholder or generic values (like \"N/A\" unless actually in the
-      document)\n   - Confirming extracted text actually appears in the source material\n   -
-      For lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
-      RULES:\n- If data is not found after thorough search, return null/empty rather
-      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON string value\n\nNo explanations, no process description,
-      no confidence scores - just the final verified JSON.\n\nJSON Schema for your
-      response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"Extract
-      the title"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
+      requested in: \"Provide the official citation format for this title.\"\n3. VERIFY:
+      Before outputting, internally validate your extraction by:\n   - Confirming
+      the requested information ACTUALLY EXISTS in the document\n   - Cross-referencing
+      multiple sources if available\n   - Checking for logical consistency (dates
+      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
+      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
+      text actually appears in the source material\n   - For lists/collections: searching
+      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
+      the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON string value\n\nNo explanations,
+      no process description, no confidence scores - just the final verified JSON.\n\nJSON
+      Schema for your response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"Provide
+      the official citation format for this title."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
     headers:
       accept:
       - application/json
@@ -485,7 +511,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3236'
+      - '3727'
       content-type:
       - application/json
       host:
@@ -515,17 +541,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xSTW/bMAy9+1cQPMdD7CTNx7FF2wFDL9t6GObCVmU6VidLgkQHy4L898FOGrtb
-        B+yiAx/f03skDxEAqhI3gLIWLBun42v36/H6Yd3umk+f9WK/WN3Xt+vbO/Vx9rD7hpOOYZ9fSPIr
-        64O0jdPEypoTLD0Jpk41WS6S5Wy6XK57oLEl6Y62dRzPbdwoo+J0ms7j6TJOVmd2bZWkgBv4HgEA
-        HPq382lK+okbmE5eKw2FILaEm0sTAHqruwqKEFRgYRgnAyitYTK99aIoXoI1mTlkBiBD3jvKcAMZ
-        Pn65ga+KNUECMdzUwjF5SDLMzDEzRVGMFT1VbRBdKtNqPQKEMZZFN5U+y9MZOV7ca7t13j6HP6hY
-        KaNCnXsSwZrOaWDrsEePEcBTP6X2TXB03jaOc7Y/qP/uKk1PejgsZ0DT5AyyZaFHrPls8o5eXhIL
-        pcNoziiFrKkcqMNSRFsqOwKiUeq/3bynfUquzPZ/5AdASnJMZe48lUq+TTy0eepu919tlyn3hjGQ
-        3ylJOSvy3SZKqkSrTxeFYR+YmrxSZkveeXU6q8rlV6lIZ2KVUIXRMfoNAAD//wMAQ9eTpGQDAAA=
+        H4sIAAAAAAAAAwAAAP//jJLBbtQwEIbveQprzskqyS5NybFIgCq4gJCQSJW49iTrrWO7tlNYrfZ5
+        eA+erHKy3aTQSlx8mG/+8fwzc4gIAcGhJMC21LPeyOTqPv300e24vV8z/FlcXH/oxD5j198/v7/7
+        AnFQ6NsdMv+kWjHdG4leaDVhZpF6DFWz4k1WrDdpkY2g1xxlkHXGJxud9EKJJE/zTZIWSXZ5Um+1
+        YOigJD8iQgg5jG/oU3H8BSVJ46dIj87RDqE8JxECVssQAeqccJ4qD/EMmVYe1dh60zQ7p1WlDpUi
+        pAK/N1hBSSpw3grVVRBP4IHK4UQy8m31dfVuRf78JlkFlTpWqmma5Q8W28HR4FINUi4AVUp7GqY0
+        ers5kePZjdSdsfrW/SWFVijhtrVF6rQKnTuvDYz0GBFyM05teDYIMFb3xtde3+H4XZHlUz2YlzXT
+        vDhBrz2VC9X6bfxCvZqjp0K6xdyBUbZFPkvnJdGBC70A0cL1v928VHtyLlT3P+VnwBgaj7w2Frlg
+        zx3PaRbDLb+Wdp7y2DA4tA+CYe0F2rAJji0d5HRh4PbOY1+3QnVojRXTmbWmvshpvqaXGbYQHaNH
+        AAAA//8DAAk+ish0AwAA
     headers:
       CF-RAY:
-      - 95a80856ddcfe79a-DFW
+      - 95a858ba8d042cb0-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -533,14 +560,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:52:59 GMT
+      - Sat, 05 Jul 2025 16:47:52 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        path=/; expires=Sat, 05-Jul-25 16:22:59 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        path=/; expires=Sat, 05-Jul-25 17:17:52 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000;
+      - _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -555,13 +582,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '541'
+      - '602'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '544'
+      - '608'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -569,13 +596,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999236'
+      - '3999114'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 11ms
+      - 13ms
       x-request-id:
-      - req_0b5b41b7c4f1de6aba80c2d55aadb562
+      - req_bb6db30fe923991cb77dc10f7606a935
     status:
       code: 200
       message: OK

@@ -26,20 +26,26 @@ interactions:
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
       requested in: \"What type of document is this?\"\n3. VERIFY: Before outputting,
-      internally validate your extraction by:\n   - Cross-referencing multiple sources
-      if available\n   - Checking for logical consistency (dates in order, numbers
-      reasonable, etc.)\n   - Ensuring no placeholder or generic values (like \"N/A\"
-      unless actually in the document)\n   - Confirming extracted text actually appears
-      in the source material\n   - For lists/collections: searching again with different
-      queries to ensure completeness\n\nCRITICAL RULES:\n- If data is not found after
-      thorough search, return null/empty rather than guessing\n- If multiple conflicting
-      values exist, choose the most authoritative/recent\n- For numeric values, verify
-      they make sense in context (e.g., page count > 0)\n- For dates, ensure they
-      follow logical chronology\n- For names/entities, verify exact spelling from
-      the source\n\nYour response must be ONLY the extracted data in the format of:
-      a JSON string value\n\nNo explanations, no process description, no confidence
-      scores - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"type\":
-      \"string\"\n}\n```"},{"role":"user","content":"What type of document is this?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
+      internally validate your extraction by:\n   - Confirming the requested information
+      ACTUALLY EXISTS in the document\n   - Cross-referencing multiple sources if
+      available\n   - Checking for logical consistency (dates in order, numbers reasonable,
+      etc.)\n   - Ensuring no placeholder or generic values (like \"N/A\" unless actually
+      in the document)\n   - Confirming extracted text actually appears in the source
+      material\n   - For lists/collections: searching again with different queries
+      to ensure completeness\n\nCRITICAL RULES:\n- If the requested information does
+      not exist or is not applicable to this document, return null\n- If a question
+      doesn''t make sense for this document type, return null\n- NEVER invent, guess,
+      or infer data that isn''t explicitly present\n- If data is not found after thorough
+      search, return null/empty rather than guessing\n- If multiple conflicting values
+      exist, choose the most authoritative/recent\n- For numeric values, verify they
+      make sense in context\n- For dates, ensure they follow logical chronology and
+      are actually present\n- For names/entities, verify exact spelling from the source\n-
+      For boolean questions, only return true/false if you can definitively answer
+      based on document content\n\nYour response must be ONLY the extracted data in
+      the format of: a JSON string value\n\nNo explanations, no process description,
+      no confidence scores - just the final verified JSON.\n\nJSON Schema for your
+      response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"What
+      type of document is this?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
     headers:
       accept:
       - application/json
@@ -48,12 +54,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3262'
+      - '3683'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -81,18 +87,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJLLbtswEEX3+gpi1lZhyUkUa9e0ReFNN0XRFlUgMeRIpkORLDkKmhr+
-        90KPWHIfQDda8Mwdzb0zx4gxUBJyBmLPSbROx3fu59cPu9fZXfjyPdsp/h7lzr57/Hxo3m5TWPUK
-        +3BAQS+qV8K2TiMpa0YsPHLCvmuSXSfZJllvtgNorUTdyxpH8ZWNW2VUnK7Tq3idxcntpN5bJTBA
-        zr5FjDF2HL79nEbiD8jZevXy0mIIvEHIz0WMgbe6fwEeggrEDcFqhsIaQjOMXlXVIVhTmGNhGCuA
-        nh0WkLMCAnllmgJWI3jiupvIp4/sjZVYQGFOhamqatnbY90F3vszndYLwI2xxPt8Blf3EzmdfWjb
-        OG8fwm9SqJVRYV965MGafuZA1sFATxFj90Ne3UUE4LxtHZVkH3H43U26HfvBvKaZpskEyRLXC9X1
-        lPJlv1IicaXDInEQXOxRztJ5PbyTyi5AtHD95zR/6z06V6b5n/YzEAIdoSydR6nEpeO5zGN/xf8q
-        O6c8DAwB/ZMSWJJC329CYs07Pd4WhOdA2Ja1Mg1659V4YLUrb1KebvhtgjVEp+gXAAAA//8DAHeD
-        8CluAwAA
+        H4sIAAAAAAAAA4ySO2/bMBSFd/0K4s5WoYddG9qSoUsztEMQIFUgMdSVzJQiGfIqaWr4vxeUHEtp
+        E6CLBn73HJ37OESMgWygYCD2nERvVXz5mHxzX/Pu+Vld337/PeTdzYV6/HJzeXV7lcAqKMz9Awp6
+        VX0SprcKSRo9YeGQEwbXdLtJt/k632xG0JsGVZB1luK1iXupZZwl2TpOtnG6O6n3Rgr0ULAfEWOM
+        HcZvyKkb/AUFS1avLz16zzuE4lzEGDijwgtw76UnrglWMxRGE+oxel3XD97oUh9KzVgJ9GKxhIKV
+        4MlJ3ZVQ6mOp67peGjhsB89DE3pQagG41oZ4GMIY/e5EjuewynTWmXv/lxRaqaXfVw65NzoE82Qs
+        jPQYMXY3DmV40ydYZ3pLFZmfOP5um+wmP5h3MdM0P0EyxNVClaWrd/yqBolL5RdjBcHFHptZOu+A
+        D400CxAtuv43zXveU+dSd/9jPwMh0BI2lXXYSPG247nMYTjVj8rOUx4Dg0f3JAVWJNGFTTTY8kFN
+        BwT+xRP2VSt1h846OV1Ra6vPGc9yvkuxhegY/QEAAP//AwCnYL0OUwMAAA==
     headers:
       CF-RAY:
-      - 95a80eb1eb05f065-DFW
+      - 95a85fabca404743-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -100,7 +105,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:57:19 GMT
+      - Sat, 05 Jul 2025 16:52:36 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -116,13 +121,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '515'
+      - '393'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '518'
+      - '396'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -130,13 +135,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999229'
+      - '3999126'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 11ms
+      - 13ms
       x-request-id:
-      - req_6610d1e6dbd6685cfedc4882d9f9ee46
+      - req_b41b536f74311f3664c15476abbdd329
     status:
       code: 200
       message: OK

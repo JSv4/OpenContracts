@@ -26,25 +26,30 @@ interactions:
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
       requested in: \"Extract company information from this document\"\n3. VERIFY:
-      Before outputting, internally validate your extraction by:\n   - Cross-referencing
+      Before outputting, internally validate your extraction by:\n   - Confirming
+      the requested information ACTUALLY EXISTS in the document\n   - Cross-referencing
       multiple sources if available\n   - Checking for logical consistency (dates
       in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
       values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
       text actually appears in the source material\n   - For lists/collections: searching
       again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
-      data is not found after thorough search, return null/empty rather than guessing\n-
+      the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
       If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON object matching the ''Company'' model structure\n\nNo
-      explanations, no process description, no confidence scores - just the final
-      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"$defs\": {\n    \"Address\":
-      {\n      \"properties\": {\n        \"street\": {\n          \"title\": \"Street\",\n          \"type\":
-      \"string\"\n        },\n        \"city\": {\n          \"title\": \"City\",\n          \"type\":
-      \"string\"\n        },\n        \"state\": {\n          \"title\": \"State\",\n          \"type\":
-      \"string\"\n        },\n        \"zip_code\": {\n          \"title\": \"Zip
-      Code\",\n          \"type\": \"string\"\n        }\n      },\n      \"required\":
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON object matching the ''Company''
+      model structure\n\nNo explanations, no process description, no confidence scores
+      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"$defs\":
+      {\n    \"Address\": {\n      \"properties\": {\n        \"street\": {\n          \"title\":
+      \"Street\",\n          \"type\": \"string\"\n        },\n        \"city\": {\n          \"title\":
+      \"City\",\n          \"type\": \"string\"\n        },\n        \"state\": {\n          \"title\":
+      \"State\",\n          \"type\": \"string\"\n        },\n        \"zip_code\":
+      {\n          \"title\": \"Zip Code\",\n          \"type\": \"string\"\n        }\n      },\n      \"required\":
       [\n        \"street\",\n        \"city\",\n        \"state\",\n        \"zip_code\"\n      ],\n      \"title\":
       \"Address\",\n      \"type\": \"object\"\n    },\n    \"Company\": {\n      \"properties\":
       {\n        \"name\": {\n          \"title\": \"Name\",\n          \"type\":
@@ -63,12 +68,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '5325'
+      - '5746'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -96,20 +101,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xUUW+bMBB+51dY9xwmSLKm5XGZpr1UzbRO6lYq5NgHcWtszz62tFH+ewUpgbSd
-        NB6QfZ+/u893H+wixkBJyBiIDSdROx1/ck831aVf2Gub8HJ5/xXrq9WXKk1ml38rmLQMu75HQT3r
-        g7C100jKmgMsPHLCNmu6+JguZsnFxVkH1FaibmmVo3hu41oZFU+T6TxOFnF6/sLeWCUwQMZuI8YY
-        23XvVqeRuIWMJZM+UmMIvELIjocYA291GwEeggrEDcFkAIU1hKaVbhqtRwBZqwvBtR4KH57daD00
-        i2tdrLZBffu9na+uPs9vfj48oZ2tfonlZlTvkPrRdYLKxohjk0b4MZ69KsYYGF4fuMpwXXgMjaZX
-        fMaA+6qp0VCrHXZ5x8ohy+HH9yW7VqSRpSxmyw13hJ6lOUxy4FJ6DCGHbJdDII9IHacDhaLHYReI
-        Ew7bJ+UKYWUf2bcnmnVQUnGvsM14e7eHE5H76L313WgAHssmcP12MtwYS7xtUDeauxdkf3SBtpXz
-        dh1eUdueqbApPPLQNXc846gX0kmA5sRG4LytHRVkH7ArerF48RwMVh/QeQ+SJa6HeJqkPXKSsJBI
-        XHVGO3pbcLFBOXAHj/NGKjsCotHl38p5L/ehAcpU/5N+AIRARygL51EqcXrl4ZjH9lfwr2PHNneC
-        IaD/owQWpNC3A5FY8t7QEB4DYV2UylTonVfdVwqlK86mfDrj5ymWEO2jZwAAAP//AwC6A6WUswQA
-        AA==
+        H4sIAAAAAAAAAwAAAP//jFNNb9swDL37Vwg8x4OduE3q4zYMwQ5d13VfmQtDlWlHqSy5Et0tCfLf
+        B9tJ7KQdMB8MgY/v8Ymkth5jIDOIGYglJ1FWyn/7FNxcPv4M7uy3m/nHD4vF8+p2daffb35cz2cw
+        ahjmYYWCDqw3wpSVQpJGd7CwyAkb1XB6EU4n0SSYtUBpMlQNrajIj4xfSi39cTCO/GDqh3txsTRS
+        oIOY/fIYY2zb/hufOsM/ELNgdIiU6BwvEOJjEmNgjWoiwJ2TjrgmGPWgMJpQN9Z1rdQAIGNUKrhS
+        feHu2w7OfbO4Umn4eb0prqNPEZ//Xnz5alZPF9/fXc1uB/U66XXVGsprLY5NGuDHeHxWjDHQvOy4
+        UnOVWnS1ojM+Y8BtUZeoqfEO26RlJRAn0FwygVECPMssOpdAvE3AkUWk0wQhaX0accTpTGUjq1SY
+        bBjd7eDEzc577Xw/6LTFvHZcvRwB19oQbzrRzuB+j+yO41amqKx5cGfUpjnSLVOL3LVdHA7TOxhp
+        LUB9si9QWVNWlJJ5xLZoGERXnSz0S93Dk8keJENcDWmz8egVxTRD4rJdqeMWCy6WmPXcfpt5nUkz
+        ALzB7V/aeU2764DUxf/I94AQWBFmaWUxk+L0yn2axebR/yvt2OfWMDi0z1JgShJtM5EMc35YXXBr
+        R1imudQF2srK9j1CXqWXYz6e8FmIOXg77y8AAAD//wMAsAwOTp0EAAA=
     headers:
       CF-RAY:
-      - 95a80da6feb13aa8-DFW
+      - 95a85e863cd76b65-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -117,7 +121,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:56:37 GMT
+      - Sat, 05 Jul 2025 16:51:49 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -133,13 +137,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '660'
+      - '688'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '664'
+      - '690'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -147,13 +151,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3998941'
+      - '3998838'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 15ms
+      - 17ms
       x-request-id:
-      - req_c691baeea791aec560d627fd5cc8fd72
+      - req_0244f43e856ebd8cb519800ad9e99603
     status:
       code: 200
       message: OK

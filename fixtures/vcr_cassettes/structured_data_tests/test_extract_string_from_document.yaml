@@ -25,22 +25,27 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"What is the main subject of this document? Return just the subject
-      as a string.\"\n3. VERIFY: Before outputting, internally validate your extraction
-      by:\n   - Cross-referencing multiple sources if available\n   - Checking for
-      logical consistency (dates in order, numbers reasonable, etc.)\n   - Ensuring
-      no placeholder or generic values (like \"N/A\" unless actually in the document)\n   -
-      Confirming extracted text actually appears in the source material\n   - For
-      lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
-      RULES:\n- If data is not found after thorough search, return null/empty rather
-      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON string value\n\nNo explanations, no process description,
-      no confidence scores - just the final verified JSON.\n\nJSON Schema for your
-      response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"What
-      is the main subject of this document? Return just the subject as a string."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
+      requested in: \"Extract the definition of the word ''vessel'' as a string.\"\n3.
+      VERIFY: Before outputting, internally validate your extraction by:\n   - Confirming
+      the requested information ACTUALLY EXISTS in the document\n   - Cross-referencing
+      multiple sources if available\n   - Checking for logical consistency (dates
+      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
+      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
+      text actually appears in the source material\n   - For lists/collections: searching
+      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
+      the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON string value\n\nNo explanations,
+      no process description, no confidence scores - just the final verified JSON.\n\nJSON
+      Schema for your response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"Extract
+      the definition of the word ''vessel'' as a string."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
     headers:
       accept:
       - application/json
@@ -49,12 +54,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3360'
+      - '3735'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -82,18 +87,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJdb9swDHz3rxD4HA9xmubrcR2wFQWGAduArnNhKBLtaJNFQaKDpUH+
-        +2A7jd2tA/aiBx7vxDvymAgBRsNGgNpJVrW36Vv/dD+7+bi8e5fd3t1ufRUP3yi7f1jzh+kTTFoG
-        bX+g4mfWG0W1t8iGXA+rgJKxVc2W19nyarq+XnRATRptS6s8p3NKa+NMOpvO5ul0mWarM3tHRmGE
-        jfieCCHEsXvbOZ3GX7AR08lzpcYYZYWwuTQJAYFsWwEZo4ksHcNkABU5RteNfsyBDx5z2OQQORhX
-        5TDJYS9t0xe/OsOoxWeWjFHckEbxxbBFkYlUvEeHQVrxKdDeREMu5nAa/xSwbKJs3brG2hEgnSOW
-        bVqdx8czcrq4slT5QNv4BxVK40zcFQFlJNc6iEweOvSUCPHYpde8CAR8oNpzwfQTu+8W83WvB8PS
-        BjRbnUEmlnbEWiwnr+gVGlkaG0f5g5Jqh3qgDsuSjTY0ApKR67+neU27d25c9T/yA6AUekZd+IDa
-        qJeOh7aA7U3/q+2ScjcwRAx7o7Bgg6HdhMZSNra/NIiHyFgXpXEVBh9Mf26lLxYzObuSqwxLSE7J
-        bwAAAP//AwDlz4cbfAMAAA==
+        H4sIAAAAAAAAAwAAAP//jJJBb9swDIXv/hUCz/FgO1mc5jgM2LEoUHSHoTBUiba1yaIm0cWCIv99
+        kJ3G7tYBu+igj496j+JLJgQYDUcBqpesBm/zTz+L29u6v/9ctHfd4eHLdrwx9dcT7oubUwebpKCn
+        76j4VfVB0eAtsiE3YxVQMqauZf2xrLe7ar+bwEAabZJ1nvMd5YNxJq+KapcXdV4eLuqejMIIR/Et
+        E0KIl+lMPp3GX3AUxeb1ZsAYZYdwvBYJAYFsugEZo4ksHcNmgYoco5usu9HaNQrYjlEme4msgHSO
+        WKZ4k6nHCzlfbVjqfKCn+IcUWuNM7JuAMpJLT0YmDxM9Z0I8TnHHNwnABxo8N0w/cHqurqq5HyxT
+        Xmh5YUws7Vq03bzTrtHI0ti4mhcoqXrUi3QZrhy1oRXIVqH/NvNe7zm4cd3/tF+AUugZdeMDaqPe
+        Bl7KAqYd/FfZdciTYYgYno3Chg2G9BEaWznaeTMgniLj0LTGdRh8MPN6tL7ZV7LaykOJLWTn7DcA
+        AAD//wMAJxVOMywDAAA=
     headers:
       CF-RAY:
-      - 95a80cabadd8462c-DFW
+      - 95a85d6f0cce4791-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -101,7 +105,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:55:56 GMT
+      - Sat, 05 Jul 2025 16:51:04 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -117,13 +121,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '577'
+      - '338'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '582'
+      - '343'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -131,13 +135,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999206'
+      - '3999113'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 11ms
+      - 13ms
       x-request-id:
-      - req_af92ef834d8487433f16bcd0427ad729
+      - req_56a8f7adfc88002c02f7940a0fdad573
     status:
       code: 200
       message: OK

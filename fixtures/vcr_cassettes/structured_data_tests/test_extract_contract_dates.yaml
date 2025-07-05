@@ -25,29 +25,34 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Extract all important dates from this contract.\"\n3. VERIFY:
-      Before outputting, internally validate your extraction by:\n   - Cross-referencing
-      multiple sources if available\n   - Checking for logical consistency (dates
-      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
-      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
-      text actually appears in the source material\n   - For lists/collections: searching
-      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
-      data is not found after thorough search, return null/empty rather than guessing\n-
+      requested in: \"Extract the enactment date of the ''Born-Alive Infants Protection
+      Act of 2002''.\"\n3. VERIFY: Before outputting, internally validate your extraction
+      by:\n   - Confirming the requested information ACTUALLY EXISTS in the document\n   -
+      Cross-referencing multiple sources if available\n   - Checking for logical consistency
+      (dates in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or
+      generic values (like \"N/A\" unless actually in the document)\n   - Confirming
+      extracted text actually appears in the source material\n   - For lists/collections:
+      searching again with different queries to ensure completeness\n\nCRITICAL RULES:\n-
+      If the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
       If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON object matching the ''ContractDates'' model structure\n\nNo
-      explanations, no process description, no confidence scores - just the final
-      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"$defs\": {\n    \"ContractDate\":
-      {\n      \"description\": \"A single important date in a contract.\",\n      \"properties\":
-      {\n        \"date\": {\n          \"description\": \"Date in ISO format (YYYY-MM-DD)\",\n          \"title\":
-      \"Date\",\n          \"type\": \"string\"\n        },\n        \"description\":
-      {\n          \"description\": \"What this date represents\",\n          \"title\":
-      \"Description\",\n          \"type\": \"string\"\n        },\n        \"is_deadline\":
-      {\n          \"description\": \"Whether this is a deadline\",\n          \"title\":
-      \"Is Deadline\",\n          \"type\": \"boolean\"\n        }\n      },\n      \"required\":
-      [\n        \"date\",\n        \"description\",\n        \"is_deadline\"\n      ],\n      \"title\":
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON object matching the ''ContractDates''
+      model structure\n\nNo explanations, no process description, no confidence scores
+      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"$defs\":
+      {\n    \"ContractDate\": {\n      \"description\": \"A single important date
+      in a contract.\",\n      \"properties\": {\n        \"date\": {\n          \"description\":
+      \"Date in ISO format (YYYY-MM-DD)\",\n          \"title\": \"Date\",\n          \"type\":
+      \"string\"\n        },\n        \"description\": {\n          \"description\":
+      \"What this date represents\",\n          \"title\": \"Description\",\n          \"type\":
+      \"string\"\n        },\n        \"is_deadline\": {\n          \"description\":
+      \"Whether this is a deadline\",\n          \"title\": \"Is Deadline\",\n          \"type\":
+      \"boolean\"\n        }\n      },\n      \"required\": [\n        \"date\",\n        \"description\",\n        \"is_deadline\"\n      ],\n      \"title\":
       \"ContractDate\",\n      \"type\": \"object\"\n    }\n  },\n  \"description\":
       \"All important dates found in a contract.\",\n  \"properties\": {\n    \"effective_date\":
       {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
@@ -59,7 +64,7 @@ interactions:
       {\n      \"description\": \"Other important dates\",\n      \"items\": {\n        \"$ref\":
       \"#/$defs/ContractDate\"\n      },\n      \"title\": \"Key Dates\",\n      \"type\":
       \"array\"\n    }\n  },\n  \"title\": \"ContractDates\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Extract
-      all important dates from this contract."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"All
+      the enactment date of the ''Born-Alive Infants Protection Act of 2002''."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"All
       important dates found in a contract.","parameters":{"properties":{"effective_date":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Contract
       effective date"},"expiration_date":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Contract
       expiration date"},"key_dates":{"description":"Other important dates","items":{"$ref":"#/$defs/ContractDate"},"type":"array"}},"type":"object","$defs":{"ContractDate":{"description":"A
@@ -75,12 +80,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '5973'
+      - '6456'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -108,18 +113,20 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNNj9MwEL3nV1hzblDSdknpcTmABGiFxC4gtIqmziQ19Re2U7FU/e/I
-        SZuk3UUih8ia5zfz5s34kDAGooI1A77FwJWV6a398/D+5mP++f52//X73QNmG2k+7Ip33+pPGcwi
-        w2x+Eg9n1itulJUUhNE9zB1hoJg1L27yYpGtlkUHKFORjLTGhnRpUiW0SOfZfJlmRZqvTuytEZw8
-        rNmPhDHGDt0/6tQV/YY1y2bniCLvsSFYD5cYA2dkjAB6L3xAHWA2gtzoQDpK162UEyAYI0uOUo6F
-        ++8wOY9moZQl3+e/Cne/oMX9W5UrXO2W/stdm03q9amfbCeobjUfTJrgQ3x9VYwx0Kh6rtAoS0e+
-        leGKzxiga1pFOkTtcDjCBX5MXjo/Tnp3VLce5XNTUGsTMGrrXHk8IcdhANI01pmNv6JGucJvS0fo
-        u76m9iZnIZ0EaC8mCNYZZUMZzI66onmev+nTwrhmE/i0DBBMQDmlzc+0i4xlRQFFN+RhrzjyLVUj
-        d9wvbCthJkAy6f65nJdy9w4I3fxP+hHgnGygqrSOKsEvWx6vOYrP8F/XBp87weDJ7QWnMghycSIV
-        1XheJvBPPpAqa6EbctaJ7oVAbcvXc5wvcJVTDckx+QsAAP//AwDtNMlGLwQAAA==
+        H4sIAAAAAAAAAwAAAP//jFRNb9swDL37Vwi89BIPjhsvgW/t0EMXFFuxFShQFwYr0YlaWXIluV0R
+        5L8PUprY/RgwHwyBj+/xiaS9SRgDKaBkwNfoedup9PQxu7g6P3++/3b/28nltV0+X10W8+VlUVw0
+        MAkMc3dP3O9ZX7hpO0VeGr2DuSX0FFSn82I6P55NZ18j0BpBKtBWnU9nJm2llmme5bM0m6fTxSt7
+        bSQnByW7SRhjbBPfwacW9AdKlk32kZacwxVBeUhiDKxRIQLonHQetYfJAHKjPelgXfdKjQBvjKo5
+        KjUU3j2b0XloFipVf+8Wy2tbWHP6+Iue5j8urvDsjLfrUb2d9EsXDTW95ocmjfBDvHxXjDHQ2O64
+        UqOqLble+Xd8xgDtqm9J++AdNhU80Est0JOroLzZVBDOFZQV5FmWp9kizYoKJhUIctzKLhSP8JlG
+        7oMQCwxmGubXxI5OjdXpiZJPxM51g9o79tMaT9E1O+E+ZAbpo6gqXS0IhZI6FG1QOdrebuGN6W3y
+        2fl2NBBLTe9QfZwUam08htJxVLevyPawFcqsOmvu3Dtq6KF069oSutjs8cyTvZFoAfo3awWdNW3n
+        a28eKBad5vnxThaG3R/gIn8FvfGoxrR5MflEsRbkUcbNOyw7R74mMXCHpcdeSDMCktHtP9r5THvX
+        AalX/yM/AJxT50nUnSUh+dsrD2mWwr/hX2mHPkfD4Mg+SU61l2TDRAQ1uN9wcC/OU1s3Uq/IdlbG
+        zxaarv6aY36Miyk1kGyTvwAAAP//AwB2b7TOxAQAAA==
     headers:
       CF-RAY:
-      - 95a80a05bf1045fb-DFW
+      - 95a85a902b767103-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -127,7 +134,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:54:08 GMT
+      - Sat, 05 Jul 2025 16:49:07 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -143,13 +150,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '373'
+      - '970'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '378'
+      - '973'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -157,13 +164,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3998827'
+      - '3998707'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 17ms
+      - 19ms
       x-request-id:
-      - req_6f42be7be3460a09e4ded6038814ea44
+      - req_7737accd417908a373a4518bcf36c7a2
     status:
       code: 200
       message: OK

@@ -27,19 +27,24 @@ interactions:
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
       requested in: \"Extract some data that definitely won''t match this complex
       structure\"\n3. VERIFY: Before outputting, internally validate your extraction
-      by:\n   - Cross-referencing multiple sources if available\n   - Checking for
-      logical consistency (dates in order, numbers reasonable, etc.)\n   - Ensuring
-      no placeholder or generic values (like \"N/A\" unless actually in the document)\n   -
-      Confirming extracted text actually appears in the source material\n   - For
-      lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
-      RULES:\n- If data is not found after thorough search, return null/empty rather
-      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON object matching the ''ComplexModel'' model structure\n\nNo
-      explanations, no process description, no confidence scores - just the final
-      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
+      by:\n   - Confirming the requested information ACTUALLY EXISTS in the document\n   -
+      Cross-referencing multiple sources if available\n   - Checking for logical consistency
+      (dates in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or
+      generic values (like \"N/A\" unless actually in the document)\n   - Confirming
+      extracted text actually appears in the source material\n   - For lists/collections:
+      searching again with different queries to ensure completeness\n\nCRITICAL RULES:\n-
+      If the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON object matching the ''ComplexModel''
+      model structure\n\nNo explanations, no process description, no confidence scores
+      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
       {\n    \"nested_data\": {\n      \"additionalProperties\": {\n        \"items\":
       {\n          \"additionalProperties\": {\n            \"type\": \"number\"\n          },\n          \"type\":
       \"object\"\n        },\n        \"type\": \"array\"\n      },\n      \"title\":
@@ -55,12 +60,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '4168'
+      - '4589'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -88,18 +93,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNNi9swEL37Vwid4+J4HTv1bRdCDwkUCqW0ZTGz8thRqy8kOe025L8X
-        2YntZFOoD0bM03vz5kPHiBDKa1oSyvbgmTQifjJ/vspNln/bfrHdZ9l+LNLNSrBt89h9aOgiMPTL
-        D2T+wnrHtDQCPddqgJlF8BhUl8VqWTwskzzrAalrFIHWGh9nOpZc8ThN0ixOini5PrP3mjN0tCTf
-        I0IIOfb/4FPV+JuWJFlcIhKdgxZpOV4ihFotQoSCc9x5UJ4uJpBp5VEF66oTYgZ4rUXFQIgp8fAd
-        Z+epWSBEtX1sDjuz65JPhxR/Pa1gx2G9SfJZvkH61fSGmk6xsUkzfIyXN8kIoQrkwOUKRGXRdcLf
-        8AmhYNtOovLBOz2e6BV+iu6dn2e1W2w6B+JtU0Ap7SF467vyfEZO4wCEbo3VL+6GGuxyt68sguvr
-        mrc3uhjpLdDuaoLUWC2Nr7z+iX3SIs8HVTpt2YSm6zPotQcxY73PFnf0qho98H7E41YxYHusJ+q0
-        XdDVXM+AaFb7Wzf3tIf6uWr/R34CGEPjsa6MxZqz64qnaxbDI/zXtbHLvWHq0B44w8pztGEeNTZw
-        WSXqXp1HWTVctWiN5f37oI2p8hTSB1gvsaHRKfoLAAD//wMAIAf9DS0EAAA=
+        H4sIAAAAAAAAAwAAAP//jFPJbtswEL3rK4g5W4V3u7rVPTltXTRd0gWBwFAjmTE3k1Sb1PC/B5Ss
+        xU4KVAeBmMf35s3CQ0QI8AwSAmxLPZNGxKv98NPVG3X9cf1FfsbN2734KX/M/yzu/27mKxgEhr67
+        R+Yb1iumpRHouVY1zCxSj0F1tJiNFpPpZDmpAKkzFIFWGB9PdSy54vF4OJ7Gw0U8Wp7YW80ZOkjI
+        r4gQQg7VP/hUGT5AQoaDJiLROVogJO0lQsBqESJAnePOU+Vh0IFMK48qWFelED3Aay1SRoXoEtff
+        oXfumkWFSL9v1nZ+Y95/Lffvrlffrja7fP3B71738tXSj6YylJeKtU3q4W08uUhGCCgqay5XVKQW
+        XSn8BZ8QoLYoJSofvMPhCGf4MXrpfNur3WJeOiqeN4UqpT0N3qqu3J6QYzsAoQtj9Z27oAa73G1T
+        i9RVdfXbGzVGKgtQnk0QjNXS+NTrHVZJl9NZrQrdlnXo6LQL4LWnoseaNawzvTRDT3k14narGGVb
+        zDpqt120zLjuAVGv9uduXtKu6+eq+B/5DmAMjccsNRYzzs4r7q5ZDI/wX9faLleGwaH9zRmmnqMN
+        88gwp80qgXt0HmWac1WgNZZX7wNyk87HdDyhyxHmEB2jJwAAAP//AwDs+In0LQQAAA==
     headers:
       CF-RAY:
-      - 95a80f4ddc66e5c2-DFW
+      - 95a860560ab36c62-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -107,7 +112,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:57:44 GMT
+      - Sat, 05 Jul 2025 16:53:03 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -123,13 +128,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '615'
+      - '346'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '617'
+      - '349'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -137,13 +142,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999109'
+      - '3999004'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 13ms
+      - 14ms
       x-request-id:
-      - req_3f377f9f0610c01849fb890bf7457648
+      - req_19febbfc0fe276b0664a6c9699afe110
     status:
       code: 200
       message: OK
@@ -175,25 +180,30 @@ interactions:
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
       requested in: \"Extract some data that definitely won''t match this complex
       structure\"\n3. VERIFY: Before outputting, internally validate your extraction
-      by:\n   - Cross-referencing multiple sources if available\n   - Checking for
-      logical consistency (dates in order, numbers reasonable, etc.)\n   - Ensuring
-      no placeholder or generic values (like \"N/A\" unless actually in the document)\n   -
-      Confirming extracted text actually appears in the source material\n   - For
-      lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
-      RULES:\n- If data is not found after thorough search, return null/empty rather
-      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON object matching the ''ComplexModel'' model structure\n\nNo
-      explanations, no process description, no confidence scores - just the final
-      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
+      by:\n   - Confirming the requested information ACTUALLY EXISTS in the document\n   -
+      Cross-referencing multiple sources if available\n   - Checking for logical consistency
+      (dates in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or
+      generic values (like \"N/A\" unless actually in the document)\n   - Confirming
+      extracted text actually appears in the source material\n   - For lists/collections:
+      searching again with different queries to ensure completeness\n\nCRITICAL RULES:\n-
+      If the requested information does not exist or is not applicable to this document,
+      return null\n- If a question doesn''t make sense for this document type, return
+      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
+      If data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON object matching the ''ComplexModel''
+      model structure\n\nNo explanations, no process description, no confidence scores
+      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
       {\n    \"nested_data\": {\n      \"additionalProperties\": {\n        \"items\":
       {\n          \"additionalProperties\": {\n            \"type\": \"number\"\n          },\n          \"type\":
       \"object\"\n        },\n        \"type\": \"array\"\n      },\n      \"title\":
       \"Nested Data\",\n      \"type\": \"object\"\n    }\n  },\n  \"required\": [\n    \"nested_data\"\n  ],\n  \"title\":
       \"ComplexModel\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Extract
-      some data that definitely won''t match this complex structure"},{"role":"assistant","tool_calls":[{"id":"call_KAfvLpLu0Rv2ewB5aLia8E06","type":"function","function":{"name":"final_result","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_KAfvLpLu0Rv2ewB5aLia8E06","content":"1
+      some data that definitely won''t match this complex structure"},{"role":"assistant","tool_calls":[{"id":"call_XNIr6WpLUuqKRBVJNkfIMtk9","type":"function","function":{"name":"final_result","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_XNIr6WpLUuqKRBVJNkfIMtk9","content":"1
       validation errors: [\n  {\n    \"type\": \"missing\",\n    \"loc\": [\n      \"nested_data\"\n    ],\n    \"msg\":
       \"Field required\",\n    \"input\": {}\n  }\n]\n\nFix the errors and try again."}],"model":"gpt-4o-mini","stream":false,"temperature":2.0,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"properties":{"nested_data":{"additionalProperties":{"items":{"additionalProperties":{"type":"number"},"type":"object"},"type":"array"},"type":"object"}},"required":["nested_data"],"type":"object"}}}]}'
@@ -205,12 +215,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '4585'
+      - '5006'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -238,18 +248,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNdb9MwFH3Pr7Duc4Oafqyljx0IygTa0CRU0BTdOjepi2Mb22FsVf87
-        ctImaTck8hBZ9/ice+6H9xFjIDJYMOBb9Lw0Ml6a53X56/P0ere5EcX6/e766+pxfvshXz7fShgE
-        ht7siPsT6w3XpZHkhVYNzC2hp6CazKbJbJwMryY1UOqMZKAVxscTHZdCiXg0HE3i4SxO5kf2VgtO
-        DhbsR8QYY/v6H3yqjP7Agg0Hp0hJzmFBsGgvMQZWyxABdE44j8rDoAO5Vp5UsK4qKXuA11qmHKXs
-        EjffvnfumoVSpmud37z99i6b3n1fffqyub1frmaPH+94L18j/WRqQ3mleNukHt7GFxfJGAOFZcMV
-        CmVqyVXSX/AZA7RFVZLywTvsD3CGH6LXzg+92i3llUP5simolPYYvNVdeTgih3YAUhfG6o27oAa7
-        wm1TS+jquvrtjU5GagtQnU0QjNWl8anXP6lOOh+PG1XotqxDk+MugNceZY81ObHO9NKMPIp6xO1W
-        ceRbyjpqt11YZUL3gKhX+0s3r2k39QtV/I98B3BOxlOWGkuZ4OcVd9cshUf4r2ttl2vD4Mj+FpxS
-        L8iGeWSU42mVwD05T2WaC1WQNVbU7wNyk16NcDTGeUI5RIfoLwAAAP//AwDC6DEbLQQAAA==
+        H4sIAAAAAAAAAwAAAP//zFRbb5swFH7nV1h+DlNI6HJ5a9ZpXXbRsnXt1KlCJ+YA3ozt2qZaEuW/
+        T4YGSNpJfRwPyJzP3znfubELCKE8pXNCWQGOlVqEi/vharm8toWDzx8vvnBT6Tfm7WV8kxZXN3Tg
+        GWr9C5k7sF4xVWqBjivZwMwgOPReo8lZNBnH4+m4BkqVovC0XLswVmHJJQ9Hw1EcDidhNH1kF4oz
+        tHROfgaEELKr316nTPEPnZPh4GAp0VrIkc7bS4RQo4S3ULCWWwfS0UEHMiUdSi9dVkL0AKeUSBgI
+        0QVunl3v3BULhEiW2fb7p+j8dmY/rKax2C5glX3d4EMvXuN6o2tBWSVZW6Qe3trnJ8EIoRLKhssl
+        iMSgrYQ74RNCweRVidJ57XS3p0f4vve1H7wos/X14pv+kZ3D8mri3l9sbyNr38WX9/9zZu35rtdV
+        g1llQTxtN0ipHHhtdb/vgpP6UKFybdTanlC9XG6LxCDYOq/+4AQHIbUEWh3NJtVGldolTv3GOugs
+        GjVeabc/HTqePYJOORA91lk0eMZfkqIDXg9vuy8MWIFpR+32BqqUqx4Q9HJ/quY5303+XOYvcd8B
+        jKF2mCbaYMrZccbdNYP+9/Kva22Va8HUonngDBPH0fh+pJjBYZSo3ViHZZJxmaPRhtebTzOdvB7B
+        aAzTCDMa7IO/AAAA//8DANtPrVwHBQAA
     headers:
       CF-RAY:
-      - 95a80f5229ebe5c2-DFW
+      - 95a86058be6f6c62-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -257,7 +268,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:57:45 GMT
+      - Sat, 05 Jul 2025 16:53:04 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -273,13 +284,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '402'
+      - '667'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '409'
+      - '670'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -287,13 +298,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999065'
+      - '3998961'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 14ms
+      - 15ms
       x-request-id:
-      - req_6203d18f8bb89c999f986477ecf88ce7
+      - req_4f97fcc16be9548646fe512dcd926746
     status:
       code: 200
       message: OK

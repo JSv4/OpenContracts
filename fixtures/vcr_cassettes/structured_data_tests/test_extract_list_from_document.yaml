@@ -25,23 +25,29 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"List the main sections or headings in this document.\"\n3. VERIFY:
-      Before outputting, internally validate your extraction by:\n   - Cross-referencing
-      multiple sources if available\n   - Checking for logical consistency (dates
-      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
-      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
-      text actually appears in the source material\n   - For lists/collections: searching
-      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
-      data is not found after thorough search, return null/empty rather than guessing\n-
-      If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON array of str values\n\nNo explanations, no process
-      description, no confidence scores - just the final verified JSON.\n\nJSON Schema
-      for your response:\n```json\n{\n  \"items\": {\n    \"type\": \"string\"\n  },\n  \"type\":
-      \"array\"\n}\n```"},{"role":"user","content":"List the main sections or headings
-      in this document."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      requested in: \"Extract a list of the terms that Section 1 defines as being
+      included under the words ''person'' and ''whoever''.\"\n3. VERIFY: Before outputting,
+      internally validate your extraction by:\n   - Confirming the requested information
+      ACTUALLY EXISTS in the document\n   - Cross-referencing multiple sources if
+      available\n   - Checking for logical consistency (dates in order, numbers reasonable,
+      etc.)\n   - Ensuring no placeholder or generic values (like \"N/A\" unless actually
+      in the document)\n   - Confirming extracted text actually appears in the source
+      material\n   - For lists/collections: searching again with different queries
+      to ensure completeness\n\nCRITICAL RULES:\n- If the requested information does
+      not exist or is not applicable to this document, return null\n- If a question
+      doesn''t make sense for this document type, return null\n- NEVER invent, guess,
+      or infer data that isn''t explicitly present\n- If data is not found after thorough
+      search, return null/empty rather than guessing\n- If multiple conflicting values
+      exist, choose the most authoritative/recent\n- For numeric values, verify they
+      make sense in context\n- For dates, ensure they follow logical chronology and
+      are actually present\n- For names/entities, verify exact spelling from the source\n-
+      For boolean questions, only return true/false if you can definitively answer
+      based on document content\n\nYour response must be ONLY the extracted data in
+      the format of: a JSON array of str values\n\nNo explanations, no process description,
+      no confidence scores - just the final verified JSON.\n\nJSON Schema for your
+      response:\n```json\n{\n  \"items\": {\n    \"type\": \"string\"\n  },\n  \"type\":
+      \"array\"\n}\n```"},{"role":"user","content":"Extract a list of the terms that
+      Section 1 defines as being included under the words ''person'' and ''whoever''."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"items":{"type":"string"},"type":"array"}},"required":["response"],"type":"object"},"strict":true}}]}'
     headers:
       accept:
@@ -51,12 +57,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3681'
+      - '4214'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -84,20 +90,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xUTW/aQBC9+1eM5owrDAQItzRt0lObJlWTKiBrWY/Ntuvd1c4aJUH898omYIdQ
-        qT5Y1rx5M2++vIkAUGU4A5QrEWTpdPzRvdyL798qEb5eP9nlzy8P4+V9mTPzr3ONvZphl79Jhj3r
-        g7Sl0xSUNTtYehKB6qjJ5CyZDPvng2kDlDYjXdMKF+KRjUtlVDzoD0ZxfxIn01f2yipJjDN4jAAA
-        Ns271mkyesIZ9Ht7S0nMoiCcHZwA0FtdW1AwKw7CBOy1oLQmkKmlm0rrDhCs1akUWreJd8+m8902
-        S2idcsKWbn98vl0vL8pw4+9UWD8Mr7r5dqGfXSMor4w8NKmDH+yzo2QAaES54yojdOqJK30cHwCF
-        L6qSTKi142aOnthZwzTH2eMcL1fCBfKQQAzXZMgLDTferhUra3iOvTneUaMAkn7t9IlyZVQ4gQ4g
-        httKE4PN4dIaDr5qsCO/IcRw4ZxWUpxARxDX5MIT1xKEhitlMmUKnuNii2+q20anvhedyXnKKxb6
-        /UiFMTY0+ZuZLl6R7WF9tC2ct0s+otbNVrxKPQluptJdjmgvpJGA1Zv9Q+dt6UIa7B9qko6nk11U
-        bG+kRUfTVzDYIHRrnwzPeifipRkFoZoFPdyEFHJFWUttb0NUmbIdIOrU/l7Nqdi7+pUp/id8C0hJ
-        LlCWOk+Zkm8rbt081b+Qf7kdutwIRia/VpLSoMjX88goF/tDQH7mQGWaK1OQd1411425S8cDMRiK
-        aUI5RtvoLwAAAP//AwCbSFM66wQAAA==
+        H4sIAAAAAAAAAwAAAP//jFPBjpswEL3zFdacQwUkDVlu3Uo9bdtTV2p3IzQxA3FrbMc2adIo/14B
+        CZDdrVQOyJrnN/PmzfgUMAaigIwB36LntZHh/S76cjhW9wtOnwx//LqLNkuSxecDPux+wKxl6M1P
+        4v7Kesd1bSR5oVUPc0voqc0ap+/jdL5I5mkH1Log2dIq48OFDmuhRJhEySKM0jBeXdhbLTg5yNhT
+        wBhjp+7f6lQFHSBj0ewaqck5rAiy4RJjYLVsI4DOCedReZiNINfKk2qlq0bKCeC1ljlHKcfC/Xea
+        nEezUMpciyR6iDn/s/ffzbflh0e+97/rw8dJvT710XSCykbxwaQJPsSzF8UYA4V1zxUKZW7JNdK/
+        4DMGaKumJuVb7XB6BkvOaOXoGbKn9Rlurp+Dt87riRWWysahfO0RKqU9tlI7k9YX5DzMQ+rKWL1x
+        L6iteuG2uSV0XZtTt4OrkE4CNDcDBWN1bXzu9S/qiqZ3aZ8VxqUb0Xh+Ab32KMf4Kr7szG2+vCCP
+        opv4sGQc+ZaKkTouGzaF0BMgmPT+Ws1bufv+har+J/0IcE7GU5EbS4Xgtx2P1yy1b/Jf1waXO8Hg
+        yO4Fp9wLsu08Cirxulngjs5TnZdCVWSNFd1zgdLkywSTOa5iKiE4B38BAAD//wMA44wk6jwEAAA=
     headers:
       CF-RAY:
-      - 95a80bff7b8a4618-DFW
+      - 95a85cc4eec7f06c-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -105,7 +109,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:55:29 GMT
+      - Sat, 05 Jul 2025 16:50:37 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -121,13 +125,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '863'
+      - '486'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '866'
+      - '540'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -135,13 +139,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999207'
+      - '3999075'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 11ms
+      - 13ms
       x-request-id:
-      - req_fe05f216f41f0d80ea522c8e7f73c0b1
+      - req_22966468dad9ec0c9381cb006ee33f57
     status:
       code: 200
       message: OK

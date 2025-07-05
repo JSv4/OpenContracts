@@ -25,22 +25,27 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Provide a comprehensive analysis of this contract.\"\n3. VERIFY:
-      Before outputting, internally validate your extraction by:\n   - Cross-referencing
-      multiple sources if available\n   - Checking for logical consistency (dates
-      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
-      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
-      text actually appears in the source material\n   - For lists/collections: searching
-      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
-      data is not found after thorough search, return null/empty rather than guessing\n-
-      If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
-      For dates, ensure they follow logical chronology\n- For names/entities, verify
-      exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON object matching the ''ContractAnalysis'' model structure\n\nNo
-      explanations, no process description, no confidence scores - just the final
-      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"$defs\": {\n    \"ContractParty\":
-      {\n      \"description\": \"A party to a contract.\",\n      \"properties\":
+      requested in: \"Perform a comprehensive analysis of the ''Respect for Marriage
+      Act'' amendment to Section 7.\"\n3. VERIFY: Before outputting, internally validate
+      your extraction by:\n   - Confirming the requested information ACTUALLY EXISTS
+      in the document\n   - Cross-referencing multiple sources if available\n   -
+      Checking for logical consistency (dates in order, numbers reasonable, etc.)\n   -
+      Ensuring no placeholder or generic values (like \"N/A\" unless actually in the
+      document)\n   - Confirming extracted text actually appears in the source material\n   -
+      For lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
+      RULES:\n- If the requested information does not exist or is not applicable to
+      this document, return null\n- If a question doesn''t make sense for this document
+      type, return null\n- NEVER invent, guess, or infer data that isn''t explicitly
+      present\n- If data is not found after thorough search, return null/empty rather
+      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context\n- For dates, ensure they
+      follow logical chronology and are actually present\n- For names/entities, verify
+      exact spelling from the source\n- For boolean questions, only return true/false
+      if you can definitively answer based on document content\n\nYour response must
+      be ONLY the extracted data in the format of: a JSON object matching the ''ContractAnalysis''
+      model structure\n\nNo explanations, no process description, no confidence scores
+      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"$defs\":
+      {\n    \"ContractParty\": {\n      \"description\": \"A party to a contract.\",\n      \"properties\":
       {\n        \"name\": {\n          \"description\": \"Full legal name\",\n          \"title\":
       \"Name\",\n          \"type\": \"string\"\n        },\n        \"role\": {\n          \"description\":
       \"Role in contract (e.g., ''Buyer'', ''Seller'', ''Service Provider'')\",\n          \"title\":
@@ -67,10 +72,17 @@ interactions:
       \"Key obligations for each party\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"title\":
       \"Key Obligations\",\n      \"type\": \"array\"\n    },\n    \"risk_factors\":
       {\n      \"description\": \"Identified risk factors\",\n      \"items\": {\n        \"type\":
-      \"string\"\n      },\n      \"title\": \"Risk Factors\",\n      \"type\": \"array\"\n    }\n  },\n  \"required\":
-      [\n    \"title\",\n    \"parties\",\n    \"key_obligations\"\n  ],\n  \"title\":
-      \"ContractAnalysis\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Provide
-      a comprehensive analysis of this contract."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"Comprehensive
+      \"string\"\n      },\n      \"title\": \"Risk Factors\",\n      \"type\": \"array\"\n    },\n    \"public_law_number\":
+      {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
+      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"description\":
+      \"Public law number pertaining to the amendment\",\n      \"title\": \"Public
+      Law Number\"\n    },\n    \"amendment_year\": {\n      \"anyOf\": [\n        {\n          \"type\":
+      \"integer\"\n        },\n        {\n          \"type\": \"null\"\n        }\n      ],\n      \"default\":
+      null,\n      \"description\": \"Year the section was amended\",\n      \"title\":
+      \"Amendment Year\"\n    }\n  },\n  \"required\": [\n    \"title\",\n    \"parties\",\n    \"key_obligations\"\n  ],\n  \"title\":
+      \"ContractAnalysis\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Perform
+      a comprehensive analysis of the ''Respect for Marriage Act'' amendment to Section
+      7."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"Comprehensive
       contract analysis results.","parameters":{"properties":{"title":{"description":"Contract
       title or type","type":"string"},"parties":{"description":"All parties to the
       contract","items":{"$ref":"#/$defs/ContractParty"},"type":"array"},"total_value":{"anyOf":[{"type":"number"},{"type":"null"}],"description":"Total
@@ -78,7 +90,9 @@ interactions:
       term in months"},"governing_law":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Governing
       law jurisdiction"},"key_obligations":{"description":"Key obligations for each
       party","items":{"type":"string"},"type":"array"},"risk_factors":{"description":"Identified
-      risk factors","items":{"type":"string"},"type":"array"}},"required":["title","parties","key_obligations"],"type":"object","$defs":{"ContractParty":{"description":"A
+      risk factors","items":{"type":"string"},"type":"array"},"public_law_number":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Public
+      law number pertaining to the amendment"},"amendment_year":{"anyOf":[{"type":"integer"},{"type":"null"}],"description":"Year
+      the section was amended"}},"required":["title","parties","key_obligations"],"type":"object","$defs":{"ContractParty":{"description":"A
       party to a contract.","properties":{"name":{"description":"Full legal name","type":"string"},"role":{"description":"Role
       in contract (e.g., ''Buyer'', ''Seller'', ''Service Provider'')","type":"string"},"address":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Business
       address if mentioned"}},"required":["name","role"],"type":"object"}}}}}]}'
@@ -90,12 +104,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '7476'
+      - '8824'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -123,21 +137,22 @@ interactions:
   response:
     body:
       string: !!binary |
-        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
+        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
     headers:
       CF-RAY:
-      - 95a809afdcea69d0-DFW
+      - 95a85a345818eb2f-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -145,7 +160,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:53:55 GMT
+      - Sat, 05 Jul 2025 16:48:53 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -161,13 +176,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1284'
+      - '1432'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1289'
+      - '1435'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -175,13 +190,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3998595'
+      - '3998336'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 21ms
+      - 24ms
       x-request-id:
-      - req_f678ee7e320518de3d77ee487aa0f7fd
+      - req_bd5254dd7c84816ab91df70d51942760
     status:
       code: 200
       message: OK

@@ -427,7 +427,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:54:36 GMT
+      - Sat, 05 Jul 2025 16:49:35 GMT
       Server:
       - gunicorn
     status:
@@ -861,7 +861,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:54:36 GMT
+      - Sat, 05 Jul 2025 16:49:36 GMT
       Server:
       - gunicorn
     status:
@@ -1295,7 +1295,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:54:35 GMT
+      - Sat, 05 Jul 2025 16:49:36 GMT
       Server:
       - gunicorn
     status:
@@ -1330,42 +1330,50 @@ interactions:
       are a highly-intelligent data extraction system with advanced verification capabilities.\\n\\nEXTRACTION
       METHODOLOGY:\\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\\n2. EXTRACT: Identify the specific data
-      requested in: \\\"Analyze this corpus and provide high-level insights.\\\"\\n3.
-      VERIFY: Before outputting, internally validate your extraction by:\\n   - Cross-referencing
+      requested in: \\\"From a corpus containing Title 1 and other legal documents,
+      extract high-level insights about statutory interpretation.\\\"\\n3. VERIFY:
+      Before outputting, internally validate your extraction by:\\n   - Confirming
+      the requested information ACTUALLY EXISTS in the document\\n   - Cross-referencing
       multiple sources if available\\n   - Checking for logical consistency (dates
       in order, numbers reasonable, etc.)\\n   - Ensuring no placeholder or generic
       values (like \\\"N/A\\\" unless actually in the document)\\n   - Confirming
       extracted text actually appears in the source material\\n   - For lists/collections:
       searching again with different queries to ensure completeness\\n\\nCRITICAL
-      RULES:\\n- If data is not found after thorough search, return null/empty rather
-      than guessing\\n- If multiple conflicting values exist, choose the most authoritative/recent\\n-
-      For numeric values, verify they make sense in context (e.g., page count > 0)\\n-
-      For dates, ensure they follow logical chronology\\n- For names/entities, verify
-      exact spelling from the source\\n\\nYour response must be ONLY the extracted
-      data in the format of: a JSON object matching the 'CorpusInsight' model structure\\n\\nNo
-      explanations, no process description, no confidence scores - just the final
-      verified JSON.\\n\\nJSON Schema for your response:\\n```json\\n{\\n  \\\"description\\\":
-      \\\"High-level insights from analyzing a corpus of documents.\\\",\\n  \\\"properties\\\":
-      {\\n    \\\"total_documents\\\": {\\n      \\\"description\\\": \\\"Number of
-      documents analyzed\\\",\\n      \\\"title\\\": \\\"Total Documents\\\",\\n      \\\"type\\\":
-      \\\"integer\\\"\\n    },\\n    \\\"common_themes\\\": {\\n      \\\"description\\\":
-      \\\"Common themes across documents\\\",\\n      \\\"items\\\": {\\n        \\\"type\\\":
-      \\\"string\\\"\\n      },\\n      \\\"title\\\": \\\"Common Themes\\\",\\n      \\\"type\\\":
-      \\\"array\\\"\\n    },\\n    \\\"total_contract_value\\\": {\\n      \\\"anyOf\\\":
-      [\\n        {\\n          \\\"type\\\": \\\"number\\\"\\n        },\\n        {\\n
-      \         \\\"type\\\": \\\"null\\\"\\n        }\\n      ],\\n      \\\"default\\\":
-      null,\\n      \\\"description\\\": \\\"Sum of all contract values\\\",\\n      \\\"title\\\":
-      \\\"Total Contract Value\\\"\\n    },\\n    \\\"most_frequent_parties\\\": {\\n
-      \     \\\"description\\\": \\\"Most frequently appearing parties\\\",\\n      \\\"items\\\":
-      {\\n        \\\"type\\\": \\\"string\\\"\\n      },\\n      \\\"title\\\": \\\"Most
-      Frequent Parties\\\",\\n      \\\"type\\\": \\\"array\\\"\\n    },\\n    \\\"key_risks\\\":
-      {\\n      \\\"description\\\": \\\"Key risks identified across all documents\\\",\\n
-      \     \\\"items\\\": {\\n        \\\"type\\\": \\\"string\\\"\\n      },\\n
-      \     \\\"title\\\": \\\"Key Risks\\\",\\n      \\\"type\\\": \\\"array\\\"\\n
-      \   }\\n  },\\n  \\\"required\\\": [\\n    \\\"total_documents\\\",\\n    \\\"common_themes\\\",\\n
-      \   \\\"most_frequent_parties\\\",\\n    \\\"key_risks\\\"\\n  ],\\n  \\\"title\\\":
-      \\\"CorpusInsight\\\",\\n  \\\"type\\\": \\\"object\\\"\\n}\\n```\"},{\"role\":\"user\",\"content\":\"Analyze
-      this corpus and provide high-level insights.\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"temperature\":0.7,\"tool_choice\":\"required\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"final_result\",\"description\":\"High-level
+      RULES:\\n- If the requested information does not exist or is not applicable
+      to this document, return null\\n- If a question doesn't make sense for this
+      document type, return null\\n- NEVER invent, guess, or infer data that isn't
+      explicitly present\\n- If data is not found after thorough search, return null/empty
+      rather than guessing\\n- If multiple conflicting values exist, choose the most
+      authoritative/recent\\n- For numeric values, verify they make sense in context\\n-
+      For dates, ensure they follow logical chronology and are actually present\\n-
+      For names/entities, verify exact spelling from the source\\n- For boolean questions,
+      only return true/false if you can definitively answer based on document content\\n\\nYour
+      response must be ONLY the extracted data in the format of: a JSON object matching
+      the 'CorpusInsight' model structure\\n\\nNo explanations, no process description,
+      no confidence scores - just the final verified JSON.\\n\\nJSON Schema for your
+      response:\\n```json\\n{\\n  \\\"description\\\": \\\"High-level insights from
+      analyzing a corpus of documents.\\\",\\n  \\\"properties\\\": {\\n    \\\"total_documents\\\":
+      {\\n      \\\"description\\\": \\\"Number of documents analyzed\\\",\\n      \\\"title\\\":
+      \\\"Total Documents\\\",\\n      \\\"type\\\": \\\"integer\\\"\\n    },\\n    \\\"common_themes\\\":
+      {\\n      \\\"description\\\": \\\"Common themes across documents\\\",\\n      \\\"items\\\":
+      {\\n        \\\"type\\\": \\\"string\\\"\\n      },\\n      \\\"title\\\": \\\"Common
+      Themes\\\",\\n      \\\"type\\\": \\\"array\\\"\\n    },\\n    \\\"total_contract_value\\\":
+      {\\n      \\\"anyOf\\\": [\\n        {\\n          \\\"type\\\": \\\"number\\\"\\n
+      \       },\\n        {\\n          \\\"type\\\": \\\"null\\\"\\n        }\\n
+      \     ],\\n      \\\"default\\\": null,\\n      \\\"description\\\": \\\"Sum
+      of all contract values\\\",\\n      \\\"title\\\": \\\"Total Contract Value\\\"\\n
+      \   },\\n    \\\"most_frequent_parties\\\": {\\n      \\\"description\\\": \\\"Most
+      frequently appearing parties\\\",\\n      \\\"items\\\": {\\n        \\\"type\\\":
+      \\\"string\\\"\\n      },\\n      \\\"title\\\": \\\"Most Frequent Parties\\\",\\n
+      \     \\\"type\\\": \\\"array\\\"\\n    },\\n    \\\"key_risks\\\": {\\n      \\\"description\\\":
+      \\\"Key risks identified across all documents\\\",\\n      \\\"items\\\": {\\n
+      \       \\\"type\\\": \\\"string\\\"\\n      },\\n      \\\"title\\\": \\\"Key
+      Risks\\\",\\n      \\\"type\\\": \\\"array\\\"\\n    }\\n  },\\n  \\\"required\\\":
+      [\\n    \\\"total_documents\\\",\\n    \\\"common_themes\\\",\\n    \\\"most_frequent_parties\\\",\\n
+      \   \\\"key_risks\\\"\\n  ],\\n  \\\"title\\\": \\\"CorpusInsight\\\",\\n  \\\"type\\\":
+      \\\"object\\\"\\n}\\n```\"},{\"role\":\"user\",\"content\":\"From a corpus containing
+      Title 1 and other legal documents, extract high-level insights about statutory
+      interpretation.\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"temperature\":0.7,\"tool_choice\":\"required\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"final_result\",\"description\":\"High-level
       insights from analyzing a corpus of documents.\",\"parameters\":{\"properties\":{\"total_documents\":{\"description\":\"Number
       of documents analyzed\",\"type\":\"integer\"},\"common_themes\":{\"description\":\"Common
       themes across documents\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"total_contract_value\":{\"anyOf\":[{\"type\":\"number\"},{\"type\":\"null\"}],\"description\":\"Sum
@@ -1380,12 +1388,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '5832'
+      - '6387'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
-        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
+      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
+        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -1413,22 +1421,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFRLb9swDL7nVwg6J0OcNsvj1nbDdtnQ0x5oAoGRaVuNXpXobmmQ/17I
-        TmL3MWA+GBY/fuRHivR+wBhXOV8yLisgabweXfunH/cPT6HI57Mp1bOvBn/fbOvFZfYrL/kwMdzm
-        HiWdWB+kM14jKWdbWAYEwhQ1m02z2cV4Pps2gHE56kQrPY0u3cgoq0aT8eRyNJ6NsvmRXTklMfIl
-        uxswxti+eSedNse/fMnGw5PFYIxQIl+enRjjwelk4RCjigSW+LADpbOENkm3tdY9gJzTQoLWXeL2
-        2fe+u2aB1kIuqqvd40P9+ZP6/u168fOivC2m7suil68NvfONoKK28tykHn62L18lY4xbMC1XWdAi
-        YKw1veIzxiGUtUFLSTvfrzg5Ai1yJ1vrii/ZdMhWXDpjnBVUocHGerdqOhJAEjNgocREWPHkHFTc
-        MogRY+yMSYeVCjRzG61KSLpjCzVToMBKbM8eAlkMsVKe5TsLRsm44usEtfpOmcUj6BqTnGw6bp7k
-        Y1wkUQR8qNGSSMHUWfMtBNqxqzZPe7juH26Oeba4E6mME886O+pksj+KKhawrHW/jq5EZSPBRmlF
-        u1OJreIaNMtV9DXhkeQxFC6YJuwx4/rAX9zTYfDe97o3gwGLOoJ+O5xgraNWYypkfUQO50XQrvTB
-        beIraqpFxUoEhNjMV3/MBychjQRev9gk7oMzngS5LTZJs2y8aMPybt07eDE/gu3VdrTJeDZ8J6LI
-        kUA1y3bebwmywrzjdnsOda5cDxj0qn8r573YbQeULf8nfAdIiZ4wFz5gruTLkju3gOl3+C+3c58b
-        wTxieFQSBSkM6UZyLOC01DzuIqERhbIlBh9U86fihRcfJzC5gHmGBR8cBs8AAAD//wMAli2Oh7cF
-        AAA=
+        H4sIAAAAAAAAAwAAAP//jFNdj9owEHzPr7D2mVQJ0EJ5a6Ve1aq9l5br6Q5kGWdDXPwR7A0qQvz3
+        KgmQwF2l5iGydjy74/H4EDEGKoMZA1kIkqbU8cdtcp9Ud0+/KtrZu8n2w07lq/dj//lh8hhgUDPc
+        6jdKOrPeSGdKjaScbWHpURDWXdPJ23QyGqeTaQMYl6GuaeuS4rGLjbIqHibDcZxM4nR6YhdOSQww
+        Y88RY4wdmn+t02b4B2YsGZwrBkMQa4TZZRNj4J2uKyBCUIGEJRh0oHSW0NbSbaV1DyDnNJdC625w
+        +x16684soTU3378W35Ifm0/zL4l4HCY/nx7m9/Nq1ZvXtt6XjaC8svJiUg+/1Gc3wxgDK0zLVVZo
+        7jFUmm74jIHw68qgpVo7HBZAjoTmmZNtdQGzZLAA6YxxllOBBuva83KwAOMC8dzjtkJLvBSeVAdu
+        cM+9Cpu2cISrucfotfWy56nHvApCvzRbWOtI1Gdu3F6ekOPlYrVbl96twg21tkGFgnsUofGrf23R
+        WUgjAaqrZEDpnSmJk9tgMzQdpqccQRffDh6NTmBrZY82PiNXHXmGJFQTnktepZAFZh23y62oMuV6
+        QNQ7/Us5r/VuHVB2/T/tO0BKLAkzXnrMlLw+crfNY/28/7Xt4nMjGAL6nZLISaGvbyTDXJxDCmEf
+        CA3PlV2jL71qXh7kJX83FMORmKaYQ3SM/gIAAP//AwD7bE/LhwQAAA==
     headers:
       CF-RAY:
-      - 95a80ab649e6f0b9-DFW
+      - 95a85b505944345c-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1436,7 +1441,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:54:37 GMT
+      - Sat, 05 Jul 2025 16:49:39 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -1452,13 +1457,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1406'
+      - '1261'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1412'
+      - '1265'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -1466,13 +1471,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3998834'
+      - '3998697'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 17ms
+      - 19ms
       x-request-id:
-      - req_74907bdd04a4ea2422eb79719b1f4b08
+      - req_fe34b2e1aad809818bf91e8b2f013c10
     status:
       code: 200
       message: OK

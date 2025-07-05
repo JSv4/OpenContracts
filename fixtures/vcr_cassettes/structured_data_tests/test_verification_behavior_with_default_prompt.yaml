@@ -25,22 +25,36 @@ interactions:
       data extraction system with advanced verification capabilities.\n\nEXTRACTION
       METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
       etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Is this a legal document?\"\n3. VERIFY: Before outputting, internally
-      validate your extraction by:\n   - Cross-referencing multiple sources if available\n   -
-      Checking for logical consistency (dates in order, numbers reasonable, etc.)\n   -
-      Ensuring no placeholder or generic values (like \"N/A\" unless actually in the
-      document)\n   - Confirming extracted text actually appears in the source material\n   -
-      For lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
-      RULES:\n- If data is not found after thorough search, return null/empty rather
-      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
+      requested in: \"Extract financial and signature information from this document\"\n3.
+      VERIFY: Before outputting, internally validate your extraction by:\n   - Cross-referencing
+      multiple sources if available\n   - Checking for logical consistency (dates
+      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
+      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
+      text actually appears in the source material\n   - For lists/collections: searching
+      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
+      data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
       For numeric values, verify they make sense in context (e.g., page count > 0)\n-
       For dates, ensure they follow logical chronology\n- For names/entities, verify
       exact spelling from the source\n\nYour response must be ONLY the extracted data
-      in the format of: a JSON boolean value (true or false)\n\nNo explanations, no
-      process description, no confidence scores - just the final verified JSON.\n\nJSON
-      Schema for your response:\n```json\n{\n  \"type\": \"boolean\"\n}\n```"},{"role":"user","content":"Is
-      this a legal document?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.1,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
-      final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"type":"boolean"}},"required":["response"],"type":"object"},"strict":true}}]}'
+      in the format of: a JSON object matching the ''VerifiableData'' model structure\n\nNo
+      explanations, no process description, no confidence scores - just the final
+      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
+      {\n    \"total_amount\": {\n      \"description\": \"Total monetary amount\",\n      \"title\":
+      \"Total Amount\",\n      \"type\": \"number\"\n    },\n    \"currency\": {\n      \"description\":
+      \"Currency code (e.g., USD, EUR)\",\n      \"title\": \"Currency\",\n      \"type\":
+      \"string\"\n    },\n    \"is_signed\": {\n      \"description\": \"Whether the
+      document is signed\",\n      \"title\": \"Is Signed\",\n      \"type\": \"boolean\"\n    },\n    \"parties_count\":
+      {\n      \"description\": \"Number of parties involved\",\n      \"title\":
+      \"Parties Count\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\":
+      [\n    \"total_amount\",\n    \"currency\",\n    \"is_signed\",\n    \"parties_count\"\n  ],\n  \"title\":
+      \"VerifiableData\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Extract
+      financial and signature information from this document"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      final response which ends this conversation","parameters":{"properties":{"total_amount":{"description":"Total
+      monetary amount","type":"number"},"currency":{"description":"Currency code (e.g.,
+      USD, EUR)","type":"string"},"is_signed":{"description":"Whether the document
+      is signed","type":"boolean"},"parties_count":{"description":"Number of parties
+      involved","type":"integer"}},"required":["total_amount","currency","is_signed","parties_count"],"type":"object"}}}]}'
     headers:
       accept:
       - application/json
@@ -49,7 +63,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3567'
+      - '4711'
       content-type:
       - application/json
       cookie:
@@ -72,7 +86,7 @@ interactions:
       x-stainless-read-timeout:
       - '600'
       x-stainless-retry-count:
-      - '0'
+      - '1'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -82,19 +96,20 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//zFTBjtowEL3nK6w5k4oABZrbbjm0WqmsWtSl3V1FxpkEg2Mb24GyiH+v
-        kkAS2LbaY3OIknl+M+/ZMz54hACPISTAltSxTAv/Vr/81F8euFqYlXwI5ut5fz27m62Sb131EToF
-        Qy1WyNyZ9Y6pTAt0XMkKZgapwyJrMHofjPpB0PtQApmKURS0VDt/oPyMS+73ur2B3x35wfjEXirO
-        0EJIHj1CCDmU70KnjPEXhKTbOUcytJamCGG9iBAwShQRoNZy66h00GlApqRDWUiXuRAtwCklIkaF
-        aApXz6H13WwWFSLSN6vteDzZzTcDOv0+UcNgNVlvP6etelXqvS4FJblk9Sa18DoeXhUjBCTNKi6X
-        VEQGbS7cFZ8QoCbNM5Su0A6HJzBotZIWnyAkzuR4hAvGsfV37LzJ64/p3fx+8ombzezrfrqJdZLt
-        bu9Hu//La0KF/afZ+vu5dfQGk9xS8bonqJTK0UJu2RTP3tWWgVCpNmphr6iFA26XkUFqS6vt7vLO
-        QkoJkF80MGijMu0ip9ZYFh0Oh1VWaIasQQeDE+iUo6KJj4LTjFzmi2J0lJcdXg8Vo2yJcUNthovm
-        MVctwGt5f63mT7kr/1ymb0nfAIyhdhhH2mDM2aXjZpnB4g7627J6l0vBYNFsOcPIcTTFecSY0HN3
-        gd1bh1mUcJmi0YaX1wMkOhr2aK9PxwEm4B293wAAAP//AwD+vZxMLAUAAA==
+        H4sIAAAAAAAAA+RUTVPbMBC9+1do9px0nA9wklvDoQOlw4VOSxpGI6S1I5AlIckpNJP/3pFNbBPo
+        DPf64JH36e0+Pe9qlxACUsCCAN+wwEurhkv7Z5V+O5mcPWY/HqfbYG+urk7PH+4vL0fLCQwiw9zd
+        Iw8H1iduSqswSKMbmDtkAWPWUXYyyiajNJvVQGkEqkgrbBhOzbCUWg7H6Xg6TLPhaPbC3hjJ0cOC
+        /EoIIWRXv6NOLfAJFiQdHCIles8KhEW7iRBwRsUIMO+lD0wHGHQgNzqgjtJ1pVQPCMYoyplSXeHm
+        2fXWnVlMKTrZentnpxfV1KzS+eos+50uH7Nl2avXpH62taC80rw1qYe38cVRMUJAs7LhSs0Udegr
+        FY74hABzRVWiDlE77NYQTGCKstJUOqxrx8gaeOUcav4cA2tYQ4xJT70sNIoYzJnyGKOWuSDRU97y
+        9/Cq5L73tR98yCz25UKc/yy/Xm7F53xZ3nznYmWerq//M7Pa9W2v9xzmlWfqbVMyrU1g8bh1V94m
+        R5aDMoV15s4fUaMD0m+oQ+Zrq/rtnRyE1BKgejVBYJ0pbaDBPGBddDbPmqzQTXmHZuMXsDGxjc9P
+        54N38lGBgcl6xNqp5oxvUHTUbrpZJaTpAUnv7G/VvJe7Ob/UxUfSdwDnaAMKah0KyV+fuNvmMF6C
+        /9rWulwLBo9uKznSINHF/yEwZ4fuBP/sA5Y0l7pAZ52s7yfILT0ds/GEzUaYQ7JP/gIAAP//AwAS
+        7qhKrQUAAA==
     headers:
       CF-RAY:
-      - 95a810e8cb1a69ba-DFW
+      - 95a80f9ff9b33aac-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -102,7 +117,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 15:58:50 GMT
+      - Sat, 05 Jul 2025 15:57:59 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -118,13 +133,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '873'
+      - '1876'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '876'
+      - '1883'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -132,13 +147,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999227'
+      - '3999036'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 11ms
+      - 14ms
       x-request-id:
-      - req_71025ff842cda8b13c4349bb9014d87f
+      - req_d82f63c969736669cf5d52926e704017
     status:
       code: 200
       message: OK

@@ -1,27 +1,51 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
-      document analysis and interpretation. Your primary goal is to answer questions
-      accurately based on document ''Test Doc'' (ID: 1).\n\nThis document is described
-      as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou have access to a
-      comprehensive set of tools for document analysis:\n\n1. **Vector Search**: A
-      sophisticated semantic search engine that finds text passages similar to your
-      queries.\n2. **Document Summary Access**: Tools to load and analyze the document''s
-      markdown summary, including:\n   - Loading full or truncated summary content\n   -
-      Calculating token lengths for context management\n3. **Notes Analysis**: Tools
-      to retrieve and examine notes attached to this document:\n   - Listing all notes
-      with metadata\n   - Accessing specific note content\n   - Calculating note token
-      lengths\n\n**Important**: Always check what tools are available to you, as additional
-      specialized tools may be provided dynamically beyond the core set described
-      above. Use the appropriate tools to gather information before answering.\n\n**Guidelines:**\n-
-      Prioritize information retrieved directly from the document using these tools\n-
-      We intentionally did not give you the entire document initially. \n  Try doing
-      some vector search to get more information initially and then iteratively \n  identifying
-      which parts of the document to review.  \n- Do not rely solely on the summary
-      or your general knowledge\n- Use multiple tools when necessary for comprehensive
-      answers\n- Present your findings in clear, helpful markdown format\n- Avoid
-      repeating instructions or disclaimers in your responses"},{"role":"user","content":"Extract
-      document information"}],"model":"gpt-4o-mini","stream":false,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"Simple
+    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
+      an expert assistant for document analysis and interpretation. Your primary goal
+      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
+      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
+      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
+      Search**: A sophisticated semantic search engine that finds text passages similar
+      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
+      the document''s markdown summary, including:\n   - Loading full or truncated
+      summary content\n   - Calculating token lengths for context management\n3. **Notes
+      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
+      Listing all notes with metadata\n   - Accessing specific note content\n   -
+      Calculating note token lengths\n\n**Important**: Always check what tools are
+      available to you, as additional specialized tools may be provided dynamically
+      beyond the core set described above. Use the appropriate tools to gather information
+      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
+      from the document using these tools\n- We intentionally did not give you the
+      entire document initially. \n  Try doing some vector search to get more information
+      initially and then iteratively \n  identifying which parts of the document to
+      review.  \n- Do not rely solely on the summary or your general knowledge\n-
+      Use multiple tools when necessary for comprehensive answers\n- Present your
+      findings in clear, helpful markdown format\n- Avoid repeating instructions or
+      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
+      data extraction system with advanced verification capabilities.\n\nEXTRACTION
+      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
+      requested in: \"Extract document information\"\n3. VERIFY: Before outputting,
+      internally validate your extraction by:\n   - Cross-referencing multiple sources
+      if available\n   - Checking for logical consistency (dates in order, numbers
+      reasonable, etc.)\n   - Ensuring no placeholder or generic values (like \"N/A\"
+      unless actually in the document)\n   - Confirming extracted text actually appears
+      in the source material\n   - For lists/collections: searching again with different
+      queries to ensure completeness\n\nCRITICAL RULES:\n- If data is not found after
+      thorough search, return null/empty rather than guessing\n- If multiple conflicting
+      values exist, choose the most authoritative/recent\n- For numeric values, verify
+      they make sense in context (e.g., page count > 0)\n- For dates, ensure they
+      follow logical chronology\n- For names/entities, verify exact spelling from
+      the source\n\nYour response must be ONLY the extracted data in the format of:
+      a JSON object matching the ''SimpleExtraction'' model structure\n\nNo explanations,
+      no process description, no confidence scores - just the final verified JSON.\n\nJSON
+      Schema for your response:\n```json\n{\n  \"description\": \"Simple model for
+      testing.\",\n  \"properties\": {\n    \"title\": {\n      \"description\": \"Document
+      title\",\n      \"title\": \"Title\",\n      \"type\": \"string\"\n    },\n    \"page_count\":
+      {\n      \"description\": \"Number of pages\",\n      \"title\": \"Page Count\",\n      \"type\":
+      \"integer\"\n    }\n  },\n  \"required\": [\n    \"title\",\n    \"page_count\"\n  ],\n  \"title\":
+      \"SimpleExtraction\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Extract
+      document information"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"Simple
       model for testing.","parameters":{"properties":{"title":{"description":"Document
       title","type":"string"},"page_count":{"description":"Number of pages","type":"integer"}},"required":["title","page_count"],"type":"object"}}}]}'
     headers:
@@ -32,12 +56,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2098'
+      - '4073'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=bDQscFKx0trnIiGDucQAvj2X09tRmOlTzQs.13GhTqA-1751724215-1.0.1.1-apAUjlK_ny3mZfJcI7PXy3gZiYZ09FScEe8B6gNdyiev_djryPjNwzSd9vK90fIV77Blk83UHGYPT79jdHcHgYvvln0tleL5bkaqYY_si2c;
-        _cfuvid=0bYiFw6eGpn6KpRBWhYxvWZ9.4aVe4KLfbU3FPzvYek-1751724215352-0.0.1.1-604800000
+      - __cf_bm=d8tIVdAbC3lw3l4QEu8.rQTsT3SGqquUpbaFOO.ttsE-1751730333-1.0.1.1-QlGq1GiuEyuM.MT26U7uVEuUTpNzWnQcZtEXblxqRIqdnu4W5UgmKOYkazaHS8kzOKv7ruzHlOleMf8.xx1qdjEaHjAPUD649l6P2YOd.ms;
+        _cfuvid=cgKv7yqSIarB8G6aRDBRg65u4sdIaRJ3MhfjRpgnIHc-1751730333358-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -65,20 +89,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//3FTBbtswDL37KwSe4yF2sibNccbareiADl0wdEthqDLtqJElTaK3ZkH+
-        fZDTxE66AT3PB8Pi4yMfaVKbiDGQBcwYiCUnUVsVv7NP9SMRNpcm89dP2Wqlvt3+uMnk9OvFZxgE
-        hnl4REF71hthaquQpNE7WDjkhCFqMnmbTNJxOk5aoDYFqkCrLMVjE9dSyzgdpuN4OImT6TN7aaRA
-        DzP2PWKMsU37Djp1gU8wY8PB3lKj97xCmB2cGANnVLAA91564ppg0IHCaEIdpOtGqR5AxqhccKW6
-        xLtn0/vumsWVytd31fV18T4TeHMxXZ9fNHhz+fH36EMv3y702raCykaLQ5N6+ME+O0nGGGhe77hS
-        c5U79I2iEz5jwF3V1KgpaIfNAkiSwgXM2ALmtxn7Eo4sYTHLltwSOpYsYMAWYHmFuTCNpuA83MJR
-        4G3vtB28qiV36VSsrtZzuvo1z4wpdVGtCvNJ/pctOXzf9+bIYdl4rl4OGNfaEA9FtRN2H500FpSp
-        rDMP/oQa6pR+mTvkvm1If1SjvZBWAjRH2wDWmdpSTmaFbdLR2fkuKnQb26GT570CMsRVZx+P9qyj
-        eHmBxGW7LocNFVwsseio3abyppCmB0S92l+q+VvsXf1SV68J3wFCoCUscuuwkOK44s7NYbjQ/uV2
-        6HIrGDy6n1JgThJd+B8Flnw/g+DXnrDOS6krdNbJ9q6B0uZnKU9HfJpgCdE2+gMAAP//AwC7vJW/
-        eQUAAA==
+        H4sIAAAAAAAAAwAAAP//jFNNj9owEL3nV1hzJhVJ2A3luBxaVV3aiqJVt6wirzMJbh3bsp0tLOK/
+        V04gCSyVmkNkz5s38+bD+4AQ4DnMCLANdazSIrzTrwu2/fxt8nj/8S55oc+f5q9Lfb982C2mX2Dk
+        Ger5FzJ3Yr1jqtICHVeyhZlB6tBHjdKbKE3GSRo3QKVyFJ5WahdOVFhxycN4HE/CcRpG0yN7ozhD
+        CzPyMyCEkH3z9zpljluYkfHoZKnQWloizDonQsAo4S1AreXWUelg1INMSYfSS5e1EAPAKSUyRoXo
+        E7fffnDum0WFyFYbnizSx5s6XuW77dJWf+yHH7b+OsjXht7pRlBRS9Y1aYB39tlFMkJA0qrlcklF
+        ZtDWwl3wCQFqyrpC6bx22K/BcSdwDTOyhtVyTr77K4lISOYbqh0aEq1hRNagaYkZU7V03nl8gLPA
+        h+Da+WnQNINFbal4200qpXLUF9W08+mIHLrJCVVqo57tBdXXye0mM0ht05DhXIKTkEYC1GejB21U
+        pV3m1G9skqbpbRsV+vXs0UlyBJ1yVPT2afR+dCVelqOjvNmNbh0ZZRvMe2q/lrTOuRoAwaD2t2qu
+        xW7r57L8n/A9wBhqh3mmDeacnVfcuxn0r/dfbl2XG8Fg0bxwhpnjaPw8cizoaQfB7qzDKiu4LNFo
+        w5uHBYXObmMaJ3QaYQHBIfgLAAD//wMAZ5fDyWYEAAA=
     headers:
       CF-RAY:
-      - 95a768ba6b57477f-DFW
+      - 95a7fe6748f346a1-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -86,7 +109,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 14:04:02 GMT
+      - Sat, 05 Jul 2025 15:46:13 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -102,13 +125,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1042'
+      - '1393'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1045'
+      - '1413'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -116,13 +139,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999589'
+      - '3999125'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 6ms
+      - 13ms
       x-request-id:
-      - req_84411a9cd0006b3d22822accbf8e3497
+      - req_7f1a362d246de410caed030eca86e6c2
     status:
       code: 200
       message: OK

@@ -1,16 +1,16 @@
 interactions:
 - request:
-    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are an expert assistant
-      designed to analyze and answer queries about a collection of documents called
-      'Test Corpus'.\\n\\n**Available Tools:**\\nYou have access to comprehensive
-      tools for analyzing documents in this corpus:\\n\\n1. **Document-Specific Tools**
-      \u2013 available *per* document via the `ask_document` helper:\\n   - Vector
-      search inside that document\\n   - Summary & note access\\n   - Annotation manipulation
-      (subject to approval)\\n   - Token length calculations for context management\\n2.
-      **Corpus-Level Coordination Tools** \u2013 orchestrate multi-document reasoning:\\n
-      \  - `list_documents()`\u2003\u2192 returns `[{document_id, title, description}]`
-      for discovery\\n   - `ask_document(document_id, question)`\u2003\u2192 runs
-      a **document agent** and yields a rich object:\\n       \u2022 `answer`\u2003str
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"<BACKGROUND_CONTEXT>\\nYou
+      are an expert assistant designed to analyze and answer queries about a collection
+      of documents called 'Test Corpus'.\\n\\n**Available Tools:**\\nYou have access
+      to comprehensive tools for analyzing documents in this corpus:\\n\\n1. **Document-Specific
+      Tools** \u2013 available *per* document via the `ask_document` helper:\\n   -
+      Vector search inside that document\\n   - Summary & note access\\n   - Annotation
+      manipulation (subject to approval)\\n   - Token length calculations for context
+      management\\n2. **Corpus-Level Coordination Tools** \u2013 orchestrate multi-document
+      reasoning:\\n   - `list_documents()`\u2003\u2192 returns `[{document_id, title,
+      description}]` for discovery\\n   - `ask_document(document_id, question)`\u2003\u2192
+      runs a **document agent** and yields a rich object:\\n       \u2022 `answer`\u2003str
       \u2013 the assistant's final answer\\n       \u2022 `sources`\u2003list \u2013
       flattened citation objects (annotation_id, page, rawText \u2026)\\n       \u2022
       `timeline`\u2003list \u2013 detailed reasoning & tool calls from the sub-agent
@@ -24,8 +24,35 @@ interactions:
       across multiple documents for comprehensive answers\\n- Cite specific documents
       and sources when presenting information\\n- Prefer using `sources` returned
       by `ask_document` or vector search to justify claims\\n- Present your findings
-      in clear, well-structured markdown format, using footnote-style citations\"},{\"role\":\"user\",\"content\":\"Calculate
-      statistics for this document collection.\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"tool_choice\":\"required\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"final_result\",\"description\":\"The
+      in clear, well-structured markdown format, using footnote-style citations\\n</BACKGROUND_CONTEXT>\\n\\nYou
+      are a highly-intelligent data extraction system with advanced verification capabilities.\\n\\nEXTRACTION
+      METHODOLOGY:\\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\\n2. EXTRACT: Identify the specific data
+      requested in: \\\"Calculate statistics for this document collection.\\\"\\n3.
+      VERIFY: Before outputting, internally validate your extraction by:\\n   - Cross-referencing
+      multiple sources if available\\n   - Checking for logical consistency (dates
+      in order, numbers reasonable, etc.)\\n   - Ensuring no placeholder or generic
+      values (like \\\"N/A\\\" unless actually in the document)\\n   - Confirming
+      extracted text actually appears in the source material\\n   - For lists/collections:
+      searching again with different queries to ensure completeness\\n\\nCRITICAL
+      RULES:\\n- If data is not found after thorough search, return null/empty rather
+      than guessing\\n- If multiple conflicting values exist, choose the most authoritative/recent\\n-
+      For numeric values, verify they make sense in context (e.g., page count > 0)\\n-
+      For dates, ensure they follow logical chronology\\n- For names/entities, verify
+      exact spelling from the source\\n\\nYour response must be ONLY the extracted
+      data in the format of: a JSON object matching the 'CorpusStats' model structure\\n\\nNo
+      explanations, no process description, no confidence scores - just the final
+      verified JSON.\\n\\nJSON Schema for your response:\\n```json\\n{\\n  \\\"properties\\\":
+      {\\n    \\\"document_count\\\": {\\n      \\\"title\\\": \\\"Document Count\\\",\\n
+      \     \\\"type\\\": \\\"integer\\\"\\n    },\\n    \\\"total_pages\\\": {\\n
+      \     \\\"title\\\": \\\"Total Pages\\\",\\n      \\\"type\\\": \\\"integer\\\"\\n
+      \   },\\n    \\\"average_document_length\\\": {\\n      \\\"title\\\": \\\"Average
+      Document Length\\\",\\n      \\\"type\\\": \\\"number\\\"\\n    },\\n    \\\"most_common_document_type\\\":
+      {\\n      \\\"title\\\": \\\"Most Common Document Type\\\",\\n      \\\"type\\\":
+      \\\"string\\\"\\n    }\\n  },\\n  \\\"required\\\": [\\n    \\\"document_count\\\",\\n
+      \   \\\"total_pages\\\",\\n    \\\"average_document_length\\\",\\n    \\\"most_common_document_type\\\"\\n
+      \ ],\\n  \\\"title\\\": \\\"CorpusStats\\\",\\n  \\\"type\\\": \\\"object\\\"\\n}\\n```\"},{\"role\":\"user\",\"content\":\"Calculate
+      statistics for this document collection.\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"temperature\":0.7,\"tool_choice\":\"required\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"final_result\",\"description\":\"The
       final response which ends this conversation\",\"parameters\":{\"properties\":{\"document_count\":{\"type\":\"integer\"},\"total_pages\":{\"type\":\"integer\"},\"average_document_length\":{\"type\":\"number\"},\"most_common_document_type\":{\"type\":\"string\"}},\"required\":[\"document_count\",\"total_pages\",\"average_document_length\",\"most_common_document_type\"],\"type\":\"object\"}}}]}"
     headers:
       accept:
@@ -35,12 +62,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2499'
+      - '4689'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=0Ea.z3BX0CBrZL.OXDWb0vOLxvzEIYMFHnyDW6SEKqE-1751723136-1.0.1.1-TEZLlYj3eKhq9dnY9LqQP7gLLGHpmOc4KbGeBKioVsQPCz6gw7ruRvQjHYh8kNwVyrZnQC6vtEQMglU9LrMCWTpBZPkw2ZaYT5RWOS1Ni0g;
-        _cfuvid=I4jOcaxaCbrHDNI7susMuLCMENIMfuZ5cqfibCXYs84-1751723136772-0.0.1.1-604800000
+      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
+        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -68,19 +95,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPbbtpAEH33V6zmGSowNFDemlZRpUqR2iL1RrSarAezyd60uyZQxL9X
-        awfbIVSqHyx7zpyZs2dmDxljIAtYMBAbjEI7Nbx2u+8/t4+f/e3TzZdf3ixHHx924cf7r3JWeBgk
-        hr1/IBFPrDfCaqcoSmsaWHjCSKnqePZ2PMsn+WReA9oWpBKtdHE4tUMtjRzmo3w6HM2G4/kze2Ol
-        oAAL9jtjjLFD/U46TUE7WLDR4BTRFAKWBIs2iTHwVqUIYAgyRDQRBh0orIlkknRTKdUDorWKC1Sq
-        a9w8h953ZxYqxSs7farizdWn/RLxlr59+KOXk2u97/VrSu9dLWhdGdGa1MPb+OKsGWNgUDdcaVBx
-        T6FS8YzPGKAvK00mJu1wWEFhRf3Pha1MXNWesRVEG1FxhyWFNoZb8lgSbymKTBk3La5tSGW0tqbL
-        SSdKGStYwRFeqDlml77vek57WlcB1esRoDE2YnKinsHdM3Jsx61s6by9D2fUZI4MG+4JQ+1if5jZ
-        SUgtAaoX+wLOW+0ij/aR6qbTad5UhW6ne+i7Z7AxshcfDy7U4wVFlPVCtTssUGyo6KjdLmNVSNsD
-        st7ZX6u5VLs5vzTl/5TvACHIRSq481RI8fLEXZqndOX/lda6XAuGQH4rBfEoyad5FLTG0+JC2IdI
-        mq+lKck7L+vbCGvHr3LMJzgf0xqyY/YXAAD//wMAoN5f35sEAAA=
+        H4sIAAAAAAAAAwAAAP//jFPbTuMwEH3PV1jzTFFvQNs3kFbap0VIFeylyBqcSerFN9kOC1T995Ud
+        mgToSpuHKJkzZ+b4zHhXMAayhBUDscUotFOjK/d6+zJbz+8uX2vzZY2XT+d3V9dfyX+7PB/DSWLY
+        h98k4oF1Kqx2iqK0poWFJ4yUqk4uziYXs/FiOc6AtiWpRKtdHM3tSEsjR9PxdD4aX4wmizf21kpB
+        AVbsV8EYY7v8TjpNSc+wYrlWjmgKAWuCVZfEGHirUgQwBBkimggnPSisiWSSdNMoNQCitYoLVKpv
+        3D67wXdvFirFv9sfN7fVn5/b56jXZ+q60o/PN6/CDPq1pV9cFlQ1RnQmDfAuvvrQjDEwqFuuNKi4
+        p9Co+IHPGKCvG00mJu2w20BpRf7nwjYmbrJnbAPRRlTcYU2hi+ETeayJdxRFpo7bjJ/mDG1DKqS1
+        NX1WOlPK2cAG9vBOz7449n0/8NpT1QRUn4eAxtiIyYs8hfs3ZN8NXNnaefsQPlCTPTJsuScM2cfh
+        OIuDkCwBmncbA85b7SKP9pFy08Vy1laFfqt79GzyBrZWdvHlfH5ypB4vKaLMK9VtsUCxpbKn9tuM
+        TSntACgGZ/+s5ljt9vzS1P9TvgeEIBep5M5TKcX7E/dpntKl/1da53IWDIH8kxTEoySf5lFShYfV
+        hfASImleSVOTd17m+wiV4+dTnM5wMaEKin3xFwAA//8DACIFiNqdBAAA
     headers:
       CF-RAY:
-      - 95a75042dc4072ff-DFW
+      - 95a80b0eec65464a-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -88,7 +115,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:47:19 GMT
+      - Sat, 05 Jul 2025 15:54:50 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -104,13 +131,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '890'
+      - '874'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '896'
+      - '879'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -118,13 +145,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999520'
+      - '3999007'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 7ms
+      - 14ms
       x-request-id:
-      - req_dd3447628170359715a208a3f2fa2294
+      - req_7dce452604405bd97daac2a3ae4be519
     status:
       code: 200
       message: OK

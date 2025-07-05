@@ -1,7 +1,7 @@
 interactions:
 - request:
     body: '{"messages":[{"role":"system","content":"You are a title extraction specialist.
-      Be very precise."},{"role":"user","content":"Extract the document title"}],"model":"gpt-4o-mini","stream":false}'
+      Be very precise."},{"role":"user","content":"Extract the document title"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
     headers:
       accept:
       - application/json
@@ -10,12 +10,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '192'
+      - '210'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=0Ea.z3BX0CBrZL.OXDWb0vOLxvzEIYMFHnyDW6SEKqE-1751723136-1.0.1.1-TEZLlYj3eKhq9dnY9LqQP7gLLGHpmOc4KbGeBKioVsQPCz6gw7ruRvQjHYh8kNwVyrZnQC6vtEQMglU9LrMCWTpBZPkw2ZaYT5RWOS1Ni0g;
-        _cfuvid=I4jOcaxaCbrHDNI7susMuLCMENIMfuZ5cqfibCXYs84-1751723136772-0.0.1.1-604800000
+      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
+        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -33,7 +33,7 @@ interactions:
       x-stainless-read-timeout:
       - '600'
       x-stainless-retry-count:
-      - '1'
+      - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -43,18 +43,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4ySTW/bMAyG7/4VnM5xEbtJneS43faFAsNOQ2GoEm1rkUVBohsHRf77YCeN3a4D
-        dtGBD1+KL8nnBEAYLXYgVCNZtd6mH30v14fN1y/fPm/vN0f/c7/9hN/7PeXLUIjFoKDH36j4RXWj
-        qPUW2ZA7YxVQMg5Vs2KdFfntal2MoCWNdpDVntMVpa1xJs2X+SpdFmm2uagbMgqj2MGvBADgeXyH
-        Pp3GXuxguXiJtBijrFHsrkkAIpAdIkLGaCJLx2IxQUWO0Y2t/+gCfoB7izIi+EBPRiNwg6BJdS06
-        BgrA2DNUgVo4NEY1cKQODtRZDdbsEVoEJsCeg1Q8itmwxZv5lwGrLsrBtuusnQHpHLEcxjaafbiQ
-        09WepdoHeoxvpKIyzsSmDCgjucFKZPJipKcE4GEcY/dqMsIHaj2XTHscv8vvzuXEtLwJZtsLZGJp
-        p/hqvXinWqmRpbFxtgahpGpQT8ppZ7LThmYgmXn+u5n3ap99G1f/T/kJKIWeUZc+oDbqteEpLeBw
-        2v9Ku854bFhEDE9GYckGw7AHjZXs7PngRDxGxrasjKsx+GDOV1f58i6X+a3cZFiJ5JT8AQAA//8D
-        APd5cS+DAwAA
+        H4sIAAAAAAAAAwAAAP//jFLBbtswDL37Kwid4yJ2kqbIbQNWYLcBu20oDEWiba2SKEh0m67Ivw+y
+        29jtOmAXHfj4nvj4+FwACKPFAYTqJSsXbPk5/P6hj0PyX7+QivZ2rXY6um53u/luP4lVZtDxFyp+
+        ZV0pcsEiG/ITrCJKxqxa7XfVflNV1X4EHGm0mdYFLrdUOuNNWa/rbbnel9XNC7snozCJA/wsAACe
+        xzfP6TWexAHWq9eKw5Rkh+JwaQIQkWyuCJmSSSw9i9UMKvKMfhz9m0WZEEKkB6MRuEfQpAaHnoEi
+        MJ4Y2kgOHnujeniiAR5psBqsuUdwCEyAJ45S8Uhmwxavlp9FbIcks2E/WLsApPfEMi9stHn3gpwv
+        xix1IdIxvaOK1niT+iaiTOSzicQUxIieC4C7cYHDm52IEMkFbpjucfyuvp7kxBzbDE5BAQgmlnau
+        bzerD9QajSyNTYsAhJKqRz0z57TkoA0tgGLh+e9hPtKefBvf/Y/8DCiFgVE3IaI26q3huS1iPup/
+        tV12PA4sEsYHo7BhgzHnoLGVg51OTaSnxOia1vgOY4hmurc2NNe1rDfypsJWFOfiDwAAAP//AwBN
+        1OLJfQMAAA==
     headers:
       CF-RAY:
-      - 95a755978d7a6be3-DFW
+      - 95a8109d8c8668e0-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -62,7 +62,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:50:57 GMT
+      - Sat, 05 Jul 2025 15:58:38 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -78,13 +78,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '460'
+      - '482'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '464'
+      - '489'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -98,7 +98,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_3e164143c47636e8e9457d8ea014da43
+      - req_1415652fc12ee5af4f370d638b618e60
     status:
       code: 200
       message: OK

@@ -1,27 +1,59 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
-      document analysis and interpretation. Your primary goal is to answer questions
-      accurately based on document ''Test Doc'' (ID: 1).\n\nThis document is described
-      as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou have access to a
-      comprehensive set of tools for document analysis:\n\n1. **Vector Search**: A
-      sophisticated semantic search engine that finds text passages similar to your
-      queries.\n2. **Document Summary Access**: Tools to load and analyze the document''s
-      markdown summary, including:\n   - Loading full or truncated summary content\n   -
-      Calculating token lengths for context management\n3. **Notes Analysis**: Tools
-      to retrieve and examine notes attached to this document:\n   - Listing all notes
-      with metadata\n   - Accessing specific note content\n   - Calculating note token
-      lengths\n\n**Important**: Always check what tools are available to you, as additional
-      specialized tools may be provided dynamically beyond the core set described
-      above. Use the appropriate tools to gather information before answering.\n\n**Guidelines:**\n-
-      Prioritize information retrieved directly from the document using these tools\n-
-      We intentionally did not give you the entire document initially. \n  Try doing
-      some vector search to get more information initially and then iteratively \n  identifying
-      which parts of the document to review.  \n- Do not rely solely on the summary
-      or your general knowledge\n- Use multiple tools when necessary for comprehensive
-      answers\n- Present your findings in clear, helpful markdown format\n- Avoid
-      repeating instructions or disclaimers in your responses"},{"role":"user","content":"Extract
-      company information from this document"}],"model":"gpt-4o-mini","stream":false,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
+      an expert assistant for document analysis and interpretation. Your primary goal
+      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
+      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
+      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
+      Search**: A sophisticated semantic search engine that finds text passages similar
+      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
+      the document''s markdown summary, including:\n   - Loading full or truncated
+      summary content\n   - Calculating token lengths for context management\n3. **Notes
+      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
+      Listing all notes with metadata\n   - Accessing specific note content\n   -
+      Calculating note token lengths\n\n**Important**: Always check what tools are
+      available to you, as additional specialized tools may be provided dynamically
+      beyond the core set described above. Use the appropriate tools to gather information
+      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
+      from the document using these tools\n- We intentionally did not give you the
+      entire document initially. \n  Try doing some vector search to get more information
+      initially and then iteratively \n  identifying which parts of the document to
+      review.  \n- Do not rely solely on the summary or your general knowledge\n-
+      Use multiple tools when necessary for comprehensive answers\n- Present your
+      findings in clear, helpful markdown format\n- Avoid repeating instructions or
+      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
+      data extraction system with advanced verification capabilities.\n\nEXTRACTION
+      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
+      requested in: \"Extract company information from this document\"\n3. VERIFY:
+      Before outputting, internally validate your extraction by:\n   - Cross-referencing
+      multiple sources if available\n   - Checking for logical consistency (dates
+      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
+      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
+      text actually appears in the source material\n   - For lists/collections: searching
+      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
+      data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
+      For dates, ensure they follow logical chronology\n- For names/entities, verify
+      exact spelling from the source\n\nYour response must be ONLY the extracted data
+      in the format of: a JSON object matching the ''Company'' model structure\n\nNo
+      explanations, no process description, no confidence scores - just the final
+      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"$defs\": {\n    \"Address\":
+      {\n      \"properties\": {\n        \"street\": {\n          \"title\": \"Street\",\n          \"type\":
+      \"string\"\n        },\n        \"city\": {\n          \"title\": \"City\",\n          \"type\":
+      \"string\"\n        },\n        \"state\": {\n          \"title\": \"State\",\n          \"type\":
+      \"string\"\n        },\n        \"zip_code\": {\n          \"title\": \"Zip
+      Code\",\n          \"type\": \"string\"\n        }\n      },\n      \"required\":
+      [\n        \"street\",\n        \"city\",\n        \"state\",\n        \"zip_code\"\n      ],\n      \"title\":
+      \"Address\",\n      \"type\": \"object\"\n    },\n    \"Company\": {\n      \"properties\":
+      {\n        \"name\": {\n          \"title\": \"Name\",\n          \"type\":
+      \"string\"\n        },\n        \"address\": {\n          \"$ref\": \"#/$defs/Address\"\n        },\n        \"subsidiaries\":
+      {\n          \"default\": [],\n          \"items\": {\n            \"$ref\":
+      \"#/$defs/Company\"\n          },\n          \"title\": \"Subsidiaries\",\n          \"type\":
+      \"array\"\n        }\n      },\n      \"required\": [\n        \"name\",\n        \"address\"\n      ],\n      \"title\":
+      \"Company\",\n      \"type\": \"object\"\n    }\n  },\n  \"$ref\": \"#/$defs/Company\"\n}\n```"},{"role":"user","content":"Extract
+      company information from this document"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"$defs":{"Address":{"properties":{"street":{"type":"string"},"city":{"type":"string"},"state":{"type":"string"},"zip_code":{"type":"string"}},"required":["street","city","state","zip_code"],"type":"object"},"Company":{"properties":{"name":{"type":"string"},"address":{"$ref":"#/$defs/Address"},"subsidiaries":{"items":{"$ref":"#"},"type":"array"}},"required":["name","address"],"type":"object"}},"properties":{"name":{"type":"string"},"address":{"$ref":"#/$defs/Address"},"subsidiaries":{"items":{"$ref":"#"},"type":"array"}},"required":["name","address"],"type":"object"}}}]}'
     headers:
       accept:
@@ -31,12 +63,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2524'
+      - '5325'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=0Ea.z3BX0CBrZL.OXDWb0vOLxvzEIYMFHnyDW6SEKqE-1751723136-1.0.1.1-TEZLlYj3eKhq9dnY9LqQP7gLLGHpmOc4KbGeBKioVsQPCz6gw7ruRvQjHYh8kNwVyrZnQC6vtEQMglU9LrMCWTpBZPkw2ZaYT5RWOS1Ni0g;
-        _cfuvid=I4jOcaxaCbrHDNI7susMuLCMENIMfuZ5cqfibCXYs84-1751723136772-0.0.1.1-604800000
+      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
+        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -64,20 +96,20 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//7FTRTtswFH3PV1j3uZ2aBEjVR8TQNDGGYEKdKIqMfdMaHNuzb6Cl6r9P
-        SWmSFibxActDZN/jc+/xsX3XEWOgJEwYiAUnUTo9PHXL31dn4/PRdJEur0+fX3+Z5PT2KRldxOcx
-        DGqGfXhEQTvWF2FLp5GUNVtYeOSEddY4O46zJE2P0wYorURd0+aOhkd2WCqjhskoORqOsmE8fmMv
-        rBIYYMLuIsYYWzf/WqeRuIQJGw12kRJD4HOESbuIMfBW1xHgIahA3BAMOlBYQ2hq6abSugeQtToX
-        XOuu8PZb98adWVzr/Gp1+S38+HptrunluynU5c2fc/VzOu3V26ZeuUZQURnRmtTD2/jkoBhjYHi5
-        5SrDde4xVJoO+IwB9/OqREO1dljPGtYMJmwGMxiwGXApPYZQh9YzCOQRqY8LRav+PBCnvQSvyuXC
-        yja2aVZVD0FJxb3CJvXd/Qb2lG16s83gU55mZ8uL55fb0c3KxqiyhXu0Nr1ZLv97+pGn7fi+d5M9
-        FlXg+v0V58ZY4rUrzR2/jw5OBrSdO28fwgG1NkqFRe6Rh8bR/mOJdkIaCVDtvUdw3paOcrJP2BRN
-        x9k2K3Q9o0OzkzeQLHHdxY9O0sEH+XKJxFXzYNseIbhYoOyoXa/glVS2B0S9vb9X81Hu7f6VmX8m
-        fQcIgY5Q5s6jVGJ/x90yj3VL/dey1uVGMAT0z0pgTgp9fR4SC767xBBWgbDMC2Xm6J1XTbeDwuUn
-        CU9SPo6xgGgT/QUAAP//AwDpt7vU+wUAAA==
+        H4sIAAAAAAAAA4xUUW+bMBB+51dY9xwmSLKm5XGZpr1UzbRO6lYq5NgHcWtszz62tFH+ewUpgbSd
+        NB6QfZ+/u893H+wixkBJyBiIDSdROx1/ck831aVf2Gub8HJ5/xXrq9WXKk1ml38rmLQMu75HQT3r
+        g7C100jKmgMsPHLCNmu6+JguZsnFxVkH1FaibmmVo3hu41oZFU+T6TxOFnF6/sLeWCUwQMZuI8YY
+        23XvVqeRuIWMJZM+UmMIvELIjocYA291GwEeggrEDcFkAIU1hKaVbhqtRwBZqwvBtR4KH57daD00
+        i2tdrLZBffu9na+uPs9vfj48oZ2tfonlZlTvkPrRdYLKxohjk0b4MZ69KsYYGF4fuMpwXXgMjaZX
+        fMaA+6qp0VCrHXZ5x8ohy+HH9yW7VqSRpSxmyw13hJ6lOUxy4FJ6DCGHbJdDII9IHacDhaLHYReI
+        Ew7bJ+UKYWUf2bcnmnVQUnGvsM14e7eHE5H76L313WgAHssmcP12MtwYS7xtUDeauxdkf3SBtpXz
+        dh1eUdueqbApPPLQNXc846gX0kmA5sRG4LytHRVkH7ArerF48RwMVh/QeQ+SJa6HeJqkPXKSsJBI
+        XHVGO3pbcLFBOXAHj/NGKjsCotHl38p5L/ehAcpU/5N+AIRARygL51EqcXrl4ZjH9lfwr2PHNneC
+        IaD/owQWpNC3A5FY8t7QEB4DYV2UylTonVfdVwqlK86mfDrj5ymWEO2jZwAAAP//AwC6A6WUswQA
+        AA==
     headers:
       CF-RAY:
-      - 95a7530c5b6b6c7f-DFW
+      - 95a80da6feb13aa8-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -85,7 +117,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:49:14 GMT
+      - Sat, 05 Jul 2025 15:56:37 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -101,13 +133,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1064'
+      - '660'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1067'
+      - '664'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -115,13 +147,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999584'
+      - '3998941'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 6ms
+      - 15ms
       x-request-id:
-      - req_2822c2f61c41ac5cca8681541fe3b727
+      - req_c691baeea791aec560d627fd5cc8fd72
     status:
       code: 200
       message: OK

@@ -1,155 +1,45 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
-      document analysis and interpretation. Your primary goal is to answer questions
-      accurately based on document ''Test Doc'' (ID: 1).\n\nThis document is described
-      as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou have access to a
-      comprehensive set of tools for document analysis:\n\n1. **Vector Search**: A
-      sophisticated semantic search engine that finds text passages similar to your
-      queries.\n2. **Document Summary Access**: Tools to load and analyze the document''s
-      markdown summary, including:\n   - Loading full or truncated summary content\n   -
-      Calculating token lengths for context management\n3. **Notes Analysis**: Tools
-      to retrieve and examine notes attached to this document:\n   - Listing all notes
-      with metadata\n   - Accessing specific note content\n   - Calculating note token
-      lengths\n\n**Important**: Always check what tools are available to you, as additional
-      specialized tools may be provided dynamically beyond the core set described
-      above. Use the appropriate tools to gather information before answering.\n\n**Guidelines:**\n-
-      Prioritize information retrieved directly from the document using these tools\n-
-      We intentionally did not give you the entire document initially. \n  Try doing
-      some vector search to get more information initially and then iteratively \n  identifying
-      which parts of the document to review.  \n- Do not rely solely on the summary
-      or your general knowledge\n- Use multiple tools when necessary for comprehensive
-      answers\n- Present your findings in clear, helpful markdown format\n- Avoid
-      repeating instructions or disclaimers in your responses"},{"role":"user","content":"Is
-      this a contract?"}],"model":"gpt-4o-mini","stream":false,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
-      final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"type":"boolean"}},"required":["response"],"type":"object"},"strict":true}}]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '2053'
-      content-type:
-      - application/json
-      host:
-      - api.openai.com
-      user-agent:
-      - pydantic-ai/0.2.16
-      x-stainless-arch:
-      - x64
-      x-stainless-async:
-      - async:asyncio
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - Linux
-      x-stainless-package-version:
-      - 1.81.0
-      x-stainless-read-timeout:
-      - '600'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.11
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPBjpswEL3zFdacQxUCmyBum6zUqt0eWqmtqu4KOWYAt8b22qbdbJR/
-        rwwJkGwqlQOy5vnNvHkz3geEAC8gI8Bq6lijRbjWz1+sXn0t3336nH6I/3xf3r/cpbff3r4oY2Hm
-        GWr7E5k7sd4w1WiBjivZw8wgdeizRqubaLWIozjpgEYVKDyt0i5MVNhwycPFfJGE81UYpUd2rThD
-        Cxn5ERBCyL77e52ywGfIyHx2ijRoLa0QsuESIWCU8BGg1nLrqHQwG0GmpEPppctWiAnglBI5o0KM
-        hftvPzmPZlEh8t3mNjHFe5Z+xPQuTu43T+v1tt48Ter1qXe6E1S2kg0mTfAhnl0UIwQkbXoul1Tk
-        Bm0r3AWfEKCmahuUzmuH/QMYtFpJiw+QlVRYPMAZ4xBcOz9O3DBYtpaK1zZRKZWjXm3n0+MROQwj
-        EarSRm3tBdU3wG2dG6S263RqeHAS0kmA9mymoI1qtMud+oVd0XgZ9Vlh3LsRjZIj6JSjYsJa3cyu
-        5MsLdJR3Qx/2jFFWYzFSx32jbcHVBAgmvb9Wcy133z+X1f+kHwHGUDsscm2w4Oy84/GaQf8s/3Vt
-        cLkTDBbNb84wdxyNn0eBJT0tF9idddjkJZcVGm1492Kg1PlyQRcxTSMsITgEfwEAAP//AwC9sqzy
-        PwQAAA==
-    headers:
-      CF-RAY:
-      - 95a74db759cee823-DFW
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 05 Jul 2025 13:45:35 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
-      - __cf_bm=HfOEmVuZ1qkBXcMQaSBwQLoJ2eKWhK40O2C2jWBsh0o-1751723135-1.0.1.1-MtWT5IJqHQX0DhTTS4tPtMjUBwB63MgfOoFEqGQIeLhmGj2YvbouhWX7nYnwBg3_ybdRq_h7cnfHuyHT6p4MzOoF3h5d_Hh3hpSk7Q4eb.o;
-        path=/; expires=Sat, 05-Jul-25 14:15:35 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=qbNAzvWomi5.IhKDTjwTMLA4AaaA1osiBNY8m52Nbk0-1751723135245-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - user-54labie7aicgek5urzpgydpm
-      openai-processing-ms:
-      - '307'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-envoy-upstream-service-time:
-      - '313'
-      x-ratelimit-limit-requests:
-      - '5000'
-      x-ratelimit-limit-tokens:
-      - '4000000'
-      x-ratelimit-remaining-requests:
-      - '4999'
-      x-ratelimit-remaining-tokens:
-      - '3999591'
-      x-ratelimit-reset-requests:
-      - 12ms
-      x-ratelimit-reset-tokens:
-      - 6ms
-      x-request-id:
-      - req_eae3c4f1a42a11416b97bfe438139483
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
-      document analysis and interpretation. Your primary goal is to answer questions
-      accurately based on document ''Test Doc'' (ID: 1).\n\nThis document is described
-      as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou have access to a
-      comprehensive set of tools for document analysis:\n\n1. **Vector Search**: A
-      sophisticated semantic search engine that finds text passages similar to your
-      queries.\n2. **Document Summary Access**: Tools to load and analyze the document''s
-      markdown summary, including:\n   - Loading full or truncated summary content\n   -
-      Calculating token lengths for context management\n3. **Notes Analysis**: Tools
-      to retrieve and examine notes attached to this document:\n   - Listing all notes
-      with metadata\n   - Accessing specific note content\n   - Calculating note token
-      lengths\n\n**Important**: Always check what tools are available to you, as additional
-      specialized tools may be provided dynamically beyond the core set described
-      above. Use the appropriate tools to gather information before answering.\n\n**Guidelines:**\n-
-      Prioritize information retrieved directly from the document using these tools\n-
-      We intentionally did not give you the entire document initially. \n  Try doing
-      some vector search to get more information initially and then iteratively \n  identifying
-      which parts of the document to review.  \n- Do not rely solely on the summary
-      or your general knowledge\n- Use multiple tools when necessary for comprehensive
-      answers\n- Present your findings in clear, helpful markdown format\n- Avoid
-      repeating instructions or disclaimers in your responses"},{"role":"user","content":"Count
-      the pages"}],"model":"gpt-4o-mini","stream":false,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
+      an expert assistant for document analysis and interpretation. Your primary goal
+      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
+      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
+      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
+      Search**: A sophisticated semantic search engine that finds text passages similar
+      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
+      the document''s markdown summary, including:\n   - Loading full or truncated
+      summary content\n   - Calculating token lengths for context management\n3. **Notes
+      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
+      Listing all notes with metadata\n   - Accessing specific note content\n   -
+      Calculating note token lengths\n\n**Important**: Always check what tools are
+      available to you, as additional specialized tools may be provided dynamically
+      beyond the core set described above. Use the appropriate tools to gather information
+      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
+      from the document using these tools\n- We intentionally did not give you the
+      entire document initially. \n  Try doing some vector search to get more information
+      initially and then iteratively \n  identifying which parts of the document to
+      review.  \n- Do not rely solely on the summary or your general knowledge\n-
+      Use multiple tools when necessary for comprehensive answers\n- Present your
+      findings in clear, helpful markdown format\n- Avoid repeating instructions or
+      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
+      data extraction system with advanced verification capabilities.\n\nEXTRACTION
+      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
+      requested in: \"Count the pages\"\n3. VERIFY: Before outputting, internally
+      validate your extraction by:\n   - Cross-referencing multiple sources if available\n   -
+      Checking for logical consistency (dates in order, numbers reasonable, etc.)\n   -
+      Ensuring no placeholder or generic values (like \"N/A\" unless actually in the
+      document)\n   - Confirming extracted text actually appears in the source material\n   -
+      For lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
+      RULES:\n- If data is not found after thorough search, return null/empty rather
+      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
+      For dates, ensure they follow logical chronology\n- For names/entities, verify
+      exact spelling from the source\n\nYour response must be ONLY the extracted data
+      in the format of: a JSON integer value\n\nNo explanations, no process description,
+      no confidence scores - just the final verified JSON.\n\nJSON Schema for your
+      response:\n```json\n{\n  \"type\": \"integer\"\n}\n```"},{"role":"user","content":"Count
+      the pages"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"type":"integer"}},"required":["response"],"type":"object"},"strict":true}}]}'
     headers:
       accept:
@@ -159,7 +49,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2049'
+      - '3531'
       content-type:
       - application/json
       host:
@@ -189,18 +79,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPBjpswEL3zFdacQxUgKSm3tre0q+0qymW7K+SYgXhjbMs22+xG+ffK
-        kADJplI5IMtv3sybN+NDQAjwAjICbEsdq7UIv+n92qX3P1clX73/eHm8u0t3q329XMRf39cw8Qy1
-        eUHmzqxPTNVaoONKdjAzSB36rFE6j9I4iZJ5C9SqQOFplXbhTIU1lzyMp/EsnKZhtDixt4oztJCR
-        3wEhhBzav9cpC9xDRqaT802N1tIKIeuDCAGjhL8Bai23jkoHkwFkSjqUXrpshBgBTimRMyrEULj7
-        DqPzYBYVIl/Ff74/PDzu0vVyuYvxNRa/8D7Z1KN6Xeo33QoqG8l6k0Z4f59dFSMEJK07LpdU5AZt
-        I9wVnxCgpmpqlM5rh8MTGLRaSYtPkEVHuIg+BrfOzyMnDJaNpeKjRVRK5ahX2nr0fEKO/TiEqrRR
-        G3tF9eK53eYGqW27HJsdnIW0EqC5mCdoo2rtcqd22BZN5l+6rDDs3IBGsxPolKNixEqTyY18eYGO
-        8nbg/Y4xyrZYDNRh12hTcDUCglHvH9Xcyt31z2X1P+kHgDHUDotcGyw4u+x4CDPon+S/wnqXW8Fg
-        0bxyhrnjaPw8CizpebHAvlmHdV5yWaHRhrevBUqdf45pnNBFhCUEx+AvAAAA//8DAFsgIiU7BAAA
+        H4sIAAAAAAAAAwAAAP//jFNRa9swEH73rxD3HI84SevgtxY6BmMrGbQM1mKu8tlRI0tCksvSkP8+
+        ZCe2k6YwPxih776777477SLGQBSQMeBr9Lw2Mr417w833+RWb5Y3K0vuzq3WD9V2bn+UbwYmgaFf
+        Xon7I+sL17WR5IVWHcwtoaeQNUmvknQ+TdNlC9S6IBlolfHxQse1UCKeTWeLeJrGyfLAXmvByUHG
+        /kSMMbZr/0GnKugvZGw6Od7U5BxWBFkfxBhYLcMNoHPCeVQeJgPItfKkgnTVSDkCvNYy5yjlULj7
+        dqPzYBZKma/kV+F/36XvS/n4/fHX9udrfX9fbG5H9brUW9MKKhvFe5NGeH+fnRVjDBTWHVcolLkl
+        10h/xmcM0FZNTcoH7bB7AkvOaOXoCbLpHk6i99Gl8/PICUtl41B+tAiV0h6D0taj5wOy78chdWWs
+        fnFn1CBeuHVuCV3b5djs6CiklQDNyTzBWF0bn3u9obbo9VXaZYVh5wY0WRxArz3KEStNJhfy5QV5
+        FO3A+x3jyNdUDNRh17AphB4B0aj3j2ou5e76F6r6n/QDwDkZT0VuLBWCn3Y8hFkKT/KzsN7lVjA4
+        sm+CU+4F2TCPgko8Lha4rfNU56VQFVljRftaoDT59Qxnc1wmVEK0j/4BAAD//wMAk8029TsEAAA=
     headers:
       CF-RAY:
-      - 95a74db75dfe2e4f-DFW
+      - 95a80856d8483168-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -208,14 +98,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:45:35 GMT
+      - Sat, 05 Jul 2025 15:52:59 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=TMFJSvEHs5gKOzvjid2nOlFR6mKpwgNsLKZIKjEXXHA-1751723135-1.0.1.1-LOrEvrU4TpvihOc6fekS5Q7pRlLUyt5m57RF37ZChLyEH0iYpqzl4xnnTyyRcrW25UeueOhuSIa8OXGDPz85mxORvHArPpXf41Z3drgG_jY;
-        path=/; expires=Sat, 05-Jul-25 14:15:35 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=GQjUuXimTnmYbPUl1q.A08ZVSHnfjIJGvxepfK9oB1c-1751730779-1.0.1.1-ns.I6NnX08lSocKJ.xHwyAYQQzSeEyqeo.buyVu1WH0ILlwOxm21C7JdAjUtF_Glt1iNWvMa2HVy3w8kXZqCp2kR.9i7ZxWPF_QUtxNf0r8;
+        path=/; expires=Sat, 05-Jul-25 16:22:59 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=T4C13.WJcD6EoWMt5AkA.8vqYcshzoiU.PaDHd0EKTo-1751723135681-0.0.1.1-604800000;
+      - _cfuvid=i9RR4RpWI4dc6JV9W0hs_VfWmhiBNK.2e1FYUPoxHuA-1751730779276-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -230,13 +120,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '551'
+      - '514'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '556'
+      - '519'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -244,39 +134,58 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999593'
+      - '3999236'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 6ms
+      - 11ms
       x-request-id:
-      - req_3a415bf2480c0a01dbce927ba5ea22ee
+      - req_d9dcdddadb2e1c54bacf52905873c186
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
-      document analysis and interpretation. Your primary goal is to answer questions
-      accurately based on document ''Test Doc'' (ID: 1).\n\nThis document is described
-      as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou have access to a
-      comprehensive set of tools for document analysis:\n\n1. **Vector Search**: A
-      sophisticated semantic search engine that finds text passages similar to your
-      queries.\n2. **Document Summary Access**: Tools to load and analyze the document''s
-      markdown summary, including:\n   - Loading full or truncated summary content\n   -
-      Calculating token lengths for context management\n3. **Notes Analysis**: Tools
-      to retrieve and examine notes attached to this document:\n   - Listing all notes
-      with metadata\n   - Accessing specific note content\n   - Calculating note token
-      lengths\n\n**Important**: Always check what tools are available to you, as additional
-      specialized tools may be provided dynamically beyond the core set described
-      above. Use the appropriate tools to gather information before answering.\n\n**Guidelines:**\n-
-      Prioritize information retrieved directly from the document using these tools\n-
-      We intentionally did not give you the entire document initially. \n  Try doing
-      some vector search to get more information initially and then iteratively \n  identifying
-      which parts of the document to review.  \n- Do not rely solely on the summary
-      or your general knowledge\n- Use multiple tools when necessary for comprehensive
-      answers\n- Present your findings in clear, helpful markdown format\n- Avoid
-      repeating instructions or disclaimers in your responses"},{"role":"user","content":"Extract
-      the title"}],"model":"gpt-4o-mini","stream":false}'
+    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
+      an expert assistant for document analysis and interpretation. Your primary goal
+      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
+      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
+      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
+      Search**: A sophisticated semantic search engine that finds text passages similar
+      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
+      the document''s markdown summary, including:\n   - Loading full or truncated
+      summary content\n   - Calculating token lengths for context management\n3. **Notes
+      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
+      Listing all notes with metadata\n   - Accessing specific note content\n   -
+      Calculating note token lengths\n\n**Important**: Always check what tools are
+      available to you, as additional specialized tools may be provided dynamically
+      beyond the core set described above. Use the appropriate tools to gather information
+      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
+      from the document using these tools\n- We intentionally did not give you the
+      entire document initially. \n  Try doing some vector search to get more information
+      initially and then iteratively \n  identifying which parts of the document to
+      review.  \n- Do not rely solely on the summary or your general knowledge\n-
+      Use multiple tools when necessary for comprehensive answers\n- Present your
+      findings in clear, helpful markdown format\n- Avoid repeating instructions or
+      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
+      data extraction system with advanced verification capabilities.\n\nEXTRACTION
+      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
+      requested in: \"Is this a contract?\"\n3. VERIFY: Before outputting, internally
+      validate your extraction by:\n   - Cross-referencing multiple sources if available\n   -
+      Checking for logical consistency (dates in order, numbers reasonable, etc.)\n   -
+      Ensuring no placeholder or generic values (like \"N/A\" unless actually in the
+      document)\n   - Confirming extracted text actually appears in the source material\n   -
+      For lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
+      RULES:\n- If data is not found after thorough search, return null/empty rather
+      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
+      For dates, ensure they follow logical chronology\n- For names/entities, verify
+      exact spelling from the source\n\nYour response must be ONLY the extracted data
+      in the format of: a JSON boolean value (true or false)\n\nNo explanations, no
+      process description, no confidence scores - just the final verified JSON.\n\nJSON
+      Schema for your response:\n```json\n{\n  \"type\": \"boolean\"\n}\n```"},{"role":"user","content":"Is
+      this a contract?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"type":"boolean"}},"required":["response"],"type":"object"},"strict":true}}]}'
     headers:
       accept:
       - application/json
@@ -285,7 +194,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1754'
+      - '3555'
       content-type:
       - application/json
       host:
@@ -315,19 +224,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPLbtswELzrKxa8uAUsw5JfgY9FUNRtjumhaAJhTa0kphRJkCvHbuB/
-        LyQllpKmQC8CyNkZzs6uniIAoXKxBSErZFk7HX9yx+9c77/cuMelzr/91u5rgQ/4I1nvPnsxbRl2
-        /0CSX1gzaWuniZU1PSw9IVOrmmxWySZdJItVB9Q2J93SSsfx0sa1MipO5+kynm/i5OqZXVklKYgt
-        /IwAAJ66b+vT5HQUW5hPX25qCgFLEttLEYDwVrc3AkNQgdGwmA6gtIbJdNZvLdCRPUoGrghYsSYo
-        vK27Y25lU5NhmNxSYLi2cgIfdtdbSD5OYQePSmtw5Avra0A4kGTrIRB6WQFbKJTJwZOmAxoGh53P
-        AFwhQ40naH2gMsPLM7gzd+aGeBJgT6UysD8BHUk2rEzZ1fXqs3E7noomYBupabQeAWiMZWxH0gV5
-        /4ycL9FpWzpv9+ENVRTKqFBlnjBY08YU2DrRoecI4L4bUfMqdeG8rR1nbH9R99wiXfZ6YtiMAV0m
-        zyBbRj1irVfTd/SynBiVDqMhC4myonygDhuBTa7sCIhGXf/t5j3tvnNlyv+RHwApyTHlmfOUK/m6
-        46HMU/vj/KvsknJnWATyByUpY0W+nUROBTa6X2cRToGpzgplSvLOq36nC5etU0wXeJVQIaJz9AcA
-        AP//AwC1RO464QMAAA==
+        H4sIAAAAAAAAAwAAAP//jFNNb9swDL37Vwg8x4OdenHiY9GhW7d2l+wDWAuDlWlHrSwJkjwsC/Lf
+        C9uN7aQZMB8MgU+PfHykdgFjIArIGPANel4bGV6av98u3Vpvb74k8e2dMbf4dHfz8fNXsfpUwaxl
+        6Mcn4v7Aesd1bSR5oVUPc0voqc0ap+/j9CJK01UH1Log2dIq48NEh7VQIpxH8ySM0jBevrI3WnBy
+        kLFfAWOM7bp/q1MV9AcyFs0OkZqcw4ogGy4xBlbLNgLonHAelYfZCHKtPKlWumqknABea5lzlHIs
+        3H+7yXk0C6XMk3Wkn79frZM6NdHV6sd18mHxc5NcT+r1qbemE1Q2ig8mTfAhnp0UYwwU1j1XKJS5
+        JddIf8JnDNBWTU3Kt9phdw+WnNHK0T1kJUpHezhi7INz54eJG5bKxqF8axMqpT22ajufHl6R/TAS
+        qStj9aM7obYNCLfJLaHrOp0aHhyEdBKgOZopGKtr43Ovn6krulgkfVYY925E4wPotUc5YaXL2Zl8
+        eUEeRTf0Yc848g0VI3XcN2wKoSdAMOn9rZpzufv+har+J/0IcE7GU5EbS4Xgxx2P1yy1z/Jf1waX
+        O8HgyP4WnHIvyLbzKKjEw3KB2zpPdV4KVZE1VnQvBkqTL+Y4v8BlTCUE++AFAAD//wMAl8LxiT8E
+        AAA=
     headers:
       CF-RAY:
-      - 95a74db74cef8785-DFW
+      - 95a80856cb94e901-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -335,14 +244,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:45:36 GMT
+      - Sat, 05 Jul 2025 15:52:59 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=HJ7Q9L0RvuJU.cMJ8HkzB.ID_NudI0H14rICASwdbA4-1751723136-1.0.1.1-TeuctK_xk_heU5vcm2iBlcQfDuCS_wWdYYUULUEB94.OTNJTcKE8D7zsGsHePAKKsLo3.Ix.c53alDOpfhSR_bp6MKj.AGJPicIxCtaMaW0;
-        path=/; expires=Sat, 05-Jul-25 14:15:36 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=o8BAFj6zi0uoXabqdqkYQoNjf4U7RrzKwYd4rYnifrc-1751730779-1.0.1.1-OrvCiyWTwygB7SXbX.7HHWIh9uQV0.E_onQWIal1r.Xqr_EF49zGtY698jw0SHXqwuoxCRgsA0PiHAuUMm8Rq0CpmKABlnwKaqkrXGTn7t4;
+        path=/; expires=Sat, 05-Jul-25 16:22:59 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=CmV8jyG58O.ApDa0QwRFJ8oXXsKsVnPIlHpAfSe.RtQ-1751723136214-0.0.1.1-604800000;
+      - _cfuvid=ptfAgwf4Xdkk.wv6WcOw6ED9ONOixsTuN_fpPdMDBpA-1751730779486-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -357,13 +266,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1023'
+      - '489'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1030'
+      - '494'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -371,39 +280,57 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999593'
+      - '3999231'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 6ms
+      - 11ms
       x-request-id:
-      - req_734f8c3173519df9b2ee0a7f2948b8c6
+      - req_5f4e50e536b18c73e1130451f1fcffff
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
-      document analysis and interpretation. Your primary goal is to answer questions
-      accurately based on document ''Test Doc'' (ID: 1).\n\nThis document is described
-      as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou have access to a
-      comprehensive set of tools for document analysis:\n\n1. **Vector Search**: A
-      sophisticated semantic search engine that finds text passages similar to your
-      queries.\n2. **Document Summary Access**: Tools to load and analyze the document''s
-      markdown summary, including:\n   - Loading full or truncated summary content\n   -
-      Calculating token lengths for context management\n3. **Notes Analysis**: Tools
-      to retrieve and examine notes attached to this document:\n   - Listing all notes
-      with metadata\n   - Accessing specific note content\n   - Calculating note token
-      lengths\n\n**Important**: Always check what tools are available to you, as additional
-      specialized tools may be provided dynamically beyond the core set described
-      above. Use the appropriate tools to gather information before answering.\n\n**Guidelines:**\n-
-      Prioritize information retrieved directly from the document using these tools\n-
-      We intentionally did not give you the entire document initially. \n  Try doing
-      some vector search to get more information initially and then iteratively \n  identifying
-      which parts of the document to review.  \n- Do not rely solely on the summary
-      or your general knowledge\n- Use multiple tools when necessary for comprehensive
-      answers\n- Present your findings in clear, helpful markdown format\n- Avoid
-      repeating instructions or disclaimers in your responses"},{"role":"user","content":"List
-      the main topics"}],"model":"gpt-4o-mini","stream":false,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
+      an expert assistant for document analysis and interpretation. Your primary goal
+      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
+      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
+      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
+      Search**: A sophisticated semantic search engine that finds text passages similar
+      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
+      the document''s markdown summary, including:\n   - Loading full or truncated
+      summary content\n   - Calculating token lengths for context management\n3. **Notes
+      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
+      Listing all notes with metadata\n   - Accessing specific note content\n   -
+      Calculating note token lengths\n\n**Important**: Always check what tools are
+      available to you, as additional specialized tools may be provided dynamically
+      beyond the core set described above. Use the appropriate tools to gather information
+      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
+      from the document using these tools\n- We intentionally did not give you the
+      entire document initially. \n  Try doing some vector search to get more information
+      initially and then iteratively \n  identifying which parts of the document to
+      review.  \n- Do not rely solely on the summary or your general knowledge\n-
+      Use multiple tools when necessary for comprehensive answers\n- Present your
+      findings in clear, helpful markdown format\n- Avoid repeating instructions or
+      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
+      data extraction system with advanced verification capabilities.\n\nEXTRACTION
+      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
+      requested in: \"List the main topics\"\n3. VERIFY: Before outputting, internally
+      validate your extraction by:\n   - Cross-referencing multiple sources if available\n   -
+      Checking for logical consistency (dates in order, numbers reasonable, etc.)\n   -
+      Ensuring no placeholder or generic values (like \"N/A\" unless actually in the
+      document)\n   - Confirming extracted text actually appears in the source material\n   -
+      For lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
+      RULES:\n- If data is not found after thorough search, return null/empty rather
+      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
+      For dates, ensure they follow logical chronology\n- For names/entities, verify
+      exact spelling from the source\n\nYour response must be ONLY the extracted data
+      in the format of: a JSON array of str values\n\nNo explanations, no process
+      description, no confidence scores - just the final verified JSON.\n\nJSON Schema
+      for your response:\n```json\n{\n  \"items\": {\n    \"type\": \"string\"\n  },\n  \"type\":
+      \"array\"\n}\n```"},{"role":"user","content":"List the main topics"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"items":{"type":"string"},"type":"array"}},"required":["response"],"type":"object"},"strict":true}}]}'
     headers:
       accept:
@@ -413,7 +340,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2078'
+      - '3617'
       content-type:
       - application/json
       host:
@@ -443,22 +370,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFRNb9swDL3nVxA6J0GdpE2Q29ai3Q4DurYZNjSFoch0zFaWNIluVwT5
-        74PkJk4/BswHQ+bTe3yUSG96AIIKMQehKsmqdnrw2f1Z8Jl+WlypcXbuw+yLzcaaf/+6/1Z8Ev3I
-        sKt7VLxjDZWtnUYma1pYeZSMUTWbHmfT0TgbHyegtgXqSFs7HkzsoCZDg9HRaDI4mg6y2Qu7sqQw
-        iDnc9gAANukdfZoC/4g5HPV3kRpDkGsU8/0mAOGtjhEhQ6DA0rDod6CyhtFE66bR+gBga3WupNZd
-        4vbZHKy7w5Ja5/x1+vzz7Mf1+WryUK7w/vL76ezJX1we5Guln10yVDZG7Q/pAN/H52+SAQgj65ZL
-        RurcY2g0v+EDCOnXTY2Go3exWQqPwVkTcCnmt0txUyHUkgywdaQC2BIW16dwQ6wRMhjAaSUdo4cM
-        yCjdFDhfiv5SZEO4QINeanDePlIgawJ41PFygS1whaDlU1KM64WhiFyzZAxJYjSEMyzJECdu3Ie+
-        DtCEqFB526wr23Biq9ZF4o2HcNVoTAxlTWDfpCMCaQogw+idR5YpZEsosUg2A0tudrknQ7hoqEBN
-        BgOU1qcsaKTieFZJStZoivRly1RKYh4P4bIrWFmj0Bsy6yQgndOk5Io08fOOlsS4QvKAZYmKw1Lc
-        bcWre9r2PlrfHfSgx7IJUr9vTmmMbatN3Xn3gmz3g6Dt2nm7Cm+osW0oVLlHGVJ/HbZ5b2ckWRDN
-        q0kSztvacc72AVPS8UnWqopu2jt0Nn0B2bLUXXwymfU/0MsLZElp1PbTraSqsOio3ZTLpiB7APQO
-        an/v5iPttn4y6/+R7wCl0DEWufNYkHpdcbfNY/wZ/mvb/pSTYRHQP5LCnAl9vI8CS7kbaRGeA2Od
-        l2TWscEp/adE6fKTkRyN5SzDUvS2vb8AAAD//wMA10Oe8bUFAAA=
+        H4sIAAAAAAAAAwAAAP//jFNNb9swDL37Vwg8x0O+Gic+BhtyGAZ0W4t1awODlWlHrSxpklykDfLf
+        C9uJ7aQZMB8MQY+PfHykdgFjIFKIGfANel4YGS7N2+3y6c/V3c1f//3513blcfLlm5bTzR1mMKgY
+        +vGJuD+yPnFdGEleaNXA3BJ6qrKOoqtRNBlG0aIGCp2SrGi58eFUh4VQIhwPx9NwGIWj+YG90YKT
+        g5jdB4wxtqv/lU6V0hZiNhwcbwpyDnOCuA1iDKyW1Q2gc8J5VB4GHci18qQq6aqUsgd4rWXCUcqu
+        cPPteufOLJQyWbjZze3WrvLCXi+vP7+ttj++/vz9onv1mtSvphaUlYq3JvXw9j4+K8YYKCwarlAo
+        E0uulP6MzxigzcuClK+0w+4BLDmjlaMHiO/XezgJ3weXzuueFZay0qH86BEqpT1WUmuT1gdk385D
+        6txY/ejOqJV64TaJJXR1m323g6OQWgKUJwMFY3VhfOL1M9VFZ9GsyQrd0nXoaHIAvfYoe6z5YnAh
+        X5KSR1FPvF0yjnxDaUftlg3LVOgeEPR6/6jmUu6mf6Hy/0nfAZyT8ZQmxlIq+GnHXZil6k3+K6x1
+        uRYMjuyL4JR4QbaaR0oZHjcL3KvzVCSZUDlZY0X9XCAzyWyM4wnOR5RBsA/eAQAA//8DABpsmso8
+        BAAA
     headers:
       CF-RAY:
-      - 95a74db74b3269f5-DFW
+      - 95a80856ddfa479d-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -466,14 +390,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:45:36 GMT
+      - Sat, 05 Jul 2025 15:52:59 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=0Ea.z3BX0CBrZL.OXDWb0vOLxvzEIYMFHnyDW6SEKqE-1751723136-1.0.1.1-TEZLlYj3eKhq9dnY9LqQP7gLLGHpmOc4KbGeBKioVsQPCz6gw7ruRvQjHYh8kNwVyrZnQC6vtEQMglU9LrMCWTpBZPkw2ZaYT5RWOS1Ni0g;
-        path=/; expires=Sat, 05-Jul-25 14:15:36 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=dBT7aebNfb.GxNBXRou1I3KZ_7hj2kwpdATONpGskGw-1751730779-1.0.1.1-62oE2Aqq2TUlpuXpAbwPmYNAyhDXUU2KhbipToSP5xQNsnIF3IEUV8BNW7kAqj.8Bi8O1X1EHj2oVTxzM2WoOMAW9NQ2EFGISZFT2Q62h8U;
+        path=/; expires=Sat, 05-Jul-25 16:22:59 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=I4jOcaxaCbrHDNI7susMuLCMENIMfuZ5cqfibCXYs84-1751723136772-0.0.1.1-604800000;
+      - _cfuvid=ZzKtG72Znv7k1a3zsCrPE_lK9k94p31EuJ4UilClChI-1751730779510-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -488,13 +412,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1583'
+      - '487'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1681'
+      - '492'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -502,13 +426,156 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999592'
+      - '3999224'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 6ms
+      - 11ms
       x-request-id:
-      - req_2319f11b985d81b50a533a1cfbe40772
+      - req_30b0d1d064131e4e0adb19c387cbe816
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
+      an expert assistant for document analysis and interpretation. Your primary goal
+      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
+      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
+      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
+      Search**: A sophisticated semantic search engine that finds text passages similar
+      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
+      the document''s markdown summary, including:\n   - Loading full or truncated
+      summary content\n   - Calculating token lengths for context management\n3. **Notes
+      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
+      Listing all notes with metadata\n   - Accessing specific note content\n   -
+      Calculating note token lengths\n\n**Important**: Always check what tools are
+      available to you, as additional specialized tools may be provided dynamically
+      beyond the core set described above. Use the appropriate tools to gather information
+      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
+      from the document using these tools\n- We intentionally did not give you the
+      entire document initially. \n  Try doing some vector search to get more information
+      initially and then iteratively \n  identifying which parts of the document to
+      review.  \n- Do not rely solely on the summary or your general knowledge\n-
+      Use multiple tools when necessary for comprehensive answers\n- Present your
+      findings in clear, helpful markdown format\n- Avoid repeating instructions or
+      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
+      data extraction system with advanced verification capabilities.\n\nEXTRACTION
+      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
+      requested in: \"Extract the title\"\n3. VERIFY: Before outputting, internally
+      validate your extraction by:\n   - Cross-referencing multiple sources if available\n   -
+      Checking for logical consistency (dates in order, numbers reasonable, etc.)\n   -
+      Ensuring no placeholder or generic values (like \"N/A\" unless actually in the
+      document)\n   - Confirming extracted text actually appears in the source material\n   -
+      For lists/collections: searching again with different queries to ensure completeness\n\nCRITICAL
+      RULES:\n- If data is not found after thorough search, return null/empty rather
+      than guessing\n- If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
+      For dates, ensure they follow logical chronology\n- For names/entities, verify
+      exact spelling from the source\n\nYour response must be ONLY the extracted data
+      in the format of: a JSON string value\n\nNo explanations, no process description,
+      no confidence scores - just the final verified JSON.\n\nJSON Schema for your
+      response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"Extract
+      the title"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3236'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSTW/bMAy9+1cQPMdD7CTNx7FF2wFDL9t6GObCVmU6VidLgkQHy4L898FOGrtb
+        B+yiAx/f03skDxEAqhI3gLIWLBun42v36/H6Yd3umk+f9WK/WN3Xt+vbO/Vx9rD7hpOOYZ9fSPIr
+        64O0jdPEypoTLD0Jpk41WS6S5Wy6XK57oLEl6Y62dRzPbdwoo+J0ms7j6TJOVmd2bZWkgBv4HgEA
+        HPq382lK+okbmE5eKw2FILaEm0sTAHqruwqKEFRgYRgnAyitYTK99aIoXoI1mTlkBiBD3jvKcAMZ
+        Pn65ga+KNUECMdzUwjF5SDLMzDEzRVGMFT1VbRBdKtNqPQKEMZZFN5U+y9MZOV7ca7t13j6HP6hY
+        KaNCnXsSwZrOaWDrsEePEcBTP6X2TXB03jaOc7Y/qP/uKk1PejgsZ0DT5AyyZaFHrPls8o5eXhIL
+        pcNoziiFrKkcqMNSRFsqOwKiUeq/3bynfUquzPZ/5AdASnJMZe48lUq+TTy0eepu919tlyn3hjGQ
+        3ylJOSvy3SZKqkSrTxeFYR+YmrxSZkveeXU6q8rlV6lIZ2KVUIXRMfoNAAD//wMAQ9eTpGQDAAA=
+    headers:
+      CF-RAY:
+      - 95a80856ddcfe79a-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 05 Jul 2025 15:52:59 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
+        path=/; expires=Sat, 05-Jul-25 16:22:59 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '541'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '544'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999236'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 11ms
+      x-request-id:
+      - req_0b5b41b7c4f1de6aba80c2d55aadb562
     status:
       code: 200
       message: OK

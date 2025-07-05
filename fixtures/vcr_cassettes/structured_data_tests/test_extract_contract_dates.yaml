@@ -1,27 +1,65 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
-      document analysis and interpretation. Your primary goal is to answer questions
-      accurately based on document ''Test Doc'' (ID: 1).\n\nThis document is described
-      as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou have access to a
-      comprehensive set of tools for document analysis:\n\n1. **Vector Search**: A
-      sophisticated semantic search engine that finds text passages similar to your
-      queries.\n2. **Document Summary Access**: Tools to load and analyze the document''s
-      markdown summary, including:\n   - Loading full or truncated summary content\n   -
-      Calculating token lengths for context management\n3. **Notes Analysis**: Tools
-      to retrieve and examine notes attached to this document:\n   - Listing all notes
-      with metadata\n   - Accessing specific note content\n   - Calculating note token
-      lengths\n\n**Important**: Always check what tools are available to you, as additional
-      specialized tools may be provided dynamically beyond the core set described
-      above. Use the appropriate tools to gather information before answering.\n\n**Guidelines:**\n-
-      Prioritize information retrieved directly from the document using these tools\n-
-      We intentionally did not give you the entire document initially. \n  Try doing
-      some vector search to get more information initially and then iteratively \n  identifying
-      which parts of the document to review.  \n- Do not rely solely on the summary
-      or your general knowledge\n- Use multiple tools when necessary for comprehensive
-      answers\n- Present your findings in clear, helpful markdown format\n- Avoid
-      repeating instructions or disclaimers in your responses"},{"role":"user","content":"Extract
-      all important dates from this contract."}],"model":"gpt-4o-mini","stream":false,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"All
+    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
+      an expert assistant for document analysis and interpretation. Your primary goal
+      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
+      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
+      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
+      Search**: A sophisticated semantic search engine that finds text passages similar
+      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
+      the document''s markdown summary, including:\n   - Loading full or truncated
+      summary content\n   - Calculating token lengths for context management\n3. **Notes
+      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
+      Listing all notes with metadata\n   - Accessing specific note content\n   -
+      Calculating note token lengths\n\n**Important**: Always check what tools are
+      available to you, as additional specialized tools may be provided dynamically
+      beyond the core set described above. Use the appropriate tools to gather information
+      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
+      from the document using these tools\n- We intentionally did not give you the
+      entire document initially. \n  Try doing some vector search to get more information
+      initially and then iteratively \n  identifying which parts of the document to
+      review.  \n- Do not rely solely on the summary or your general knowledge\n-
+      Use multiple tools when necessary for comprehensive answers\n- Present your
+      findings in clear, helpful markdown format\n- Avoid repeating instructions or
+      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
+      data extraction system with advanced verification capabilities.\n\nEXTRACTION
+      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
+      requested in: \"Extract all important dates from this contract.\"\n3. VERIFY:
+      Before outputting, internally validate your extraction by:\n   - Cross-referencing
+      multiple sources if available\n   - Checking for logical consistency (dates
+      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
+      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
+      text actually appears in the source material\n   - For lists/collections: searching
+      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
+      data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
+      For dates, ensure they follow logical chronology\n- For names/entities, verify
+      exact spelling from the source\n\nYour response must be ONLY the extracted data
+      in the format of: a JSON object matching the ''ContractDates'' model structure\n\nNo
+      explanations, no process description, no confidence scores - just the final
+      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"$defs\": {\n    \"ContractDate\":
+      {\n      \"description\": \"A single important date in a contract.\",\n      \"properties\":
+      {\n        \"date\": {\n          \"description\": \"Date in ISO format (YYYY-MM-DD)\",\n          \"title\":
+      \"Date\",\n          \"type\": \"string\"\n        },\n        \"description\":
+      {\n          \"description\": \"What this date represents\",\n          \"title\":
+      \"Description\",\n          \"type\": \"string\"\n        },\n        \"is_deadline\":
+      {\n          \"description\": \"Whether this is a deadline\",\n          \"title\":
+      \"Is Deadline\",\n          \"type\": \"boolean\"\n        }\n      },\n      \"required\":
+      [\n        \"date\",\n        \"description\",\n        \"is_deadline\"\n      ],\n      \"title\":
+      \"ContractDate\",\n      \"type\": \"object\"\n    }\n  },\n  \"description\":
+      \"All important dates found in a contract.\",\n  \"properties\": {\n    \"effective_date\":
+      {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
+      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"description\":
+      \"Contract effective date\",\n      \"title\": \"Effective Date\"\n    },\n    \"expiration_date\":
+      {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
+      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"description\":
+      \"Contract expiration date\",\n      \"title\": \"Expiration Date\"\n    },\n    \"key_dates\":
+      {\n      \"description\": \"Other important dates\",\n      \"items\": {\n        \"$ref\":
+      \"#/$defs/ContractDate\"\n      },\n      \"title\": \"Key Dates\",\n      \"type\":
+      \"array\"\n    }\n  },\n  \"title\": \"ContractDates\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Extract
+      all important dates from this contract."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"All
       important dates found in a contract.","parameters":{"properties":{"effective_date":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Contract
       effective date"},"expiration_date":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Contract
       expiration date"},"key_dates":{"description":"Other important dates","items":{"$ref":"#/$defs/ContractDate"},"type":"array"}},"type":"object","$defs":{"ContractDate":{"description":"A
@@ -37,12 +75,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2676'
+      - '5973'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=0Ea.z3BX0CBrZL.OXDWb0vOLxvzEIYMFHnyDW6SEKqE-1751723136-1.0.1.1-TEZLlYj3eKhq9dnY9LqQP7gLLGHpmOc4KbGeBKioVsQPCz6gw7ruRvQjHYh8kNwVyrZnQC6vtEQMglU9LrMCWTpBZPkw2ZaYT5RWOS1Ni0g;
-        _cfuvid=I4jOcaxaCbrHDNI7susMuLCMENIMfuZ5cqfibCXYs84-1751723136772-0.0.1.1-604800000
+      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
+        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -70,19 +108,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPLjtowFN3nK6y7JhUJzJCya6Wh08csuqCqNKDI49wEg2NbtkNBiH+v
-        4pAHMJWaRWTd43PPuQ+fAkKAZzAnwDbUsVKL8LM+/DLPyXK5P3x7ep5soxdNfyymx+VCyx2MaoZ6
-        2yJzLesDU6UW6LiSDcwMUod11mj2EM3iSfTxwQOlylDUtEK7cKrCkksexuN4Go5nYZRc2BvFGVqY
-        k9eAEEJO/l/7lBkeYE7GozZSorW0QJh3lwgBo0QdAWott45KB6MeZEo6lLV1WQkxAJxSImVUiF64
-        +U6Dc98sKkT6tIxfku+401/xy+/J4tP2MWZ/RPJzoNekPmpvKK8k65o0wLv4/EaMEJC0bLhcUpEa
-        tJVwN3xCgJqiKlG62jucVoB5jszxPaYZdbhqqyUrwIPmhtZqd9AOjz5m6+Dr+gxXKufgvfN60EGD
-        eWWpuG8tlVI5r+l7u74g526MQhXaqDd7Q62L5naTGqTWd2c4pKA14i1AdbUHoI0qtUud2qEXnU6S
-        Jiv0uzpALxsFTjkqBvFZy7rKl2boKPeL0u0mo2yDWU/td5RWGVcDIBjUfu/mvdxN/VwW/5O+BxhD
-        7TBLtcGMs+uK+2sG66f8r2tdl71hsGj2nGHqOJp6HhnmtF1IsEfrsExzLgs02nD/yiDX6WNM4wlN
-        IswhOAd/AQAA//8DAHNdozxzBAAA
+        H4sIAAAAAAAAAwAAAP//jFNNj9MwEL3nV1hzblDSdknpcTmABGiFxC4gtIqmziQ19Re2U7FU/e/I
+        SZuk3UUih8ia5zfz5s34kDAGooI1A77FwJWV6a398/D+5mP++f52//X73QNmG2k+7Ip33+pPGcwi
+        w2x+Eg9n1itulJUUhNE9zB1hoJg1L27yYpGtlkUHKFORjLTGhnRpUiW0SOfZfJlmRZqvTuytEZw8
+        rNmPhDHGDt0/6tQV/YY1y2bniCLvsSFYD5cYA2dkjAB6L3xAHWA2gtzoQDpK162UEyAYI0uOUo6F
+        ++8wOY9moZQl3+e/Cne/oMX9W5UrXO2W/stdm03q9amfbCeobjUfTJrgQ3x9VYwx0Kh6rtAoS0e+
+        leGKzxiga1pFOkTtcDjCBX5MXjo/Tnp3VLce5XNTUGsTMGrrXHk8IcdhANI01pmNv6JGucJvS0fo
+        u76m9iZnIZ0EaC8mCNYZZUMZzI66onmev+nTwrhmE/i0DBBMQDmlzc+0i4xlRQFFN+RhrzjyLVUj
+        d9wvbCthJkAy6f65nJdy9w4I3fxP+hHgnGygqrSOKsEvWx6vOYrP8F/XBp87weDJ7QWnMghycSIV
+        1XheJvBPPpAqa6EbctaJ7oVAbcvXc5wvcJVTDckx+QsAAP//AwDtNMlGLwQAAA==
     headers:
       CF-RAY:
-      - 95a74f325ae1f036-DFW
+      - 95a80a05bf1045fb-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -90,7 +127,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:46:36 GMT
+      - Sat, 05 Jul 2025 15:54:08 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -106,13 +143,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '881'
+      - '373'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '887'
+      - '378'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -120,13 +157,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999584'
+      - '3998827'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 6ms
+      - 17ms
       x-request-id:
-      - req_f9c6d03a3311ecc872ced67863f0413f
+      - req_6f42be7be3460a09e4ded6038814ea44
     status:
       code: 200
       message: OK

@@ -90,6 +90,121 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
+def _get_structured_extraction_prompt(
+    prompt: str,
+    target_type: Type[T],
+    agent_system_prompt: Optional[str] = None
+) -> str:
+    """
+    Generates a system prompt specifically for one-shot structured data extraction,
+    with robust support for primitives, Pydantic models, and collections.
+    """
+    from typing import get_args, get_origin
+    from pydantic import BaseModel, TypeAdapter
+    
+    # Use Pydantic's TypeAdapter to correctly generate a JSON schema for any type.
+    # This handles primitives, models, lists, tuples, etc., automatically.
+    type_adapter = TypeAdapter(target_type)
+    json_schema = type_adapter.json_schema()
+    
+    # To make the prompt more human-readable and guide the LLM better,
+    # we can provide a simplified text description of the target type.
+    type_description = _get_type_description(target_type)
+    
+    schema_as_string = json.dumps(json_schema, indent=2)
+
+    extraction_instructions = f"""You are a highly-intelligent data extraction system with advanced verification capabilities.
+
+EXTRACTION METHODOLOGY:
+1. GATHER: Use available tools (similarity_search, load_document_md_summary, etc.) to find ALL relevant information
+2. EXTRACT: Identify the specific data requested in: "{prompt}"
+3. VERIFY: Before outputting, internally validate your extraction by:
+   - Cross-referencing multiple sources if available
+   - Checking for logical consistency (dates in order, numbers reasonable, etc.)
+   - Ensuring no placeholder or generic values (like "N/A" unless actually in the document)
+   - Confirming extracted text actually appears in the source material
+   - For lists/collections: searching again with different queries to ensure completeness
+
+CRITICAL RULES:
+- If data is not found after thorough search, return null/empty rather than guessing
+- If multiple conflicting values exist, choose the most authoritative/recent
+- For numeric values, verify they make sense in context (e.g., page count > 0)
+- For dates, ensure they follow logical chronology
+- For names/entities, verify exact spelling from the source
+
+Your response must be ONLY the extracted data in the format of: {type_description}
+
+No explanations, no process description, no confidence scores - just the final verified JSON.
+
+JSON Schema for your response:
+```json
+{schema_as_string}
+```"""
+
+    if agent_system_prompt:
+        return f"""<BACKGROUND_CONTEXT>
+{agent_system_prompt}
+</BACKGROUND_CONTEXT>
+
+{extraction_instructions}"""
+    else:
+        return extraction_instructions
+
+
+def _get_type_description(target_type: Type[Any]) -> str:
+    """Create a simple, human-readable description of a type."""
+    from typing import get_args, get_origin
+    from pydantic import BaseModel
+    
+    origin = get_origin(target_type)
+    
+    if origin is list:
+        args = get_args(target_type)
+        if args:
+            inner_type = args[0]
+            if hasattr(inner_type, '__name__'):
+                inner_type_name = inner_type.__name__
+            else:
+                inner_type_name = str(inner_type)
+            return f"a JSON array of {inner_type_name} values"
+        return "a JSON array"
+    elif origin is tuple:
+        args = get_args(target_type)
+        if args:
+            type_names = [getattr(t, '__name__', str(t)) for t in args]
+            return f"a JSON array with exactly {len(args)} elements: [{', '.join(type_names)}]"
+        return "a JSON array (tuple)"
+    elif origin is set:
+        args = get_args(target_type)
+        if args:
+            inner_type = args[0]
+            inner_type_name = getattr(inner_type, '__name__', str(inner_type))
+            return f"a JSON array of unique {inner_type_name} values"
+        return "a JSON array of unique values"
+    elif origin is dict:
+        args = get_args(target_type)
+        if args and len(args) >= 2:
+            key_type = getattr(args[0], '__name__', str(args[0]))
+            value_type = getattr(args[1], '__name__', str(args[1]))
+            return f"a JSON object with {key_type} keys and {value_type} values"
+        return "a JSON object"
+    elif hasattr(target_type, '__mro__') and BaseModel in target_type.__mro__:
+        return f"a JSON object matching the '{target_type.__name__}' model structure"
+    else:
+        # Primitives and other types
+        type_name = getattr(target_type, '__name__', str(target_type))
+        if type_name == 'str':
+            return "a JSON string value"
+        elif type_name == 'int':
+            return "a JSON integer value"
+        elif type_name == 'float':
+            return "a JSON number value"
+        elif type_name == 'bool':
+            return "a JSON boolean value (true or false)"
+        else:
+            return f"a JSON value of type '{type_name}'"
+
+
 def _to_source_node(raw: Any) -> SourceNode:
     """
     Convert an item coming from pydantic-ai (dict or BaseModel) to
@@ -726,45 +841,73 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
 
         Creates a temporary agent with the target type as output schema.
         """
+        logger.info(
+            f"Generating structured response for target_type='{getattr(target_type, '__name__', str(target_type))}'"
+        )
+        
         try:
             # Build model settings with overrides
-            model_settings = {}
+            model_settings = _prepare_pydantic_ai_model_settings(self.config)
             if temperature is not None:
                 model_settings["temperature"] = temperature
             if max_tokens is not None:
                 model_settings["max_tokens"] = max_tokens
 
+            # Resolve tools
+            effective_tools = list(self.config.tools or [])
+            if tools:
+                # Convert string/CoreTool to PydanticAI tools
+                from opencontractserver.llms.api import _resolve_tools
+                resolved_core_tools = _resolve_tools(tools)
+                pydantic_tools = PydanticAIToolFactory.create_tools(resolved_core_tools)
+                effective_tools.extend(pydantic_tools)
+
+            # Generate the specialized system prompt for extraction
+            # Only use custom system_prompt if explicitly provided
+            if system_prompt:
+                final_system_prompt = system_prompt
+            else:
+                final_system_prompt = _get_structured_extraction_prompt(
+                    prompt, 
+                    target_type, 
+                    self.config.system_prompt
+                )
+
             # Create a temporary agent with structured output
-            temp_agent = PydanticAIAgent(
+            structured_agent = PydanticAIAgent(
                 model=model or self.config.model_name,
                 result_type=target_type,
-                system_prompt=system_prompt or self.config.system_prompt or "",
-                model_settings=model_settings if model_settings else None,
+                system_prompt=final_system_prompt,
+                model_settings=model_settings,
             )
+            
+            # Add tools to the agent
+            if effective_tools:
+                for tool in effective_tools:
+                    if hasattr(tool, '__name__'):
+                        tool_name = tool.__name__
+                    else:
+                        tool_name = str(tool)
+                    structured_agent._function_tools[tool_name] = tool
 
-            # Convert tools if provided
-            if tools:
-                tool_factory = PydanticAIToolFactory()
-                for tool in tools:
-                    if callable(tool):
-                        # Convert CoreTool or callable to PydanticAI tool
-                        pydantic_tool = tool_factory.create_tool(tool)
-                        if pydantic_tool:
-                            temp_agent._function_tools[
-                                getattr(tool, "__name__", str(tool))
-                            ] = pydantic_tool
-
-            # Run the agent
-            run_result = await temp_agent.run(
-                prompt,
+            # Run the agent with the user's prompt
+            # The system prompt already contains all the context and instructions
+            run_result = await structured_agent.run(
+                prompt,  # Pass the actual prompt, not empty string
                 deps=self.agent_deps,
                 **kwargs
             )
 
             # Extract the structured result
             return run_result.data
+            
         except Exception as e:
-            logger.error(f"Error in _structured_response_raw: {e}")
+            logger.warning(
+                f"Pydantic-AI failed to generate a valid structured response: {e}"
+            )
+            # Log the problematic response if available
+            if hasattr(e, 'body') and e.body:
+                logger.warning(f"Problematic LLM response body: {e.body}")
             return None
 
     async def resume_with_approval(

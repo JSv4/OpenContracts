@@ -1,27 +1,62 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
-      document analysis and interpretation. Your primary goal is to answer questions
-      accurately based on document ''Test Doc'' (ID: 1).\n\nThis document is described
-      as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou have access to a
-      comprehensive set of tools for document analysis:\n\n1. **Vector Search**: A
-      sophisticated semantic search engine that finds text passages similar to your
-      queries.\n2. **Document Summary Access**: Tools to load and analyze the document''s
-      markdown summary, including:\n   - Loading full or truncated summary content\n   -
-      Calculating token lengths for context management\n3. **Notes Analysis**: Tools
-      to retrieve and examine notes attached to this document:\n   - Listing all notes
-      with metadata\n   - Accessing specific note content\n   - Calculating note token
-      lengths\n\n**Important**: Always check what tools are available to you, as additional
-      specialized tools may be provided dynamically beyond the core set described
-      above. Use the appropriate tools to gather information before answering.\n\n**Guidelines:**\n-
-      Prioritize information retrieved directly from the document using these tools\n-
-      We intentionally did not give you the entire document initially. \n  Try doing
-      some vector search to get more information initially and then iteratively \n  identifying
-      which parts of the document to review.  \n- Do not rely solely on the summary
-      or your general knowledge\n- Use multiple tools when necessary for comprehensive
-      answers\n- Present your findings in clear, helpful markdown format\n- Avoid
-      repeating instructions or disclaimers in your responses"},{"role":"user","content":"Extract
-      all available metadata from this document"}],"model":"gpt-4o-mini","stream":false,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
+      an expert assistant for document analysis and interpretation. Your primary goal
+      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
+      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
+      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
+      Search**: A sophisticated semantic search engine that finds text passages similar
+      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
+      the document''s markdown summary, including:\n   - Loading full or truncated
+      summary content\n   - Calculating token lengths for context management\n3. **Notes
+      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
+      Listing all notes with metadata\n   - Accessing specific note content\n   -
+      Calculating note token lengths\n\n**Important**: Always check what tools are
+      available to you, as additional specialized tools may be provided dynamically
+      beyond the core set described above. Use the appropriate tools to gather information
+      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
+      from the document using these tools\n- We intentionally did not give you the
+      entire document initially. \n  Try doing some vector search to get more information
+      initially and then iteratively \n  identifying which parts of the document to
+      review.  \n- Do not rely solely on the summary or your general knowledge\n-
+      Use multiple tools when necessary for comprehensive answers\n- Present your
+      findings in clear, helpful markdown format\n- Avoid repeating instructions or
+      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
+      data extraction system with advanced verification capabilities.\n\nEXTRACTION
+      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
+      requested in: \"Extract all available metadata from this document\"\n3. VERIFY:
+      Before outputting, internally validate your extraction by:\n   - Cross-referencing
+      multiple sources if available\n   - Checking for logical consistency (dates
+      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
+      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
+      text actually appears in the source material\n   - For lists/collections: searching
+      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
+      data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
+      For dates, ensure they follow logical chronology\n- For names/entities, verify
+      exact spelling from the source\n\nYour response must be ONLY the extracted data
+      in the format of: a JSON object matching the ''DocumentMetadata'' model structure\n\nNo
+      explanations, no process description, no confidence scores - just the final
+      verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
+      {\n    \"title\": {\n      \"title\": \"Title\",\n      \"type\": \"string\"\n    },\n    \"author\":
+      {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
+      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Author\"\n    },\n    \"date_created\":
+      {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
+      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Date
+      Created\"\n    },\n    \"version\": {\n      \"anyOf\": [\n        {\n          \"type\":
+      \"string\"\n        },\n        {\n          \"type\": \"null\"\n        }\n      ],\n      \"default\":
+      null,\n      \"title\": \"Version\"\n    },\n    \"department\": {\n      \"anyOf\":
+      [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
+      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Department\"\n    },\n    \"classification\":
+      {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
+      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Classification\"\n    },\n    \"tags\":
+      {\n      \"anyOf\": [\n        {\n          \"items\": {\n            \"type\":
+      \"string\"\n          },\n          \"type\": \"array\"\n        },\n        {\n          \"type\":
+      \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Tags\"\n    }\n  },\n  \"required\":
+      [\n    \"title\"\n  ],\n  \"title\": \"DocumentMetadata\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Extract
+      all available metadata from this document"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"properties":{"title":{"type":"string"},"author":{"anyOf":[{"type":"string"},{"type":"null"}]},"date_created":{"anyOf":[{"type":"string"},{"type":"null"}]},"version":{"anyOf":[{"type":"string"},{"type":"null"}]},"department":{"anyOf":[{"type":"string"},{"type":"null"}]},"classification":{"anyOf":[{"type":"string"},{"type":"null"}]},"tags":{"anyOf":[{"items":{"type":"string"},"type":"array"},{"type":"null"}]}},"required":["title"],"type":"object"}}}]}'
     headers:
       accept:
@@ -31,12 +66,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2405'
+      - '5565'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=0Ea.z3BX0CBrZL.OXDWb0vOLxvzEIYMFHnyDW6SEKqE-1751723136-1.0.1.1-TEZLlYj3eKhq9dnY9LqQP7gLLGHpmOc4KbGeBKioVsQPCz6gw7ruRvQjHYh8kNwVyrZnQC6vtEQMglU9LrMCWTpBZPkw2ZaYT5RWOS1Ni0g;
-        _cfuvid=I4jOcaxaCbrHDNI7susMuLCMENIMfuZ5cqfibCXYs84-1751723136772-0.0.1.1-604800000
+      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
+        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -64,19 +99,20 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA8xUXW+bMBR951dY9zlMhLB8vbXrJq3bFLXToqxThVxzIe6MbdkmTRrlv0+GBki6
-        SX0cD8jc43PvuV/sA0KAZzAnwNbUsVKL8FJvfz6triS7i+zd4+z2g2S76mJxi9FqO4WBZ6iHR2Tu
-        yHrHVKkFOq5kAzOD1KH3Opy8H07i0Wg6roFSZSg8rdAuTFRYcsnDOIqTMJqEwxfnbK04Qwtz8isg
-        hJB9/fY6ZYZbmJNocLSUaC0tEObtJULAKOEtQK3l1lHpYNCBTEmH0kuXlRA9wCklUkaF6AI3z753
-        7opFhUhv4uXy8yq5/BaNZ2p6lX/5+GNmLpabXrzG9U7XgvJKsrZIPby1z8+CEQKSlg2XSypSg7YS
-        7oxPCFBTVCVK57XD/gAn+KH3dRi8KbO1EdtEf39a4HNyg9Z8uo4Xm/j66/+cWXu+73XVYF5ZKl63
-        m0qpHPXa6n7fB2f1AaEKbdSDPaN6udyuU4PU1nn1Byc4CqklQHUym6CNKrVLnfqNddAkGjZeoduf
-        Dh3NXkCnHBU9VvIy/qf+0gwd5fXwtvvCKFtj1lG7vaFVxlUPCHq5v1bzN99N/lwWb3HfAYyhdpil
-        2mDG2WnG3TWD/vfyr2ttlWvBYNFsOMPUcTS+Hxnm9DhKYHfWYZnmXBZotOH15kOu03FM4xGdDjGH
-        4BD8AQAA//8DABgVp3EHBQAA
+        H4sIAAAAAAAAAwAAAP//jFTBbtswDL37KwSe4yF20ibLsR2GbcC6DV3RdXNhsDLtqJUlQaKLdUH+
+        fbBTx07aAcshsPn4yKdHyptICFAFrATINbKsnY7P3J+bpT2bf7i6+Vl8/vEx5esv8zK9v7DNDGHS
+        MuzdPUnuWW+krZ0mVtbsYOkJmdqqyeIkWcySaTrvgNoWpFta5Tie27hWRsXpNJ3H00WcLJ/Za6sk
+        BViJX5EQQmy6/1anKeg3rMR00kdqCgErgtU+SQjwVrcRwBBUYDQMkwGU1jCZVrpptB4BbK3OJWo9
+        NN79NqPnwSzUOr+4lqU9uX8krvjb/P3l1+LTw7u3y5NRv13pJ9cJKhsj9yaN8H18ddRMCDBY77jK
+        oM49hUbzEV8IQF81NRlutcMmA1asKYOVyODq8lx8b19FImJxvkbH5EWSwURkgA2vrc96N0QGBTLl
+        z/Mbxx/JB2XNQSo59Ny2HUelbn0vlUQ+ymesQv++hYMjbKPXnm9H4/FUNgH1y7mhMZa7Xt3gbp+R
+        7X5HtK2ct3fhiNo6qsI694Shs368AVEvpJMAzcGSgfO2dpyzfaCuaTJdzHZlYbgJA3zag2wZ9YiW
+        zE4nr1TMC2JU3R7uV1+iXFMxcIcrgE2h7AiIRqd/Kee12jsHlKn+p/wASEmOqcidp0LJwyMPaZ7a
+        L8W/0vY+d4IhkH9UknJW5NuJFFRiv+8QngJTnZfKVOSdV90lhtLlpymmM1wmVEK0jf4CAAD//wMA
+        Ie6yVNIEAAA=
     headers:
       CF-RAY:
-      - 95a753da7bb62e71-DFW
+      - 95a80e537f9db650-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -84,7 +120,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:49:47 GMT
+      - Sat, 05 Jul 2025 15:57:05 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -100,13 +136,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '755'
+      - '1076'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '759'
+      - '1080'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -114,13 +150,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999584'
+      - '3998863'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 6ms
+      - 17ms
       x-request-id:
-      - req_7caaf18c5fb75635386b4472518e3cf1
+      - req_ec51687fb7e57ebd319d3aa6f4b61ffb
     status:
       code: 200
       message: OK

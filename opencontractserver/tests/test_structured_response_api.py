@@ -6,7 +6,10 @@ extracting typed data from documents and corpuses without conversation persisten
 """
 
 import asyncio
+import json
+import logging
 from datetime import datetime
+from pathlib import Path
 from typing import List, Optional
 
 import pytest
@@ -18,6 +21,69 @@ from opencontractserver.llms import agents
 from opencontractserver.llms.agents.core_agents import CoreAgent
 from opencontractserver.llms.types import AgentFramework
 from opencontractserver.tests.base import BaseFixtureTestCase
+
+
+# Set up logging for structured data results
+def setup_structured_data_logger():
+    """Set up logger to capture structured data results."""
+    log_file = Path(__file__).parent / "structured_data_results.log"
+    
+    # Create a logger specifically for structured data
+    logger = logging.getLogger("structured_data_results")
+    logger.setLevel(logging.INFO)
+    
+    # Remove existing handlers to avoid duplicates
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+    
+    # Create file handler
+    file_handler = logging.FileHandler(log_file, mode='w')
+    file_handler.setLevel(logging.INFO)
+    
+    # Create formatter
+    formatter = logging.Formatter('%(message)s')
+    file_handler.setFormatter(formatter)
+    
+    logger.addHandler(file_handler)
+    return logger
+
+# Initialize logger
+structured_data_logger = setup_structured_data_logger()
+
+
+def log_structured_result(test_name: str, result: any):
+    """Log structured result as JSON for inspection."""
+    try:
+        # Convert result to JSON-serializable format
+        if result is None:
+            json_result = None
+        elif hasattr(result, 'model_dump'):
+            # Pydantic model
+            json_result = result.model_dump()
+        elif isinstance(result, list):
+            # List of items (potentially Pydantic models)
+            json_result = []
+            for item in result:
+                if hasattr(item, 'model_dump'):
+                    json_result.append(item.model_dump())
+                else:
+                    json_result.append(item)
+        else:
+            # Basic types (str, int, float, bool)
+            json_result = result
+        
+        # Log the result
+        structured_data_logger.info(f"\n{'='*50}")
+        structured_data_logger.info(f"TEST: {test_name}")
+        structured_data_logger.info(f"{'='*50}")
+        structured_data_logger.info(f"RESULT TYPE: {type(result).__name__}")
+        structured_data_logger.info(f"RESULT DATA:")
+        structured_data_logger.info(json.dumps(json_result, indent=2, ensure_ascii=False))
+        structured_data_logger.info("")
+        
+    except Exception as e:
+        structured_data_logger.error(f"Error logging result for {test_name}: {str(e)}")
+        structured_data_logger.info(f"Raw result: {repr(result)}")
 
 
 # Pydantic models for structured extraction tests
@@ -99,6 +165,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             str
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_extract_string_from_document", result)
+        
         assert isinstance(result, str) or result is None
         if result:
             assert len(result) > 0
@@ -119,6 +188,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             "How many pages does this document have? Return just the number.",
             int
         )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_extract_integer_from_document", result)
         
         assert isinstance(result, int) or result is None
         if result:
@@ -141,6 +213,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             float
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_extract_float_from_document", result)
+        
         assert isinstance(result, float) or result is None
     
     @vcr.use_cassette(
@@ -160,6 +235,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             bool
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_extract_boolean_from_document", result)
+        
         assert isinstance(result, bool) or result is None
     
     @vcr.use_cassette(
@@ -178,6 +256,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             "List the main sections or headings in this document.",
             List[str]
         )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_extract_list_from_document", result)
         
         assert isinstance(result, list) or result is None
         if result:
@@ -201,6 +282,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             "Extract all important dates from this contract.",
             ContractDates
         )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_extract_contract_dates", result)
         
         assert isinstance(result, ContractDates) or result is None
         if result:
@@ -230,6 +314,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             List[ContractParty]
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_extract_contract_parties", result)
+        
         assert isinstance(result, list) or result is None
         if result:
             for party in result:
@@ -254,6 +341,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             ContractAnalysis
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_extract_comprehensive_analysis", result)
+        
         assert isinstance(result, ContractAnalysis) or result is None
         if result:
             assert result.title
@@ -276,6 +366,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             "Extract all payment terms from this document.",
             List[PaymentTerm]
         )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_extract_payment_terms", result)
         
         assert isinstance(result, list) or result is None
         if result and len(result) > 0:
@@ -306,6 +399,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             CorpusInsight
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_extract_corpus_insights", result)
+        
         assert isinstance(result, CorpusInsight) or result is None
         if result:
             assert result.total_documents >= 0
@@ -335,6 +431,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             CorpusStats
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_extract_corpus_statistics", result)
+        
         assert isinstance(result, CorpusStats) or result is None
         if result:
             assert result.document_count >= 0
@@ -361,7 +460,114 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             system_prompt="You are a title extraction specialist. Be very precise."
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_with_custom_system_prompt", result)
+        
         assert isinstance(result, str) or result is None
+    
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_verification_behavior_with_default_prompt.yaml",
+        filter_headers=["authorization"],
+    )
+    async def test_verification_behavior_with_default_prompt(self):
+        """Test that the default prompt includes verification behavior."""
+        agent = await agents.for_document(
+            document=self.doc.id,
+            corpus=self.corpus.id,
+            framework=AgentFramework.PYDANTIC_AI,
+            user_id=self.user.id)
+        
+        # Test with a complex extraction that benefits from verification
+        class VerifiableData(BaseModel):
+            total_amount: float = Field(description="Total monetary amount")
+            currency: str = Field(description="Currency code (e.g., USD, EUR)")
+            is_signed: bool = Field(description="Whether the document is signed")
+            parties_count: int = Field(description="Number of parties involved")
+        
+        result = await agent.structured_response(
+            "Extract financial and signature information from this document",
+            VerifiableData
+        )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_verification_behavior_with_default_prompt", result)
+        
+        assert isinstance(result, VerifiableData) or result is None
+        if result:
+            # Verification should ensure reasonable values
+            assert result.total_amount >= 0  # No negative amounts
+            assert len(result.currency) == 3  # Valid currency code
+            assert result.parties_count > 0  # At least one party
+    
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_custom_prompt_overrides_default.yaml",
+        filter_headers=["authorization"],
+    )
+    async def test_custom_prompt_overrides_default(self):
+        """Test that custom system prompt completely overrides the default extraction prompt."""
+        agent = await agents.for_document(
+            document=self.doc.id,
+            corpus=self.corpus.id,
+            framework=AgentFramework.PYDANTIC_AI,
+            user_id=self.user.id)
+        
+        # Use a deliberately bad custom prompt that would produce poor results
+        # This demonstrates that it truly overrides the default
+        bad_prompt = "You are a creative writer. Make up interesting data regardless of what's in the document."
+        
+        class TestData(BaseModel):
+            document_type: str
+            accuracy_statement: str = Field(description="A statement about accuracy")
+        
+        result = await agent.structured_response(
+            "What type of document is this and how accurate is your assessment?",
+            TestData,
+            system_prompt=bad_prompt
+        )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_custom_prompt_overrides_default", result)
+        
+        # The result should still parse but might contain creative/inaccurate data
+        # due to our bad prompt overriding the careful extraction prompt
+        assert isinstance(result, TestData) or result is None
+    
+    @vcr.use_cassette(
+        "fixtures/vcr_cassettes/structured_data_tests/test_verification_prevents_placeholder_values.yaml",
+        filter_headers=["authorization"],
+    )
+    async def test_verification_prevents_placeholder_values(self):
+        """Test that verification prevents placeholder values like 'N/A' unless actually in document."""
+        agent = await agents.for_document(
+            document=self.doc.id,
+            corpus=self.corpus.id,
+            framework=AgentFramework.PYDANTIC_AI,
+            user_id=self.user.id)
+        
+        class ContactInfo(BaseModel):
+            phone: Optional[str] = Field(None, description="Phone number if present")
+            email: Optional[str] = Field(None, description="Email if present") 
+            fax: Optional[str] = Field(None, description="Fax number if present")
+        
+        result = await agent.structured_response(
+            "Extract all contact information from this document",
+            ContactInfo
+        )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_verification_prevents_placeholder_values", result)
+        
+        assert isinstance(result, ContactInfo) or result is None
+        if result:
+            # Verification should return None rather than placeholder values
+            # unless they actually appear in the document
+            if result.phone:
+                assert result.phone != "N/A"
+                assert result.phone != "Not Available"
+            if result.email:
+                assert "@" in result.email  # Basic email validation
+            if result.fax:
+                assert result.fax != "N/A"
     
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/structured_data_tests/test_with_custom_temperature.yaml",
@@ -381,6 +587,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             bool,
             temperature=0.1
         )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_with_custom_temperature", result)
         
         assert isinstance(result, bool) or result is None
     
@@ -402,6 +611,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             model="gpt-3.5-turbo"
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_with_custom_model", result)
+        
         assert isinstance(result, str) or result is None
     
     @vcr.use_cassette(
@@ -421,6 +633,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             str,
             max_tokens=50
         )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_with_max_tokens_limit", result)
         
         assert isinstance(result, str) or result is None
         if result:
@@ -448,6 +663,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             model="invalid-model-name-12345"
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_returns_none_on_llm_error", result)
+        
         assert result is None
     
     @vcr.use_cassette(
@@ -472,6 +690,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             temperature=2.0  # High temperature for unpredictable output
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_returns_none_on_parsing_error", result)
+        
         # Should return None rather than raising an exception
         assert result is None or isinstance(result, ComplexModel)
     
@@ -494,6 +715,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             str
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_pydantic_ai_structured_response", result)
+        
         assert isinstance(result, str) or result is None
     
     @vcr.use_cassette(
@@ -512,6 +736,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             "What type of document is this?",
             str
         )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_llama_index_structured_response_returns_none", result)
         
         # LlamaIndex implementation should return None
         assert result is None
@@ -540,6 +767,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             "Extract the document title",
             str
         )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_no_conversation_persistence", result)
         
         # Check conversation hasn't changed
         final_messages = await agent.get_conversation_messages()
@@ -570,6 +800,12 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             "What was my previous question?",  # This shouldn't know
             str
         )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_multiple_extractions_independent", {
+            "first_result": result1,
+            "second_result": result2
+        })
         
         assert result1 is None or isinstance(result1, str)
         assert result2 is None or isinstance(result2, str)
@@ -611,6 +847,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             Company
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_nested_pydantic_models", result)
+        
         assert isinstance(result, Company) or result is None
         if result:
             assert isinstance(result.address, Address)
@@ -640,6 +879,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             "Extract all available metadata from this document",
             DocumentMetadata
         )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_optional_fields_handling", result)
         
         assert isinstance(result, DocumentMetadata) or result is None
         if result:
@@ -676,6 +918,9 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             DocClassification
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_enum_extraction", result)
+        
         assert isinstance(result, DocClassification) or result is None
         if result:
             assert isinstance(result.doc_type, DocumentType)
@@ -702,6 +947,14 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         ]
         
         results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Log the structured result for inspection
+        log_structured_result("test_concurrent_extractions", {
+            "title_extraction": results[0],
+            "page_count": results[1],
+            "is_contract": results[2],
+            "main_topics": results[3]
+        })
         
         # All should complete without exceptions
         for result in results:
@@ -730,6 +983,9 @@ class TestStructuredResponseAPIConvenience(BaseFixtureTestCase):
             user_id=self.user.id
         )
         
+        # Log the structured result for inspection
+        log_structured_result("test_get_structured_response_from_document", result)
+        
         assert isinstance(result, str) or result is None
     
     @vcr.use_cassette(
@@ -751,6 +1007,9 @@ class TestStructuredResponseAPIConvenience(BaseFixtureTestCase):
             framework=AgentFramework.PYDANTIC_AI,
             user_id=self.user.id
         )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_get_structured_response_from_corpus", result)
         
         assert isinstance(result, int) or result is None
         if result:
@@ -781,5 +1040,8 @@ class TestStructuredResponseAPIConvenience(BaseFixtureTestCase):
             max_tokens=100,
             embedder="text-embedding-ada-002"
         )
+        
+        # Log the structured result for inspection
+        log_structured_result("test_convenience_with_all_overrides", result)
         
         assert isinstance(result, SimpleResult) or result is None 

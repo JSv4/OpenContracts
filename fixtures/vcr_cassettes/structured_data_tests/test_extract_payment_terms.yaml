@@ -1,27 +1,59 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
-      document analysis and interpretation. Your primary goal is to answer questions
-      accurately based on document ''Test Doc'' (ID: 1).\n\nThis document is described
-      as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou have access to a
-      comprehensive set of tools for document analysis:\n\n1. **Vector Search**: A
-      sophisticated semantic search engine that finds text passages similar to your
-      queries.\n2. **Document Summary Access**: Tools to load and analyze the document''s
-      markdown summary, including:\n   - Loading full or truncated summary content\n   -
-      Calculating token lengths for context management\n3. **Notes Analysis**: Tools
-      to retrieve and examine notes attached to this document:\n   - Listing all notes
-      with metadata\n   - Accessing specific note content\n   - Calculating note token
-      lengths\n\n**Important**: Always check what tools are available to you, as additional
-      specialized tools may be provided dynamically beyond the core set described
-      above. Use the appropriate tools to gather information before answering.\n\n**Guidelines:**\n-
-      Prioritize information retrieved directly from the document using these tools\n-
-      We intentionally did not give you the entire document initially. \n  Try doing
-      some vector search to get more information initially and then iteratively \n  identifying
-      which parts of the document to review.  \n- Do not rely solely on the summary
-      or your general knowledge\n- Use multiple tools when necessary for comprehensive
-      answers\n- Present your findings in clear, helpful markdown format\n- Avoid
-      repeating instructions or disclaimers in your responses"},{"role":"user","content":"Extract
-      all payment terms from this document."}],"model":"gpt-4o-mini","stream":false,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
+      an expert assistant for document analysis and interpretation. Your primary goal
+      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
+      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
+      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
+      Search**: A sophisticated semantic search engine that finds text passages similar
+      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
+      the document''s markdown summary, including:\n   - Loading full or truncated
+      summary content\n   - Calculating token lengths for context management\n3. **Notes
+      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
+      Listing all notes with metadata\n   - Accessing specific note content\n   -
+      Calculating note token lengths\n\n**Important**: Always check what tools are
+      available to you, as additional specialized tools may be provided dynamically
+      beyond the core set described above. Use the appropriate tools to gather information
+      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
+      from the document using these tools\n- We intentionally did not give you the
+      entire document initially. \n  Try doing some vector search to get more information
+      initially and then iteratively \n  identifying which parts of the document to
+      review.  \n- Do not rely solely on the summary or your general knowledge\n-
+      Use multiple tools when necessary for comprehensive answers\n- Present your
+      findings in clear, helpful markdown format\n- Avoid repeating instructions or
+      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
+      data extraction system with advanced verification capabilities.\n\nEXTRACTION
+      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
+      requested in: \"Extract all payment terms from this document.\"\n3. VERIFY:
+      Before outputting, internally validate your extraction by:\n   - Cross-referencing
+      multiple sources if available\n   - Checking for logical consistency (dates
+      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
+      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
+      text actually appears in the source material\n   - For lists/collections: searching
+      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
+      data is not found after thorough search, return null/empty rather than guessing\n-
+      If multiple conflicting values exist, choose the most authoritative/recent\n-
+      For numeric values, verify they make sense in context (e.g., page count > 0)\n-
+      For dates, ensure they follow logical chronology\n- For names/entities, verify
+      exact spelling from the source\n\nYour response must be ONLY the extracted data
+      in the format of: a JSON array of PaymentTerm values\n\nNo explanations, no
+      process description, no confidence scores - just the final verified JSON.\n\nJSON
+      Schema for your response:\n```json\n{\n  \"$defs\": {\n    \"PaymentTerm\":
+      {\n      \"description\": \"A payment term in a contract.\",\n      \"properties\":
+      {\n        \"amount\": {\n          \"description\": \"Payment amount\",\n          \"title\":
+      \"Amount\",\n          \"type\": \"number\"\n        },\n        \"currency\":
+      {\n          \"default\": \"USD\",\n          \"description\": \"Currency code\",\n          \"title\":
+      \"Currency\",\n          \"type\": \"string\"\n        },\n        \"due_date\":
+      {\n          \"anyOf\": [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\":
+      \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\":
+      \"When payment is due\",\n          \"title\": \"Due Date\"\n        },\n        \"condition\":
+      {\n          \"description\": \"Payment condition or trigger\",\n          \"title\":
+      \"Condition\",\n          \"type\": \"string\"\n        }\n      },\n      \"required\":
+      [\n        \"amount\",\n        \"condition\"\n      ],\n      \"title\": \"PaymentTerm\",\n      \"type\":
+      \"object\"\n    }\n  },\n  \"items\": {\n    \"$ref\": \"#/$defs/PaymentTerm\"\n  },\n  \"type\":
+      \"array\"\n}\n```"},{"role":"user","content":"Extract all payment terms from
+      this document."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"items":{"$ref":"#/$defs/PaymentTerm"},"type":"array"}},"required":["response"],"type":"object","$defs":{"PaymentTerm":{"description":"A
       payment term in a contract.","properties":{"amount":{"description":"Payment
       amount","type":"number"},"currency":{"description":"Currency code","type":"string"},"due_date":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"When
@@ -34,12 +66,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2524'
+      - '5222'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=0Ea.z3BX0CBrZL.OXDWb0vOLxvzEIYMFHnyDW6SEKqE-1751723136-1.0.1.1-TEZLlYj3eKhq9dnY9LqQP7gLLGHpmOc4KbGeBKioVsQPCz6gw7ruRvQjHYh8kNwVyrZnQC6vtEQMglU9LrMCWTpBZPkw2ZaYT5RWOS1Ni0g;
-        _cfuvid=I4jOcaxaCbrHDNI7susMuLCMENIMfuZ5cqfibCXYs84-1751723136772-0.0.1.1-604800000
+      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
+        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -67,19 +99,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNRb9owEH7Pr7DumUw4wGB5a/vSDa3TtG6a1KLIOJdg6tiW7axUiP8+
-        OYEkUCYtD5Hl776777477yNCQOSQEuAb5nllZHxrdr+/84m7LX583dL8frmkX8bzxxndLWavMAoM
-        vd4i9yfWB64rI9ELrVqYW2QeQ1Y6n9F5Mkk+JQ1Q6RxloJXGx1MdV0KJOBkn03g8j+niyN5owdFB
-        Sp4iQgjZN/+gU+W4g5SMR6ebCp1jJULaBRECVstwA8w54TxTHkY9yLXyqIJ0VUs5ALzWMuNMyr5w
-        ++0H594sJmV2s+S4eP28/fXy7aHAm4d6/Xgnfm7rQb029ZtpBBW14p1JA7y7Ty+KEQKKVS1XKCYz
-        i66W/oJPCDBb1hUqH7TD/hksOqOVw2dIn1YHOAs/RNfOq4EVFovaMfneI6aU9ixIbUxaHZFDNw+p
-        S2P12l1Qg3rhNplF5po2h25HJyGNBKjPBgrG6sr4zOsXbIpOKW2zQr90PUonR9Brz+SAlUxHV/Jl
-        OXommol3S8YZ32DeU/tlY3Uu9ACIBr2/V3Mtd9u/UOX/pO8BztF4zDNjMRf8vOM+zGJ4k/8K61xu
-        BIND+0dwzLxAG+aRY8FOmwXuzXmsskKoEq2xonkuUJjsY8KSCVtQLCA6RH8BAAD//wMA1+nPKDwE
-        AAA=
+        H4sIAAAAAAAAA4xTTW/bMAy9+1cIPMdDnM/GtwVr0EOHYeiGYG0Dg5VpR6ssaZIcrAvy3wfbie2k
+        GTAfDEGPj3x8pPYBYyBSiBnwLXpeGBkuzZ+1SbPv39a3uFz9EjPz+OXxh8tWH++zHQwqhn75Sdyf
+        WB+4LowkL7RqYG4JPVVZo/k0mo+Hi8m4BgqdkqxoufHhRIeFUCIcDUeTcDgPo5sje6sFJwcxewoY
+        Y2xf/yudKqXfELPh4HRTkHOYE8RtEGNgtaxuAJ0TzqPyMOhArpUnVUlXpZQ9wGstE45SdoWbb987
+        d2ahlMnX8SxT9/Pd3Xr1aT69xc8PD6/5nVz26jWp30wtKCsVb03q4e19fFGMMVBYNFyhUCaWXCn9
+        BZ8xQJuXBSlfaYf9M1hyRitHzxA/bQ5wFn4Irp03PSssZaVD+d4jVEp7rKTWJm2OyKGdh9S5sfrF
+        XVAr9cJtE0vo6jb7bgcnIbUEKM8GCsbqwvjE61eqiy6msyYrdEvXodH4CHrtUfZYs8XgSr4kJY+i
+        nni7ZBz5ltKO2i0blqnQPSDo9f5ezbXcTf9C5f+TvgM4J+MpTYylVPDzjrswS9Wb/FdY63ItGBzZ
+        neCUeEG2mkdKGZ42C9yb81QkmVA5WWNF/VwgM8lshKMx3kSUQXAI/gIAAP//AwCPXQQTPAQAAA==
     headers:
       CF-RAY:
-      - 95a75192be3ceabd-DFW
+      - 95a80c5b0cde2fec-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -87,7 +118,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:48:13 GMT
+      - Sat, 05 Jul 2025 15:55:43 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -103,13 +134,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '369'
+      - '431'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '373'
+      - '435'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -117,13 +148,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999586'
+      - '3998961'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 6ms
+      - 15ms
       x-request-id:
-      - req_c860ec7273e02a8ae896e9a0086a804b
+      - req_59f57d6ae8dde27f3bfe6073b22cbecc
     status:
       code: 200
       message: OK

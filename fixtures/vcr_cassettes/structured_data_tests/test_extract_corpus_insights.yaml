@@ -427,7 +427,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:47:05 GMT
+      - Sat, 05 Jul 2025 15:54:36 GMT
       Server:
       - gunicorn
     status:
@@ -861,7 +861,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:47:05 GMT
+      - Sat, 05 Jul 2025 15:54:36 GMT
       Server:
       - gunicorn
     status:
@@ -1295,24 +1295,24 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:47:06 GMT
+      - Sat, 05 Jul 2025 15:54:35 GMT
       Server:
       - gunicorn
     status:
       code: 200
       message: OK
 - request:
-    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are an expert assistant
-      designed to analyze and answer queries about a collection of documents called
-      'Test Corpus'.\\n\\n**Available Tools:**\\nYou have access to comprehensive
-      tools for analyzing documents in this corpus:\\n\\n1. **Document-Specific Tools**
-      \u2013 available *per* document via the `ask_document` helper:\\n   - Vector
-      search inside that document\\n   - Summary & note access\\n   - Annotation manipulation
-      (subject to approval)\\n   - Token length calculations for context management\\n2.
-      **Corpus-Level Coordination Tools** \u2013 orchestrate multi-document reasoning:\\n
-      \  - `list_documents()`\u2003\u2192 returns `[{document_id, title, description}]`
-      for discovery\\n   - `ask_document(document_id, question)`\u2003\u2192 runs
-      a **document agent** and yields a rich object:\\n       \u2022 `answer`\u2003str
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"<BACKGROUND_CONTEXT>\\nYou
+      are an expert assistant designed to analyze and answer queries about a collection
+      of documents called 'Test Corpus'.\\n\\n**Available Tools:**\\nYou have access
+      to comprehensive tools for analyzing documents in this corpus:\\n\\n1. **Document-Specific
+      Tools** \u2013 available *per* document via the `ask_document` helper:\\n   -
+      Vector search inside that document\\n   - Summary & note access\\n   - Annotation
+      manipulation (subject to approval)\\n   - Token length calculations for context
+      management\\n2. **Corpus-Level Coordination Tools** \u2013 orchestrate multi-document
+      reasoning:\\n   - `list_documents()`\u2003\u2192 returns `[{document_id, title,
+      description}]` for discovery\\n   - `ask_document(document_id, question)`\u2003\u2192
+      runs a **document agent** and yields a rich object:\\n       \u2022 `answer`\u2003str
       \u2013 the assistant's final answer\\n       \u2022 `sources`\u2003list \u2013
       flattened citation objects (annotation_id, page, rawText \u2026)\\n       \u2022
       `timeline`\u2003list \u2013 detailed reasoning & tool calls from the sub-agent
@@ -1326,8 +1326,46 @@ interactions:
       across multiple documents for comprehensive answers\\n- Cite specific documents
       and sources when presenting information\\n- Prefer using `sources` returned
       by `ask_document` or vector search to justify claims\\n- Present your findings
-      in clear, well-structured markdown format, using footnote-style citations\"},{\"role\":\"user\",\"content\":\"Analyze
-      this corpus and provide high-level insights.\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"tool_choice\":\"required\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"final_result\",\"description\":\"High-level
+      in clear, well-structured markdown format, using footnote-style citations\\n</BACKGROUND_CONTEXT>\\n\\nYou
+      are a highly-intelligent data extraction system with advanced verification capabilities.\\n\\nEXTRACTION
+      METHODOLOGY:\\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\\n2. EXTRACT: Identify the specific data
+      requested in: \\\"Analyze this corpus and provide high-level insights.\\\"\\n3.
+      VERIFY: Before outputting, internally validate your extraction by:\\n   - Cross-referencing
+      multiple sources if available\\n   - Checking for logical consistency (dates
+      in order, numbers reasonable, etc.)\\n   - Ensuring no placeholder or generic
+      values (like \\\"N/A\\\" unless actually in the document)\\n   - Confirming
+      extracted text actually appears in the source material\\n   - For lists/collections:
+      searching again with different queries to ensure completeness\\n\\nCRITICAL
+      RULES:\\n- If data is not found after thorough search, return null/empty rather
+      than guessing\\n- If multiple conflicting values exist, choose the most authoritative/recent\\n-
+      For numeric values, verify they make sense in context (e.g., page count > 0)\\n-
+      For dates, ensure they follow logical chronology\\n- For names/entities, verify
+      exact spelling from the source\\n\\nYour response must be ONLY the extracted
+      data in the format of: a JSON object matching the 'CorpusInsight' model structure\\n\\nNo
+      explanations, no process description, no confidence scores - just the final
+      verified JSON.\\n\\nJSON Schema for your response:\\n```json\\n{\\n  \\\"description\\\":
+      \\\"High-level insights from analyzing a corpus of documents.\\\",\\n  \\\"properties\\\":
+      {\\n    \\\"total_documents\\\": {\\n      \\\"description\\\": \\\"Number of
+      documents analyzed\\\",\\n      \\\"title\\\": \\\"Total Documents\\\",\\n      \\\"type\\\":
+      \\\"integer\\\"\\n    },\\n    \\\"common_themes\\\": {\\n      \\\"description\\\":
+      \\\"Common themes across documents\\\",\\n      \\\"items\\\": {\\n        \\\"type\\\":
+      \\\"string\\\"\\n      },\\n      \\\"title\\\": \\\"Common Themes\\\",\\n      \\\"type\\\":
+      \\\"array\\\"\\n    },\\n    \\\"total_contract_value\\\": {\\n      \\\"anyOf\\\":
+      [\\n        {\\n          \\\"type\\\": \\\"number\\\"\\n        },\\n        {\\n
+      \         \\\"type\\\": \\\"null\\\"\\n        }\\n      ],\\n      \\\"default\\\":
+      null,\\n      \\\"description\\\": \\\"Sum of all contract values\\\",\\n      \\\"title\\\":
+      \\\"Total Contract Value\\\"\\n    },\\n    \\\"most_frequent_parties\\\": {\\n
+      \     \\\"description\\\": \\\"Most frequently appearing parties\\\",\\n      \\\"items\\\":
+      {\\n        \\\"type\\\": \\\"string\\\"\\n      },\\n      \\\"title\\\": \\\"Most
+      Frequent Parties\\\",\\n      \\\"type\\\": \\\"array\\\"\\n    },\\n    \\\"key_risks\\\":
+      {\\n      \\\"description\\\": \\\"Key risks identified across all documents\\\",\\n
+      \     \\\"items\\\": {\\n        \\\"type\\\": \\\"string\\\"\\n      },\\n
+      \     \\\"title\\\": \\\"Key Risks\\\",\\n      \\\"type\\\": \\\"array\\\"\\n
+      \   }\\n  },\\n  \\\"required\\\": [\\n    \\\"total_documents\\\",\\n    \\\"common_themes\\\",\\n
+      \   \\\"most_frequent_parties\\\",\\n    \\\"key_risks\\\"\\n  ],\\n  \\\"title\\\":
+      \\\"CorpusInsight\\\",\\n  \\\"type\\\": \\\"object\\\"\\n}\\n```\"},{\"role\":\"user\",\"content\":\"Analyze
+      this corpus and provide high-level insights.\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"temperature\":0.7,\"tool_choice\":\"required\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"final_result\",\"description\":\"High-level
       insights from analyzing a corpus of documents.\",\"parameters\":{\"properties\":{\"total_documents\":{\"description\":\"Number
       of documents analyzed\",\"type\":\"integer\"},\"common_themes\":{\"description\":\"Common
       themes across documents\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"total_contract_value\":{\"anyOf\":[{\"type\":\"number\"},{\"type\":\"null\"}],\"description\":\"Sum
@@ -1342,12 +1380,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2867'
+      - '5832'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=0Ea.z3BX0CBrZL.OXDWb0vOLxvzEIYMFHnyDW6SEKqE-1751723136-1.0.1.1-TEZLlYj3eKhq9dnY9LqQP7gLLGHpmOc4KbGeBKioVsQPCz6gw7ruRvQjHYh8kNwVyrZnQC6vtEQMglU9LrMCWTpBZPkw2ZaYT5RWOS1Ni0g;
-        _cfuvid=I4jOcaxaCbrHDNI7susMuLCMENIMfuZ5cqfibCXYs84-1751723136772-0.0.1.1-604800000
+      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
+        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -1375,19 +1413,22 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFTbbtNAEH33V6z2OUGJkzRR3iiFCkQFAkEpTbWarsfJtntjd1wSovw7
-        WjuJ3QsSfrBWc+bMnD0z9jZjjKuCzxmXKyBpvO6f+vXlx2jwkn7+fq3XF+Hs7P3nqzdXBCeDP7yX
-        GO72DiUdWK+kM14jKWcbWAYEwlR1OJ0Mp/kozyc1YFyBOtGWnvpj1zfKqn4+yMf9wbQ/nO3ZK6ck
-        Rj5n1xljjG3rd9JpC1zzORv0DhGDMcIS+fyYxBgPTqcIhxhVJLDEey0onSW0SbqttO4A5JwWErRu
-        GzfPtnNuzQKtxVR+u/2q3duL76NPP84/vDtd36k7/eW8068pvfG1oLKy8mhSBz/G50+aMcYtmIar
-        LGgRMFaanvAZ4xCWlUFLSTvfLjg5Ai0KJ5voojaNLbh0xjgraIUG6+j1TQo36cmaAJLEA+gKFweL
-        2IIbF0mUAX9VaEl4CKS69HvciKDi/T6044/k7bKXzjcd6wOWVQT9fCZgrSNI1tRDudkju+P8tVv6
-        4G7jE2pyS8WVCAixtrU73ewgpJbAq0cLxH1wxpMgd4910/Fs1lTl7ZK36GSyBxsH2/h41HuhniiQ
-        QNUbdlxqCXKFRUttlxuqQrkOkHXu/lzNS7Wb+yu7/J/yLSAlesJC+ICFko9v3KYFTP+Af6UdXa4F
-        84jhQUkUpDCkeRRYwmGTedxEQiNKZZcYfFD158lLL05yyEcwG2LJs132FwAA//8DAG3JOuusBAAA
+        H4sIAAAAAAAAAwAAAP//jFRLb9swDL7nVwg6J0OcNsvj1nbDdtnQ0x5oAoGRaVuNXpXobmmQ/17I
+        TmL3MWA+GBY/fuRHivR+wBhXOV8yLisgabweXfunH/cPT6HI57Mp1bOvBn/fbOvFZfYrL/kwMdzm
+        HiWdWB+kM14jKWdbWAYEwhQ1m02z2cV4Pps2gHE56kQrPY0u3cgoq0aT8eRyNJ6NsvmRXTklMfIl
+        uxswxti+eSedNse/fMnGw5PFYIxQIl+enRjjwelk4RCjigSW+LADpbOENkm3tdY9gJzTQoLWXeL2
+        2fe+u2aB1kIuqqvd40P9+ZP6/u168fOivC2m7suil68NvfONoKK28tykHn62L18lY4xbMC1XWdAi
+        YKw1veIzxiGUtUFLSTvfrzg5Ai1yJ1vrii/ZdMhWXDpjnBVUocHGerdqOhJAEjNgocREWPHkHFTc
+        MogRY+yMSYeVCjRzG61KSLpjCzVToMBKbM8eAlkMsVKe5TsLRsm44usEtfpOmcUj6BqTnGw6bp7k
+        Y1wkUQR8qNGSSMHUWfMtBNqxqzZPe7juH26Oeba4E6mME886O+pksj+KKhawrHW/jq5EZSPBRmlF
+        u1OJreIaNMtV9DXhkeQxFC6YJuwx4/rAX9zTYfDe97o3gwGLOoJ+O5xgraNWYypkfUQO50XQrvTB
+        beIraqpFxUoEhNjMV3/MBychjQRev9gk7oMzngS5LTZJs2y8aMPybt07eDE/gu3VdrTJeDZ8J6LI
+        kUA1y3bebwmywrzjdnsOda5cDxj0qn8r573YbQeULf8nfAdIiZ4wFz5gruTLkju3gOl3+C+3c58b
+        wTxieFQSBSkM6UZyLOC01DzuIqERhbIlBh9U86fihRcfJzC5gHmGBR8cBs8AAAD//wMAli2Oh7cF
+        AAA=
     headers:
       CF-RAY:
-      - 95a74fedce60476a-DFW
+      - 95a80ab649e6f0b9-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1395,7 +1436,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:47:06 GMT
+      - Sat, 05 Jul 2025 15:54:37 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -1411,13 +1452,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1021'
+      - '1406'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1025'
+      - '1412'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -1425,13 +1466,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999520'
+      - '3998834'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 7ms
+      - 17ms
       x-request-id:
-      - req_cd34fcb3fbf0d0e5003147dff2cdd026
+      - req_74907bdd04a4ea2422eb79719b1f4b08
     status:
       code: 200
       message: OK

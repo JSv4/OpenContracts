@@ -1,27 +1,45 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are an expert assistant for
-      document analysis and interpretation. Your primary goal is to answer questions
-      accurately based on document ''Test Doc'' (ID: 1).\n\nThis document is described
-      as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou have access to a
-      comprehensive set of tools for document analysis:\n\n1. **Vector Search**: A
-      sophisticated semantic search engine that finds text passages similar to your
-      queries.\n2. **Document Summary Access**: Tools to load and analyze the document''s
-      markdown summary, including:\n   - Loading full or truncated summary content\n   -
-      Calculating token lengths for context management\n3. **Notes Analysis**: Tools
-      to retrieve and examine notes attached to this document:\n   - Listing all notes
-      with metadata\n   - Accessing specific note content\n   - Calculating note token
-      lengths\n\n**Important**: Always check what tools are available to you, as additional
-      specialized tools may be provided dynamically beyond the core set described
-      above. Use the appropriate tools to gather information before answering.\n\n**Guidelines:**\n-
-      Prioritize information retrieved directly from the document using these tools\n-
-      We intentionally did not give you the entire document initially. \n  Try doing
-      some vector search to get more information initially and then iteratively \n  identifying
-      which parts of the document to review.  \n- Do not rely solely on the summary
-      or your general knowledge\n- Use multiple tools when necessary for comprehensive
-      answers\n- Present your findings in clear, helpful markdown format\n- Avoid
-      repeating instructions or disclaimers in your responses"},{"role":"user","content":"What
-      type of document is this?"}],"model":"gpt-4o-mini","stream":false}'
+    body: '{"messages":[{"role":"system","content":"<BACKGROUND_CONTEXT>\nYou are
+      an expert assistant for document analysis and interpretation. Your primary goal
+      is to answer questions accurately based on document ''Test Doc'' (ID: 1).\n\nThis
+      document is described as:\n`USC Title 1 - Chapter 1`\n\n**Available Tools:**\nYou
+      have access to a comprehensive set of tools for document analysis:\n\n1. **Vector
+      Search**: A sophisticated semantic search engine that finds text passages similar
+      to your queries.\n2. **Document Summary Access**: Tools to load and analyze
+      the document''s markdown summary, including:\n   - Loading full or truncated
+      summary content\n   - Calculating token lengths for context management\n3. **Notes
+      Analysis**: Tools to retrieve and examine notes attached to this document:\n   -
+      Listing all notes with metadata\n   - Accessing specific note content\n   -
+      Calculating note token lengths\n\n**Important**: Always check what tools are
+      available to you, as additional specialized tools may be provided dynamically
+      beyond the core set described above. Use the appropriate tools to gather information
+      before answering.\n\n**Guidelines:**\n- Prioritize information retrieved directly
+      from the document using these tools\n- We intentionally did not give you the
+      entire document initially. \n  Try doing some vector search to get more information
+      initially and then iteratively \n  identifying which parts of the document to
+      review.  \n- Do not rely solely on the summary or your general knowledge\n-
+      Use multiple tools when necessary for comprehensive answers\n- Present your
+      findings in clear, helpful markdown format\n- Avoid repeating instructions or
+      disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
+      data extraction system with advanced verification capabilities.\n\nEXTRACTION
+      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
+      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
+      requested in: \"What type of document is this?\"\n3. VERIFY: Before outputting,
+      internally validate your extraction by:\n   - Cross-referencing multiple sources
+      if available\n   - Checking for logical consistency (dates in order, numbers
+      reasonable, etc.)\n   - Ensuring no placeholder or generic values (like \"N/A\"
+      unless actually in the document)\n   - Confirming extracted text actually appears
+      in the source material\n   - For lists/collections: searching again with different
+      queries to ensure completeness\n\nCRITICAL RULES:\n- If data is not found after
+      thorough search, return null/empty rather than guessing\n- If multiple conflicting
+      values exist, choose the most authoritative/recent\n- For numeric values, verify
+      they make sense in context (e.g., page count > 0)\n- For dates, ensure they
+      follow logical chronology\n- For names/entities, verify exact spelling from
+      the source\n\nYour response must be ONLY the extracted data in the format of:
+      a JSON string value\n\nNo explanations, no process description, no confidence
+      scores - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"type\":
+      \"string\"\n}\n```"},{"role":"user","content":"What type of document is this?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
     headers:
       accept:
       - application/json
@@ -30,12 +48,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1767'
+      - '3262'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=0Ea.z3BX0CBrZL.OXDWb0vOLxvzEIYMFHnyDW6SEKqE-1751723136-1.0.1.1-TEZLlYj3eKhq9dnY9LqQP7gLLGHpmOc4KbGeBKioVsQPCz6gw7ruRvQjHYh8kNwVyrZnQC6vtEQMglU9LrMCWTpBZPkw2ZaYT5RWOS1Ni0g;
-        _cfuvid=I4jOcaxaCbrHDNI7susMuLCMENIMfuZ5cqfibCXYs84-1751723136772-0.0.1.1-604800000
+      - __cf_bm=Hf6wgv84rXjOBoSF0y49n0s2Osk4KqTauf7.8eO3HgE-1751730779-1.0.1.1-7elWekVej0r9oC.8A6xu3R_N5tNGkttvHUY6jYDh4sVDWW7qGCItFjaaO2VGqe4vti4M2X73xBmvgMzdRIAgpQ7n23xXYDmisI2QezsMMbI;
+        _cfuvid=32cVjIITQZg_7BX04PlqduLY468ZwsOvr98R9xlRbT4-1751730779674-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -63,20 +81,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNNTxsxEL3nV4x8aqVslGxCE3IkVSV6qdRAqSgomtizuwavbdmzhBTx
-        3ytvQjYUKvWy0s6b9/zm66kHILQScxCyQpa1N9mZf7w+/Tpb/tDXZ9/Ov5/o4ZeTq7Je//yc352L
-        fmK49R1JfmENpKu9IdbO7mAZCJmS6mh6Mprm4/HpaQvUTpFJtNJzNnFZra3O8mE+yYbTbDTbsyun
-        JUUxh189AICn9pt8WkWPYg7D/kukphixJDE/JAGI4EyKCIxRR0bLot+B0lkm21q/qAiUk01NloE1
-        G1JwIy6XC7hIPzCCDBYVeqYAoxsBOgKCoRLNEa1CToDHwOAK4Irg0momBUtGpggLpwg+XC4XHweQ
-        Xkz6rVJqmjaYupaYnkKNNmkWpCiggcjIDbuwBYMb0PateB9cKNHq36Rgvd3VAGgVyJ3twaGSkmzS
-        NFtQhCbCRnPV6u0B8ME96KidjYBr13ALGtzEVg9VmlTkgKwfKCVLipHiwdVgOdi3pghY08aF+8Fx
-        2wMVTcQ0etsYcwSgtY7bJrQDv90jz4cRG1f64NbxL6ookqFqFQijs2mckZ0XLfrcA7htV6l5tR3C
-        B1d7XrG7p/a5cT7b6Ylugzt0OtmD7BhNF58M8/47eitFjNrEo2UUEmVFqqN2m4uN0u4I6B1V/dbN
-        e9q7yrUt/0e+A6Qkz6RWPpDS8nXFXVqgdOD/Sjt0uTUsIoUHLWnFmkKahKICG7M7OxG3kaleFdqW
-        FHzQu9sr/OpTjvkYZyMqRO+59wcAAP//AwAtpXHPiQQAAA==
+        H4sIAAAAAAAAAwAAAP//jJLLbtswEEX3+gpi1lZhyUkUa9e0ReFNN0XRFlUgMeRIpkORLDkKmhr+
+        90KPWHIfQDda8Mwdzb0zx4gxUBJyBmLPSbROx3fu59cPu9fZXfjyPdsp/h7lzr57/Hxo3m5TWPUK
+        +3BAQS+qV8K2TiMpa0YsPHLCvmuSXSfZJllvtgNorUTdyxpH8ZWNW2VUnK7Tq3idxcntpN5bJTBA
+        zr5FjDF2HL79nEbiD8jZevXy0mIIvEHIz0WMgbe6fwEeggrEDcFqhsIaQjOMXlXVIVhTmGNhGCuA
+        nh0WkLMCAnllmgJWI3jiupvIp4/sjZVYQGFOhamqatnbY90F3vszndYLwI2xxPt8Blf3EzmdfWjb
+        OG8fwm9SqJVRYV965MGafuZA1sFATxFj90Ne3UUE4LxtHZVkH3H43U26HfvBvKaZpskEyRLXC9X1
+        lPJlv1IicaXDInEQXOxRztJ5PbyTyi5AtHD95zR/6z06V6b5n/YzEAIdoSydR6nEpeO5zGN/xf8q
+        O6c8DAwB/ZMSWJJC329CYs07Pd4WhOdA2Ja1Mg1659V4YLUrb1KebvhtgjVEp+gXAAAA//8DAHeD
+        8CluAwAA
     headers:
       CF-RAY:
-      - 95a7542ed9ea6c7f-DFW
+      - 95a80eb1eb05f065-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -84,7 +100,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 13:50:01 GMT
+      - Sat, 05 Jul 2025 15:57:19 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -100,13 +116,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '1456'
+      - '515'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1463'
+      - '518'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -114,13 +130,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999588'
+      - '3999229'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 6ms
+      - 11ms
       x-request-id:
-      - req_fddc53e0b0c15198536876568663d941
+      - req_6610d1e6dbd6685cfedc4882d9f9ee46
     status:
       code: 200
       message: OK

@@ -4,7 +4,7 @@ import logging
 from abc import ABC
 from collections.abc import AsyncGenerator, Awaitable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Literal, Optional, Protocol, Union, runtime_checkable
+from typing import Any, Callable, Literal, Optional, Protocol, Type, TypeVar, Union, runtime_checkable
 
 from django.conf import settings
 from django.utils import timezone
@@ -22,6 +22,9 @@ from opencontractserver.llms.vector_stores.core_vector_stores import (
 from opencontractserver.utils.embeddings import aget_embedder
 
 logger = logging.getLogger(__name__)
+
+# Generic type variable for structured responses
+T = TypeVar("T")
 
 
 class MessageState:
@@ -352,6 +355,41 @@ class CoreAgent(Protocol):
         ...
 
     # ------------------------------------------------------------------
+    # Structured response extraction
+    # ------------------------------------------------------------------
+
+    async def structured_response(
+        self,
+        prompt: str,
+        target_type: Type[T],
+        *,
+        system_prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **kwargs
+    ) -> Optional[T]:
+        """Performs a one-shot query to extract structured data matching the target_type.
+
+        This method is non-conversational and does not store messages.
+
+        Args:
+            prompt: The natural language prompt for data extraction.
+            target_type: The Python type for the desired output (e.g., int, str, list[str], MyPydanticModel).
+            system_prompt: An optional, single-use system prompt to guide the LLM.
+            model: An optional, single-use LLM model override.
+            tools: An optional, single-use list of tools for this call.
+            temperature: An optional, single-use temperature setting.
+            max_tokens: An optional, single-use max_tokens setting.
+            **kwargs: Additional framework-specific options.
+
+        Returns:
+            An instance of target_type if successful, otherwise None.
+        """
+        ...
+
+    # ------------------------------------------------------------------
     # Human-in-the-loop: approve / resume
     # ------------------------------------------------------------------
 
@@ -492,12 +530,65 @@ class CoreAgentBase(ABC):
         async for chunk in self.stream(message, **kwargs):
             yield chunk
 
+
     async def store_message(self, content: str, msg_type: str = "LLM") -> int:
         """Legacy method - delegates to appropriate store method."""
         if msg_type.upper() == "USER":
             return await self.store_user_message(content)
         else:
             return await self.store_llm_message(content)
+
+    # ------------------------------------------------------------------
+    # Structured response extraction
+    # ------------------------------------------------------------------
+
+    async def structured_response(
+        self,
+        prompt: str,
+        target_type: Type[T],
+        *,
+        system_prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **kwargs
+    ) -> Optional[T]:
+        """Framework-agnostic wrapper for structured response extraction.
+
+        This method provides ephemeral, one-shot data extraction without
+        persisting any messages to the conversation history.
+
+        Args:
+            prompt: The natural language prompt for data extraction.
+            target_type: The Python type for the desired output.
+            system_prompt: Optional system prompt override.
+            model: Optional model override.
+            tools: Optional tools override.
+            temperature: Optional temperature override.
+            max_tokens: Optional max_tokens override.
+            **kwargs: Additional framework-specific options.
+
+        Returns:
+            An instance of target_type if successful, otherwise None.
+        """
+        try:
+            # Call the framework-specific implementation
+            result = await self._structured_response_raw(
+                prompt=prompt,
+                target_type=target_type,
+                system_prompt=system_prompt,
+                model=model,
+                tools=tools,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **kwargs
+            )
+            return result
+        except Exception as e:
+            # Log the error but don't raise - return None per spec
+            print(f"Error in structured_response: {e}")
+            return None
 
     # ------------------------------------------------------------------
     # Framework-specific hooks – **must** be implemented by adapters.
@@ -519,6 +610,38 @@ class CoreAgentBase(ABC):
         """Yield framework-native events (ThoughtEvent / ContentEvent / …).
 
         The base wrapper will take care of DB side-effects.
+        """
+        raise NotImplementedError
+
+    async def _structured_response_raw(
+        self,
+        prompt: str,
+        target_type: Type[T],
+        *,
+        system_prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **kwargs
+    ) -> Optional[T]:  # pragma: no cover – abstract
+        """Framework-specific structured response extraction.
+
+        This method must be implemented by framework adapters to perform
+        the actual structured extraction using their native capabilities.
+
+        Args:
+            prompt: The natural language prompt for data extraction.
+            target_type: The Python type for the desired output.
+            system_prompt: Optional system prompt override.
+            model: Optional model override.
+            tools: Optional tools override.
+            temperature: Optional temperature override.
+            max_tokens: Optional max_tokens override.
+            **kwargs: Additional framework-specific options.
+
+        Returns:
+            An instance of target_type if successful, otherwise None.
         """
         raise NotImplementedError
 

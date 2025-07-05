@@ -4,7 +4,7 @@ import dataclasses
 import json
 import logging
 from collections.abc import AsyncGenerator
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Type, TypeVar, Union
 from uuid import uuid4
 
 from pydantic_ai.agent import Agent as PydanticAIAgent
@@ -85,6 +85,9 @@ from .timeline_schema import TimelineEntry
 from .timeline_utils import TimelineBuilder
 
 logger = logging.getLogger(__name__)
+
+# Type variable for structured responses
+T = TypeVar("T")
 
 
 def _to_source_node(raw: Any) -> SourceNode:
@@ -706,6 +709,63 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                     "framework": "pydantic_ai",
                 },
             )
+
+    async def _structured_response_raw(
+        self,
+        prompt: str,
+        target_type: Type[T],
+        *,
+        system_prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **kwargs
+    ) -> Optional[T]:
+        """PydanticAI implementation of structured response extraction.
+
+        Creates a temporary agent with the target type as output schema.
+        """
+        try:
+            # Build model settings with overrides
+            model_settings = {}
+            if temperature is not None:
+                model_settings["temperature"] = temperature
+            if max_tokens is not None:
+                model_settings["max_tokens"] = max_tokens
+
+            # Create a temporary agent with structured output
+            temp_agent = PydanticAIAgent(
+                model=model or self.config.model_name,
+                result_type=target_type,
+                system_prompt=system_prompt or self.config.system_prompt or "",
+                model_settings=model_settings if model_settings else None,
+            )
+
+            # Convert tools if provided
+            if tools:
+                tool_factory = PydanticAIToolFactory()
+                for tool in tools:
+                    if callable(tool):
+                        # Convert CoreTool or callable to PydanticAI tool
+                        pydantic_tool = tool_factory.create_tool(tool)
+                        if pydantic_tool:
+                            temp_agent._function_tools[
+                                getattr(tool, "__name__", str(tool))
+                            ] = pydantic_tool
+
+            # Run the agent
+            run_result = await temp_agent.run(
+                prompt,
+                deps=self.agent_deps,
+                **kwargs
+            )
+
+            # Extract the structured result
+            return run_result.data
+        except Exception as e:
+            logger.error(f"Error in _structured_response_raw: {e}")
+            return None
 
     async def resume_with_approval(
         self,

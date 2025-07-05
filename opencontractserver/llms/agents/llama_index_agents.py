@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import AsyncGenerator
-from typing import Any, Optional, Union
+from typing import Any, Callable, Optional, Type, TypeVar, Union
 
 import nest_asyncio
 from llama_cloud import MessageRole
@@ -53,6 +53,9 @@ from opencontractserver.llms.vector_stores.llama_index_vector_stores import (
 nest_asyncio.apply()
 
 logger = logging.getLogger(__name__)
+
+# Type variable for structured responses
+T = TypeVar("T")
 
 
 def _convert_llama_index_node_to_source_node(
@@ -327,6 +330,28 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
             metadata={"framework": "llama_index"},
         )
 
+    async def _structured_response_raw(
+        self,
+        prompt: str,
+        target_type: Type[T],
+        *,
+        system_prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **kwargs
+    ) -> Optional[T]:
+        """LlamaIndex placeholder for structured response extraction.
+
+        Currently not implemented - returns None.
+        """
+        logger.warning(
+            "Structured response extraction not yet implemented for LlamaIndex agents. "
+            "Returning None."
+        )
+        return None
+
 
 class LlamaIndexCorpusAgent(CoreAgentBase):
     """LlamaIndex implementation of corpus agent using core functionality."""
@@ -518,6 +543,28 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
             is_complete=True,
             metadata={"framework": "llama_index"},
         )
+
+    async def _structured_response_raw(
+        self,
+        prompt: str,
+        target_type: Type[T],
+        *,
+        system_prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        **kwargs
+    ) -> Optional[T]:
+        """LlamaIndex placeholder for structured response extraction.
+
+        Currently not implemented - returns None.
+        """
+        logger.warning(
+            "Structured response extraction not yet implemented for LlamaIndex agents. "
+            "Returning None."
+        )
+        return None
 
 
 # Backward compatibility - maintain the original OpenContractDbAgent interface

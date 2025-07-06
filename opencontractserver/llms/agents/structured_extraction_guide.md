@@ -51,7 +51,7 @@ from opencontractserver.llms import agents
 class ContractParties(BaseModel):
     buyer: str = Field(description="Name of the buyer")
     seller: str = Field(description="Name of the seller")
-    
+
 agent = await agents.for_document(document=123, corpus=456)
 
 # Simple extraction
@@ -74,7 +74,7 @@ class PaymentTerms(BaseModel):
     amount: float = Field(description="Payment amount")
     currency: str = Field(description="Currency code")
     due_date: str = Field(description="Payment due date")
-    
+
 # Provide additional context to guide extraction
 result = await agent.structured_response(
     "Extract payment terms from Section 4",
@@ -103,7 +103,7 @@ class ProjectSchedule(BaseModel):
     start_date: str = Field(description="Project start date")
     end_date: str = Field(description="Project end date")
     milestones: List[Milestone] = Field(description="Project milestones")
-    
+
 schedule = await agent.structured_response(
     "Extract the complete project schedule including all milestones",
     ProjectSchedule,
@@ -198,13 +198,13 @@ try:
         "Extract insurance requirements",
         InsuranceRequirements
     )
-    
+
     if result is None:
         # Information not found - this is normal
         log.info("No insurance requirements in document")
     else:
         process_insurance_data(result)
-        
+
 except Exception as e:
     # Actual error in extraction process
     log.error(f"Extraction failed: {e}")
@@ -256,4 +256,4 @@ The enhanced structured extraction system provides:
 - **Transparency**: Clear search and verification process
 - **Flexibility**: Supports simple to complex data schemas
 - **Safety**: Returns None rather than guessing
-- **Context Support**: Extra guidance via `extra_context` parameter 
+- **Context Support**: Extra guidance via `extra_context` parameter

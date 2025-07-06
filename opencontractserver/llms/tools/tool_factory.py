@@ -26,7 +26,7 @@ class CoreTool:
     ``requires_approval`` marks tools that must be explicitly approved by a
     human before execution.  Framework adapters **must** honour this flag
     and implement a veto-gate when set to ``True``.
-    
+
     ``requires_corpus`` marks tools that need a corpus_id to function.
     These tools will be filtered out when creating agents for documents
     that are not in any corpus.
@@ -76,7 +76,10 @@ class CoreTool:
         )
 
         return cls(
-            function=func, metadata=metadata, requires_approval=requires_approval, requires_corpus=requires_corpus
+            function=func,
+            metadata=metadata,
+            requires_approval=requires_approval,
+            requires_corpus=requires_corpus,
         )
 
     @property

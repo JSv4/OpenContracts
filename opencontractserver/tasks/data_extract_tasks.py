@@ -101,10 +101,10 @@ async def doc_extract_query_task(
     No more marvin. No more flakiness. Just pure extraction power! 🚀
     """
     import traceback
-    from typing import Type, get_args, get_origin
+    from typing import get_origin
 
     from django.utils import timezone
-    from pydantic import BaseModel, create_model
+    from pydantic import BaseModel
 
     from opencontractserver.llms import agents
     from opencontractserver.llms.types import AgentFramework
@@ -161,27 +161,26 @@ async def doc_extract_query_task(
 
     # Initialize datacell to None to avoid UnboundLocalError
     datacell = None
-    
+
     try:
         # 1. Setup
         datacell = await sync_get_datacell(cell_id)
         await sync_mark_started(datacell)
-        
+
         document = datacell.document
         column = datacell.column
-        
+
         # Get corpus ID (None if document isn't in a corpus - that's OK now!)
         corpus_id = await sync_get_corpus_id(document)
 
         # 2. Parse the output type
         output_type = parse_model_or_primitive(column.output_type)
-        
+
         # Handle list types
         if column.extract_is_list:
             # If it's not already a List type, wrap it
             if get_origin(output_type) is not list:
-                from typing import List
-                output_type = List[output_type]
+                output_type = list[output_type]
 
         # 3. Build the prompt
         prompt = column.query if column.query else column.match_text
@@ -194,41 +193,49 @@ async def doc_extract_query_task(
             "Extract ONLY the requested information from the document.",
             "If the information is not present, return None rather than guessing.",
         ]
-        
+
         # Add must_contain_text constraint
         if column.must_contain_text:
             system_prompt_parts.append(
                 f"\nIMPORTANT: Only extract data from sections that contain the text: '{column.must_contain_text}'"
             )
-        
-        # Add limit_to_label constraint  
+
+        # Add limit_to_label constraint
         if column.limit_to_label:
             system_prompt_parts.append(
                 f"\nIMPORTANT: Only extract data from annotations labeled as: '{column.limit_to_label}'"
             )
-            
+
         system_prompt = "\n".join(system_prompt_parts)
 
         # 5. Build extra context from instructions and match_text
         extra_context_parts = []
-        
+
         if column.instructions:
-            extra_context_parts.append(f"Additional instructions: {column.instructions}")
-            
+            extra_context_parts.append(
+                f"Additional instructions: {column.instructions}"
+            )
+
         # Handle special match_text with ||| separator (few-shot examples)
         if column.match_text and "|||" in column.match_text:
-            examples = [ex.strip() for ex in column.match_text.split("|||") if ex.strip()]
+            examples = [
+                ex.strip() for ex in column.match_text.split("|||") if ex.strip()
+            ]
             if examples:
                 extra_context_parts.append(
-                    "Here are example values to guide your extraction:\n" + 
-                    "\n".join(f"- {ex}" for ex in examples)
+                    "Here are example values to guide your extraction:\n"
+                    + "\n".join(f"- {ex}" for ex in examples)
                 )
-        
-        extra_context = "\n\n".join(extra_context_parts) if extra_context_parts else None
+
+        extra_context = (
+            "\n\n".join(extra_context_parts) if extra_context_parts else None
+        )
 
         # 6. EXTRACT! 🚀
-        logger.info(f"Extracting {output_type} from document {document.id} for column {column.name}")
-        
+        logger.info(
+            f"Extracting {output_type} from document {document.id} for column {column.name}"
+        )
+
         # Create a temporary agent and extract
         result = await agents.get_structured_response_from_document(
             document=document.id,
@@ -249,25 +256,27 @@ async def doc_extract_query_task(
             # Convert result to saveable format
             if isinstance(result, BaseModel):
                 data = {"data": result.model_dump()}
-            elif isinstance(result, list) and result and isinstance(result[0], BaseModel):
+            elif (
+                isinstance(result, list) and result and isinstance(result[0], BaseModel)
+            ):
                 data = {"data": [item.model_dump() for item in result]}
             else:
                 data = {"data": result}
-            
+
             await sync_mark_completed(datacell, data)
             logger.info(f"Successfully extracted data for cell {cell_id}")
-            
+
             # Note: The new API doesn't expose sources directly in structured_response
             # This is actually better - sources are for chat, not extraction!
-            
+
         else:
             # Extraction returned None
             await sync_mark_failed(
                 datacell,
                 "Failed to extract requested data from document",
-                "The extraction returned None - the requested information may not be present in the document."
+                "The extraction returned None - the requested information may not be present in the document.",
             )
-            
+
     except Exception as e:
         logger.exception(f"Error during extraction for cell {cell_id}: {e}")
         tb = traceback.format_exc()

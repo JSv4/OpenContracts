@@ -4,7 +4,7 @@ import dataclasses
 import json
 import logging
 from collections.abc import AsyncGenerator
-from typing import Any, Callable, Optional, Type, TypeVar, Union
+from typing import Any, Callable, Optional, TypeVar, Union
 from uuid import uuid4
 
 from pydantic_ai.agent import Agent as PydanticAIAgent
@@ -76,6 +76,7 @@ from opencontractserver.llms.tools.pydantic_ai_tools import (
     PydanticAIDependencies,
     PydanticAIToolFactory,
 )
+from opencontractserver.llms.tools.tool_factory import CoreTool
 from opencontractserver.llms.vector_stores.pydantic_ai_vector_stores import (
     PydanticAIAnnotationVectorStore,
 )
@@ -92,32 +93,23 @@ T = TypeVar("T")
 
 def _get_structured_extraction_prompt(
     prompt: str,
-    target_type: Type[T],
+    target_type: type[T],
     agent_system_prompt: Optional[str] = None,
-    extra_context: Optional[str] = None
+    extra_context: Optional[str] = None,
 ) -> str:
     """
     Generates a system prompt specifically for one-shot structured data extraction,
     with robust support for primitives, Pydantic models, and collections.
-    
+
     Args:
         prompt: The extraction request from the user
         target_type: The target type to extract data into
         agent_system_prompt: Optional base system prompt to incorporate
         extra_context: Optional additional context to include in the prompt
     """
-    from typing import get_args, get_origin
-    from pydantic import BaseModel, TypeAdapter
-    
-    # Use Pydantic's TypeAdapter to correctly generate a JSON schema for any type.
-    # This handles primitives, models, lists, tuples, etc., automatically.
-    type_adapter = TypeAdapter(target_type)
-    json_schema = type_adapter.json_schema()
-    
     # To make the prompt more human-readable and guide the LLM better,
     # we can provide a simplified text description of the target type.
     type_description = _get_type_description(target_type)
-    print(f"Type description: {type_description}")
 
     # Build extra context section if provided
     extra_context_section = ""
@@ -194,7 +186,7 @@ VERIFICATION RULES:
 - For relationships, both entities and the relationship must be explicitly stated
 
 OUTPUT RULES:
-- Return ONLY the extracted data in this exact format: 
+- Return ONLY the extracted data in this exact format:
 
 {type_description}
 
@@ -204,7 +196,7 @@ OUTPUT RULES:
 
 User has provided the following additional context (if blank, nothing provided):
 {extra_context_section}
-"""
+"""  # noqa: E501
 
     if agent_system_prompt:
         return f"""<BACKGROUND_CONTEXT>
@@ -216,14 +208,15 @@ User has provided the following additional context (if blank, nothing provided):
         return extraction_instructions
 
 
-def _get_type_description(target_type: Type[Any]) -> str:
+def _get_type_description(target_type: type[Any]) -> str:
     """Create a simple, human-readable description of a type."""
-    from typing import get_args, get_origin
-    from pydantic import BaseModel, TypeAdapter
     import json
-    
+    from typing import get_args, get_origin
+
+    from pydantic import BaseModel, TypeAdapter
+
     origin = get_origin(target_type)
-    
+
     # Handle iterables with recursive descriptions
     if origin is list or target_type is list:
         args = get_args(target_type)
@@ -231,7 +224,7 @@ def _get_type_description(target_type: Type[Any]) -> str:
             inner_desc = _get_type_description(args[0])
             return f"a JSON array where each element is {inner_desc}"
         return "a JSON array"
-    
+
     elif origin is tuple or target_type is tuple:
         args = get_args(target_type)
         if args:
@@ -242,16 +235,20 @@ def _get_type_description(target_type: Type[Any]) -> str:
                 element_descriptions = [_get_type_description(t) for t in args]
                 return f"a JSON array with exactly {len(args)} elements: [{', '.join(element_descriptions)}]"
         return "a JSON array (tuple)"
-    
+
     elif origin is set or target_type is set:
         args = get_args(target_type)
         if args:
             inner_desc = _get_type_description(args[0])
             return f"a JSON array of unique values where each element is {inner_desc}"
         return "a JSON array of unique values"
-    
+
     # For dicts and complex objects, use JSON schema
-    elif origin is dict or target_type is dict or (hasattr(target_type, '__mro__') and BaseModel in target_type.__mro__):
+    elif (
+        origin is dict
+        or target_type is dict
+        or (hasattr(target_type, "__mro__") and BaseModel in target_type.__mro__)
+    ):
         type_adapter = TypeAdapter(target_type)
         json_schema = type_adapter.json_schema()
         # Format the schema nicely
@@ -260,19 +257,19 @@ def _get_type_description(target_type: Type[Any]) -> str:
             return f"a JSON object matching this schema:\n{schema_str}"
         else:
             return f"a JSON object matching the '{target_type.__name__}' model with this schema:\n{schema_str}"
-    
+
     # Handle primitives with plain descriptions
     else:
-        type_name = getattr(target_type, '__name__', str(target_type))
-        if type_name == 'str':
+        type_name = getattr(target_type, "__name__", str(target_type))
+        if type_name == "str":
             return "a plain string value"
-        elif type_name == 'int':
+        elif type_name == "int":
             return "an integer value"
-        elif type_name == 'float':
+        elif type_name == "float":
             return "a numeric value"
-        elif type_name == 'bool':
+        elif type_name == "bool":
             return "a boolean value (true or false)"
-        elif type_name == 'NoneType' or target_type is type(None):
+        elif type_name == "NoneType" or target_type is type(None):
             return "null"
         else:
             # For any other complex type, use JSON schema
@@ -281,7 +278,7 @@ def _get_type_description(target_type: Type[Any]) -> str:
                 json_schema = type_adapter.json_schema()
                 schema_str = json.dumps(json_schema, indent=2)
                 return f"a value matching this JSON schema:\n{schema_str}"
-            except:
+            except Exception:
                 return f"a JSON value of type '{type_name}'"
 
 
@@ -908,7 +905,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
     async def _structured_response_raw(
         self,
         prompt: str,
-        target_type: Type[T],
+        target_type: type[T],
         *,
         system_prompt: Optional[str] = None,
         model: Optional[str] = None,
@@ -916,7 +913,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         extra_context: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> Optional[T]:
         """PydanticAI implementation of structured response extraction.
 
@@ -925,7 +922,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
         logger.info(
             f"Generating structured response for target_type='{getattr(target_type, '__name__', str(target_type))}'"
         )
-        
+
         try:
             # Build model settings with overrides
             model_settings = _prepare_pydantic_ai_model_settings(self.config)
@@ -939,6 +936,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
             if tools:
                 # Convert string/CoreTool to PydanticAI tools
                 from opencontractserver.llms.api import _resolve_tools
+
                 resolved_core_tools = _resolve_tools(tools)
                 pydantic_tools = PydanticAIToolFactory.create_tools(resolved_core_tools)
                 effective_tools.extend(pydantic_tools)
@@ -950,10 +948,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
             else:
                 # Use the explicit extra_context parameter (may be None)
                 final_system_prompt = _get_structured_extraction_prompt(
-                    prompt, 
-                    target_type, 
-                    self.config.system_prompt,
-                    extra_context
+                    prompt, target_type, self.config.system_prompt, extra_context
                 )
 
             # Create a temporary agent with structured output
@@ -963,11 +958,11 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
                 system_prompt=final_system_prompt,
                 model_settings=model_settings,
             )
-            
+
             # Add tools to the agent
             if effective_tools:
                 for tool in effective_tools:
-                    if hasattr(tool, '__name__'):
+                    if hasattr(tool, "__name__"):
                         tool_name = tool.__name__
                     else:
                         tool_name = str(tool)
@@ -978,18 +973,18 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
             run_result = await structured_agent.run(
                 prompt,  # Pass the actual prompt, not empty string
                 deps=self.agent_deps,
-                **kwargs
+                **kwargs,
             )
 
             # Extract the structured result
             return run_result.data
-            
+
         except Exception as e:
             logger.warning(
                 f"Pydantic-AI failed to generate a valid structured response: {e}"
             )
             # Log the problematic response if available
-            if hasattr(e, 'body') and e.body:
+            if hasattr(e, "body") and e.body:
                 logger.warning(f"Problematic LLM response body: {e.body}")
             return None
 

@@ -5,7 +5,7 @@ This module provides a simple interface for creating document or corpus agents.
 """
 
 import logging
-from typing import Any, Literal, Optional, Type, TypeVar, Union
+from typing import Any, Literal, Optional, TypeVar, Union
 
 from django.conf import settings
 
@@ -265,7 +265,7 @@ class AgentAPI:
         document: DocumentType,
         corpus: Optional[CorpusType],
         prompt: str,
-        target_type: Type[T],
+        target_type: type[T],
         *,
         framework: Optional[FrameworkType] = None,
         user_id: Optional[int] = None,
@@ -322,13 +322,13 @@ class AgentAPI:
 
             # Extract structured data using Pydantic
             from pydantic import BaseModel
-            
+
             class ContractTerms(BaseModel):
                 start_date: str
                 end_date: str
                 total_value: float
                 parties: list[str]
-            
+
             terms = await agents.get_structured_response_from_document(
                 document=doc,
                 corpus=corpus,
@@ -375,7 +375,7 @@ class AgentAPI:
     async def get_structured_response_from_corpus(
         corpus: CorpusType,
         prompt: str,
-        target_type: Type[T],
+        target_type: type[T],
         *,
         framework: Optional[FrameworkType] = None,
         user_id: Optional[int] = None,
@@ -422,13 +422,13 @@ class AgentAPI:
 
             # Extract a summary structure
             from pydantic import BaseModel
-            
+
             class CorpusSummary(BaseModel):
                 main_themes: list[str]
                 document_count: int
                 key_entities: list[str]
                 date_range: dict[str, str]
-            
+
             summary = await agents.get_structured_response_from_corpus(
                 corpus=corpus,
                 prompt="Provide a comprehensive summary of this corpus",

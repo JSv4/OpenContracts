@@ -32,23 +32,18 @@ class TestDocExtractQueryTask(TransactionTestCase):
 
     def setUp(self):
         """Set up test data."""
-        self.user = User.objects.create_user(
-            username="testuser", password="testpass"
-        )
-        
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+
         # Create corpus
         from opencontractserver.corpuses.models import Corpus
-        self.corpus = Corpus.objects.create(
-            title="Test Corpus",
-            creator=self.user
-        )
-        
-        # Create document  
+
+        self.corpus = Corpus.objects.create(title="Test Corpus", creator=self.user)
+
+        # Create document
         from opencontractserver.documents.models import Document
+
         self.doc = Document.objects.create(
-            title="Test Document",
-            creator=self.user,
-            file_type="text/plain"
+            title="Test Document", creator=self.user, file_type="text/plain"
         )
         self.corpus.documents.add(self.doc)
 
@@ -176,7 +171,7 @@ class TestDocExtractQueryTaskDirect(BaseFixtureTestCase):
 
         # Add documents (from BaseFixtureTestCase) to the Corpus (required for new agent API)
         self.corpus.documents.add(self.doc, self.doc2, self.doc3)
-        
+
         # Add documents to the Extract
         self.extract.documents.add(self.doc, self.doc2, self.doc3)
         self.extract.save()
@@ -197,7 +192,7 @@ class TestDocExtractQueryTaskDirect(BaseFixtureTestCase):
         logging.info("Starting test_doc_extract_query_task_directly.")
 
         for doc in self.extract.documents.all():
-            
+
             cell = Datacell.objects.create(
                 extract=self.extract,
                 column=self.column1,
@@ -223,20 +218,20 @@ class TestDocExtractQueryTaskDirect(BaseFixtureTestCase):
                     cell.data,
                     f"The Datacell's data (ID: {cell.id}) should not be None after the extraction.",
                 )
-                
+
                 # Verify the result has the expected structure
-                self.assertIn("data", result, "Expected 'data' key in extraction result")
-                
+                self.assertIn(
+                    "data", result, "Expected 'data' key in extraction result"
+                )
+
                 # Verify completion status
                 self.assertIsNotNone(
-                    cell.completed, 
-                    f"Cell {cell.id} should be marked as completed"
+                    cell.completed, f"Cell {cell.id} should be marked as completed"
                 )
                 self.assertIsNone(
-                    cell.failed,
-                    f"Cell {cell.id} should not be marked as failed"
+                    cell.failed, f"Cell {cell.id} should not be marked as failed"
                 )
-                
+
             except Exception as e:
                 logging.error(
                     f"Exception in test_doc_extract_query_task_directly for cell {cell.id}: {e}"

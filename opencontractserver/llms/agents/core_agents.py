@@ -4,7 +4,16 @@ import logging
 from abc import ABC
 from collections.abc import AsyncGenerator, Awaitable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Literal, Optional, Protocol, Type, TypeVar, Union, runtime_checkable
+from typing import (
+    Any,
+    Callable,
+    Literal,
+    Optional,
+    Protocol,
+    TypeVar,
+    Union,
+    runtime_checkable,
+)
 
 from django.conf import settings
 from django.utils import timezone
@@ -16,6 +25,7 @@ from opencontractserver.conversations.models import (
 )
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.llms.tools.tool_factory import CoreTool
 from opencontractserver.llms.vector_stores.core_vector_stores import (
     CoreAnnotationVectorStore,
 )
@@ -361,7 +371,7 @@ class CoreAgent(Protocol):
     async def structured_response(
         self,
         prompt: str,
-        target_type: Type[T],
+        target_type: type[T],
         *,
         system_prompt: Optional[str] = None,
         model: Optional[str] = None,
@@ -369,7 +379,7 @@ class CoreAgent(Protocol):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         extra_context: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> Optional[T]:
         """Performs a one-shot query to extract structured data matching the target_type.
 
@@ -532,7 +542,6 @@ class CoreAgentBase(ABC):
         async for chunk in self.stream(message, **kwargs):
             yield chunk
 
-
     async def store_message(self, content: str, msg_type: str = "LLM") -> int:
         """Legacy method - delegates to appropriate store method."""
         if msg_type.upper() == "USER":
@@ -547,7 +556,7 @@ class CoreAgentBase(ABC):
     async def structured_response(
         self,
         prompt: str,
-        target_type: Type[T],
+        target_type: type[T],
         *,
         system_prompt: Optional[str] = None,
         model: Optional[str] = None,
@@ -555,7 +564,7 @@ class CoreAgentBase(ABC):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         extra_context: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> Optional[T]:
         """Framework-agnostic wrapper for structured response extraction.
 
@@ -587,7 +596,7 @@ class CoreAgentBase(ABC):
                 temperature=temperature,
                 max_tokens=max_tokens,
                 extra_context=extra_context,
-                **kwargs
+                **kwargs,
             )
             return result
         except Exception as e:
@@ -621,7 +630,7 @@ class CoreAgentBase(ABC):
     async def _structured_response_raw(
         self,
         prompt: str,
-        target_type: Type[T],
+        target_type: type[T],
         *,
         system_prompt: Optional[str] = None,
         model: Optional[str] = None,
@@ -629,7 +638,7 @@ class CoreAgentBase(ABC):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         extra_context: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> Optional[T]:  # pragma: no cover – abstract
         """Framework-specific structured response extraction.
 

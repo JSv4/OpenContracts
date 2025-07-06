@@ -17,7 +17,6 @@ import sys
 from pathlib import Path
 from typing import Final
 
-
 OUTPUT_FILENAME: Final[str] = "llms_files_contents.txt"
 
 
@@ -38,7 +37,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as out_fp:
         for file_path in files:
             rel_path = file_path.relative_to(repo_root)
-            out_fp.write(f"<FILE path=\"{rel_path.as_posix()}\">\n")
+            out_fp.write(f'<FILE path="{rel_path.as_posix()}">\n')
 
             try:
                 content = file_path.read_text(encoding="utf-8", errors="ignore")
@@ -54,4 +53,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main() 
+    main()

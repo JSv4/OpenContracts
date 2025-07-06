@@ -2,7 +2,7 @@
 
 import logging
 from collections.abc import AsyncGenerator
-from typing import Any, Callable, Optional, Type, TypeVar, Union
+from typing import Any, Callable, Optional, TypeVar, Union
 
 import nest_asyncio
 from llama_cloud import MessageRole
@@ -45,6 +45,7 @@ from opencontractserver.llms.tools.llama_index_tools import (
     get_partial_note_content_tool,
     load_document_md_summary_tool,
 )
+from opencontractserver.llms.tools.tool_factory import CoreTool
 from opencontractserver.llms.vector_stores.llama_index_vector_stores import (
     DjangoAnnotationVectorStore,
 )
@@ -333,7 +334,7 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
     async def _structured_response_raw(
         self,
         prompt: str,
-        target_type: Type[T],
+        target_type: type[T],
         *,
         system_prompt: Optional[str] = None,
         model: Optional[str] = None,
@@ -341,7 +342,7 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         extra_context: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> Optional[T]:
         """LlamaIndex placeholder for structured response extraction.
 
@@ -548,7 +549,7 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
     async def _structured_response_raw(
         self,
         prompt: str,
-        target_type: Type[T],
+        target_type: type[T],
         *,
         system_prompt: Optional[str] = None,
         model: Optional[str] = None,
@@ -556,7 +557,7 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         extra_context: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> Optional[T]:
         """LlamaIndex placeholder for structured response extraction.
 

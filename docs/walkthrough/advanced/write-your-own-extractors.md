@@ -66,27 +66,27 @@ async def custom_doc_query(cell_id: int) -> None:
     datacell = await Datacell.objects.select_related(
         'extract', 'column', 'document', 'creator'
     ).aget(pk=cell_id)
-    
+
     # Mark as started
     datacell.started = timezone.now()
     await datacell.asave()
-    
+
     try:
         # Get corpus ID (required for agent framework)
         corpus_id = await sync_get_corpus_id(datacell.document)
         if not corpus_id:
             raise ValueError(f"Document {datacell.document.id} is not in any corpus!")
-        
+
         # Parse output type
         from opencontractserver.utils.etl import parse_model_or_primitive
         output_type = parse_model_or_primitive(datacell.column.output_type)
-        
+
         # Handle list types
         if datacell.column.extract_is_list:
             from typing import List
             if get_origin(output_type) is not list:
                 output_type = List[output_type]
-        
+
         # Your custom extraction logic here
         result = await agents.get_structured_response_from_document(
             document=datacell.document.id,
@@ -99,12 +99,12 @@ async def custom_doc_query(cell_id: int) -> None:
             temperature=0.3,
             # Add your custom parameters
         )
-        
+
         # Save results
         datacell.data = {"data": result}
         datacell.completed = timezone.now()
         await datacell.asave()
-        
+
     except Exception as e:
         datacell.stacktrace = str(e)
         datacell.failed = timezone.now()

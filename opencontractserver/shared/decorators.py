@@ -6,7 +6,7 @@ import traceback
 from functools import wraps
 from typing import Any, Callable, Union
 
-from asgiref.sync import sync_to_async, async_to_sync, iscoroutinefunction
+from asgiref.sync import async_to_sync, sync_to_async
 from celery import shared_task
 from celery.exceptions import Retry
 from django.core.exceptions import ObjectDoesNotExist
@@ -339,6 +339,7 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
         return wrapper
 
     return decorator
+
 
 def async_doc_analyzer_task(
     max_retries: Union[int, None] = None, input_schema: dict | None = None
@@ -683,23 +684,24 @@ def async_doc_analyzer_task(
 def celery_task_with_async_to_sync(*task_args, **task_kwargs) -> Callable:
     """
     Simplified decorator for async Celery tasks using AsyncToSync.
-    
+
     This decorator converts async functions to sync functions that can be
     registered as Celery tasks, without creating new event loops or
     closing database connections.
     """
+
     def decorator(async_func: Callable[..., Any]) -> Callable[..., Any]:
         # Convert async to sync using asgiref
         sync_func = async_to_sync(async_func)
-        
+
         # Register as a Celery task
         @shared_task(*task_args, **task_kwargs)
         @functools.wraps(async_func)
         def wrapper(*args, **kwargs):
             return sync_func(*args, **kwargs)
-        
+
         # Expose underlying async func for testing if needed
         wrapper._async_func = async_func
         return wrapper
-    
+
     return decorator

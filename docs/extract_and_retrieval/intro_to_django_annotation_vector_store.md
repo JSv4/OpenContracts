@@ -17,7 +17,7 @@ This design enables efficient vector search across granular, visually-locatable 
 The core layer contains all business logic for vector search operations, independent of any specific agent framework:
 
 ```python
-from opencontractserver.llms.core_vector_stores import (
+from opencontractserver.llms.vector_stores.core_vector_stores import (
     CoreAnnotationVectorStore,
     VectorSearchQuery,
     VectorSearchResult,

@@ -6,7 +6,7 @@ import traceback
 from functools import wraps
 from typing import Any, Callable, Union
 
-from asgiref.sync import sync_to_async
+from asgiref.sync import sync_to_async, async_to_sync, iscoroutinefunction
 from celery import shared_task
 from celery.exceptions import Retry
 from django.core.exceptions import ObjectDoesNotExist
@@ -340,48 +340,6 @@ def doc_analyzer_task(max_retries=None, input_schema: dict | None = None) -> cal
 
     return decorator
 
-
-def async_celery_task(*task_args, **task_kwargs) -> Callable:
-    """
-    Decorator for async Celery tasks.
-
-    This decorator wraps an async function to make it compatible with Celery,
-    which expects synchronous functions. It creates a new event loop or uses
-    an existing one to run the originally wrapped async function.
-    """
-
-    def decorator(async_func: Callable[..., Any]) -> Callable[..., Any]:
-        # We create a standard sync function as the actual Celery task
-        @shared_task(*task_args, **task_kwargs)
-        @functools.wraps(async_func)
-        def wrapper(*args, **kwargs) -> Any:
-            from django.db import connections
-
-            # Close any existing connections before starting the async task
-            for conn in connections.all():
-                conn.close_if_unusable_or_obsolete()
-
-            # Create a new event loop (or reuse an existing one if needed)
-            loop = asyncio.new_event_loop()
-            try:
-                asyncio.set_event_loop(loop)
-                return loop.run_until_complete(async_func(*args, **kwargs))
-            finally:
-                # Ensure we gracefully shut down async gens/tasks
-                loop.run_until_complete(loop.shutdown_asyncgens())
-
-                # Close connections after task completion to prevent hanging connections
-                for conn in connections.all():
-                    conn.close_if_unusable_or_obsolete()
-                    conn.close()
-
-                loop.close()
-
-        return wrapper
-
-    return decorator
-
-
 def async_doc_analyzer_task(
     max_retries: Union[int, None] = None, input_schema: dict | None = None
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
@@ -424,9 +382,6 @@ def async_doc_analyzer_task(
 
                 # Finally close the loop
                 loop.close()
-
-                # # Forcibly close the current thread's DB connection.
-                # connection.close()
 
         async def async_wrapper(self, *args, **kwargs) -> Any:
             """
@@ -722,4 +677,29 @@ def async_doc_analyzer_task(
 
         return wrapper
 
+    return decorator
+
+
+def celery_task_with_async_to_sync(*task_args, **task_kwargs) -> Callable:
+    """
+    Simplified decorator for async Celery tasks using AsyncToSync.
+    
+    This decorator converts async functions to sync functions that can be
+    registered as Celery tasks, without creating new event loops or
+    closing database connections.
+    """
+    def decorator(async_func: Callable[..., Any]) -> Callable[..., Any]:
+        # Convert async to sync using asgiref
+        sync_func = async_to_sync(async_func)
+        
+        # Register as a Celery task
+        @shared_task(*task_args, **task_kwargs)
+        @functools.wraps(async_func)
+        def wrapper(*args, **kwargs):
+            return sync_func(*args, **kwargs)
+        
+        # Expose underlying async func for testing if needed
+        wrapper._async_func = async_func
+        return wrapper
+    
     return decorator

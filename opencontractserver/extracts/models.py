@@ -53,7 +53,6 @@ class Column(BaseOCModel):
     output_type = django.db.models.TextField(null=False, blank=False)
     limit_to_label = django.db.models.CharField(max_length=512, null=True, blank=True)
     instructions = django.db.models.TextField(null=True, blank=True)
-    agentic = django.db.models.BooleanField(default=False)
     extract_is_list = django.db.models.BooleanField(default=False)
     task_name = django.db.models.CharField(
         max_length=1024,

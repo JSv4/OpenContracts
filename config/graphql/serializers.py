@@ -73,7 +73,6 @@ class ColumnSerializer(serializers.ModelSerializer):
             "limit_to_label",
             "instructions",
             "language_model_id",
-            "agentic",
             "extract_is_list",
             "must_contain_text",
         ]

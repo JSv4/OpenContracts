@@ -11,7 +11,7 @@ class FieldsetAdmin(GuardedModelAdmin):
 
 @admin.register(Column)
 class ColumnAdmin(GuardedModelAdmin):
-    list_display = ["id", "query", "match_text", "output_type", "agentic"]
+    list_display = ["id", "query", "match_text", "output_type"]
 
 
 @admin.register(Extract)

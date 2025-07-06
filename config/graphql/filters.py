@@ -395,7 +395,6 @@ class ColumnFilter(django_filters.FilterSet):
             "match_text": ["contains"],
             "output_type": ["exact"],
             "limit_to_label": ["exact"],
-            "agentic": ["exact"],
         }
 
 

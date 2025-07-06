@@ -5,10 +5,10 @@ from collections.abc import AsyncGenerator
 from typing import Any, Callable, Optional, TypeVar, Union
 
 import nest_asyncio
-from llama_cloud import MessageRole
 from llama_index.agent.openai import OpenAIAgent
 from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core.base.llms.types import ChatMessage as LlamaChatMessage
+from llama_index.core.base.llms.types import MessageRole
 from llama_index.core.chat_engine.types import StreamingAgentChatResponse
 from llama_index.core.objects import ObjectIndex
 from llama_index.core.tools import QueryEngineTool, ToolMetadata

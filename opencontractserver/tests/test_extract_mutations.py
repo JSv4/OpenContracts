@@ -88,15 +88,13 @@ class ExtractsMutationTestCase(TestCase):
                     name: "BIAD"
                     fieldsetId: "{}",
                     query: "TestQuery",
-                    outputType: "str",
-                    agentic: false
+                    outputType: "str"
                 ) {{
                     ok
                     obj {{
                         id
                         query
                         outputType
-                        agentic
                     }}
                 }}
             }}
@@ -110,7 +108,6 @@ class ExtractsMutationTestCase(TestCase):
         self.assertIsNotNone(result["data"]["createColumn"]["obj"]["id"])
         self.assertEqual(result["data"]["createColumn"]["obj"]["query"], "TestQuery")
         self.assertEqual(result["data"]["createColumn"]["obj"]["outputType"], "str")
-        self.assertEqual(result["data"]["createColumn"]["obj"]["agentic"], False)
 
     def test_start_extract_mutation(self):
         mutation = """

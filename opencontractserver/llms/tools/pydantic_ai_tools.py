@@ -280,6 +280,7 @@ class PydanticAIToolFactory:
         parameter_descriptions: Optional[dict[str, str]] = None,
         *,
         requires_approval: bool = False,
+        requires_corpus: bool = False,
     ) -> Callable:
         """Create a PydanticAI-compatible callable tool directly from a Python function.
 
@@ -289,6 +290,7 @@ class PydanticAIToolFactory:
             description: Optional custom description
             parameter_descriptions: Optional parameter descriptions
             requires_approval: Whether the tool requires approval
+            requires_corpus: Whether the tool requires a corpus_id to function
 
         Returns:
             PydanticAI-compatible callable function
@@ -299,6 +301,7 @@ class PydanticAIToolFactory:
             description=description,
             parameter_descriptions=parameter_descriptions,
             requires_approval=requires_approval,
+            requires_corpus=requires_corpus,
         )
         return PydanticAIToolWrapper(core_tool).callable_function
 
@@ -350,6 +353,7 @@ class PydanticAIToolFactory:
             name=name,
             description=description,
             parameter_descriptions=parameter_descriptions,
+            requires_corpus=False,
         )
 
 
@@ -383,6 +387,7 @@ def pydantic_ai_tool(
             name=name,
             description=description,
             parameter_descriptions=parameter_descriptions,
+            requires_corpus=False,
         )
 
     return decorator
@@ -410,6 +415,7 @@ def create_pydantic_ai_tool_from_func(
         name=name,
         description=description,
         parameter_descriptions=parameter_descriptions,
+        requires_corpus=False,
     )
 
 

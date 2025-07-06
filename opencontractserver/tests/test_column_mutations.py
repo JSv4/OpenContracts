@@ -39,7 +39,6 @@ class ColumnMutationTestCase(TestCase):
             output_type="str",
             limit_to_label="OriginalLimit",
             instructions="OriginalInstructions",
-            agentic=False,
             creator=self.user,
         )
         set_permissions_for_obj_to_user(self.user, self.column, [PermissionTypes.CRUD])
@@ -53,8 +52,7 @@ class ColumnMutationTestCase(TestCase):
                     matchText: "UpdatedMatchText",
                     outputType: "int",
                     limitToLabel: "UpdatedLimit",
-                    instructions: "UpdatedInstructions",
-                    agentic: true
+                    instructions: "UpdatedInstructions"
                 ) {{
                     ok
                     objId
@@ -76,7 +74,6 @@ class ColumnMutationTestCase(TestCase):
         self.assertEqual(updated_column.output_type, "int")
         self.assertEqual(updated_column.limit_to_label, "UpdatedLimit")
         self.assertEqual(updated_column.instructions, "UpdatedInstructions")
-        self.assertTrue(updated_column.agentic)
 
     def test_delete_column_mutation(self):
         mutation = """
@@ -104,7 +101,6 @@ class ColumnMutationTestCase(TestCase):
                     fieldsetId: "{}",
                     query: "NewQuery",
                     outputType: "int",
-                    agentic: true,
                     matchText: "NewMatchText",
                     limitToLabel: "NewLimit",
                     instructions: "NewInstructions"
@@ -117,7 +113,6 @@ class ColumnMutationTestCase(TestCase):
                         outputType
                         limitToLabel
                         instructions
-                        agentic
                     }}
                 }}
             }}
@@ -137,4 +132,3 @@ class ColumnMutationTestCase(TestCase):
         self.assertEqual(created_column.output_type, "int")
         self.assertEqual(created_column.limit_to_label, "NewLimit")
         self.assertEqual(created_column.instructions, "NewInstructions")
-        self.assertTrue(created_column.agentic)

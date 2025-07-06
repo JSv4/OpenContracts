@@ -340,6 +340,7 @@ class LlamaIndexDocumentAgent(CoreAgentBase):
         tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        extra_context: Optional[str] = None,
         **kwargs
     ) -> Optional[T]:
         """LlamaIndex placeholder for structured response extraction.
@@ -554,6 +555,7 @@ class LlamaIndexCorpusAgent(CoreAgentBase):
         tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        extra_context: Optional[str] = None,
         **kwargs
     ) -> Optional[T]:
         """LlamaIndex placeholder for structured response extraction.

@@ -22,29 +22,53 @@ interactions:
       Use multiple tools when necessary for comprehensive answers\n- Present your
       findings in clear, helpful markdown format\n- Avoid repeating instructions or
       disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
-      data extraction system with advanced verification capabilities.\n\nEXTRACTION
-      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
-      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Extract the document title\"\n3. VERIFY: Before outputting,
-      internally validate your extraction by:\n   - Confirming the requested information
-      ACTUALLY EXISTS in the document\n   - Cross-referencing multiple sources if
-      available\n   - Checking for logical consistency (dates in order, numbers reasonable,
-      etc.)\n   - Ensuring no placeholder or generic values (like \"N/A\" unless actually
-      in the document)\n   - Confirming extracted text actually appears in the source
-      material\n   - For lists/collections: searching again with different queries
-      to ensure completeness\n\nCRITICAL RULES:\n- If the requested information does
-      not exist or is not applicable to this document, return null\n- If a question
-      doesn''t make sense for this document type, return null\n- NEVER invent, guess,
-      or infer data that isn''t explicitly present\n- If data is not found after thorough
-      search, return null/empty rather than guessing\n- If multiple conflicting values
-      exist, choose the most authoritative/recent\n- For numeric values, verify they
-      make sense in context\n- For dates, ensure they follow logical chronology and
-      are actually present\n- For names/entities, verify exact spelling from the source\n-
-      For boolean questions, only return true/false if you can definitively answer
-      based on document content\n\nYour response must be ONLY the extracted data in
-      the format of: a JSON string value\n\nNo explanations, no process description,
-      no confidence scores - just the final verified JSON.\n\nJSON Schema for your
-      response:\n```json\n{\n  \"type\": \"string\"\n}\n```"},{"role":"user","content":"Extract
+      data extraction system with NO PRIOR KNOWLEDGE about any documents. You must
+      ONLY use information obtained through the provided tools.\n\nAVAILABLE TOOLS
+      FOR DOCUMENT ANALYSIS:\n- similarity_search: Semantic vector search to find
+      relevant passages based on meaning\n- load_document_md_summary: Access markdown
+      summary of the document (if available)\n- load_document_txt_extract: Load plain
+      text extract of document (full or partial)\n- get_document_notes: Retrieve human-created
+      notes attached to this document\n- search_document_notes: Search through notes
+      for specific keywords\n- get_document_summary: Get the latest human-prepared
+      summary content\n- add_exact_string_annotations: Find exact string matches in
+      the document\n- Other document-specific tools may be available\n\nCRITICAL OPERATING
+      PRINCIPLES:\n1. You have ZERO knowledge about this document except what you
+      discover through tools\n2. NEVER assume, infer, or use any information not explicitly
+      found via tool calls\n3. If you cannot find requested information after thorough
+      search, return null\n4. Your answers must be 100% traceable to specific tool
+      results\n\nEXTRACTION METHODOLOGY:\n\nPHASE 1 - COMPREHENSIVE SEARCH:\n1. Analyze
+      the extraction request: \"Extract the document title\"\n2. Plan multiple search
+      strategies using different tools and query variations\n3. Execute searches systematically:\n   -
+      Try semantic search with various phrasings\n   - Load document summary if relevant\n   -
+      Search notes if they might contain the information\n   - Access document text
+      for detailed inspection\n4. Collect ALL potentially relevant information\n\nPHASE
+      2 - INITIAL EXTRACTION:\n1. Review all gathered information\n2. Extract ONLY
+      data that directly answers the request\n3. For each piece of extracted data,
+      note its source (which tool, what result)\n4. If information is ambiguous or
+      conflicting, prefer the most authoritative source\n5. If required information
+      is not found, prepare to return null for those fields\n\nPHASE 3 - BACKWARD
+      VERIFICATION (CRITICAL):\n1. Take your proposed answer and work backwards\n2.
+      For EACH data point in your answer:\n   - Can you cite the EXACT tool call and
+      result that provided this information?\n   - Does the source material actually
+      say what you claim it says?\n   - Is this a direct quote/fact or are you interpreting/inferring?\n3.
+      If ANY data point fails verification:\n   - Remove unverifiable data\n   - Search
+      again with more targeted queries\n   - If still not found, that field should
+      be null\n\nPHASE 4 - ITERATION IF NEEDED:\nIf backward verification revealed
+      gaps or errors:\n1. Identify what specific information is missing or wrong\n2.
+      Formulate new, more targeted search queries\n3. Return to PHASE 1 with these
+      specific queries\n4. Repeat until either:\n   - All data is verified with clear
+      sources, OR\n   - You''ve exhausted search options and must return null\n\nVERIFICATION
+      RULES:\n- Dates must be explicitly stated in the source material (not inferred
+      from context)\n- Numbers must be exact matches from the document (not calculated
+      or estimated)\n- Names/entities must appear verbatim (not paraphrased or corrected)\n-
+      Boolean values require explicit supporting statements\n- Lists must be complete
+      based on the source (not \"including but not limited to\")\n- For relationships,
+      both entities and the relationship must be explicitly stated\n\nOUTPUT RULES:\n-
+      Return ONLY the extracted data in this exact format: \n\na plain string value\n\n-
+      No explanations, confidence scores, or meta-commentary\n- Use null/empty for
+      missing data rather than placeholders\n- The entire response must be valid string
+      representation of desired answer convertible to the target type\n\nUser has
+      provided the following additional context (if blank, nothing provided):\n\n"},{"role":"user","content":"Extract
       the document title"}],"model":"gpt-4o-mini","stream":false,"temperature":0.7}'
     headers:
       accept:
@@ -54,12 +78,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3675'
+      - '5648'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
-        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
+      - __cf_bm=4_gmVURDuZKY2geW67mrcJmHfSge7MQ6SQYwvcO3Rcw-1751760736-1.0.1.1-OHBOavi5r3Bj3TshtVcWhIDYemLMOc.LZZ.Zh8OP7xw7dvNPNBJfUURLqOsW68hVAMUCQMTAsp1NZRACyCHj7Ptlaw9kkWMvvPLkqb7MCRg;
+        _cfuvid=nJAMzKDSO8HRLgzCw8QUEzEHfaRUzTBvizMw8371j24-1751760736988-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -87,18 +111,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJLBbtswDIbvfgqC53iwnbQJcly3oUOBYcA6dMBc2KpMO+pkSZXookWQ
-        dx9sp7G7dcAuOvDjT/EnuY8AUFW4BZQ7wbJ1On7/kHy9unI3Hz98+nz+lDx8ubE/pF13l5dn1yku
-        eoW9uyfJL6p30rZOEytrRiw9Caa+aro+S9fL1TLLBtDainQvaxzHKxu3yqg4S7JVnKzjdHNU76yS
-        FHALPyMAgP3w9n2aip5wC8niJdJSCKIh3J6SANBb3UdQhKACC8O4mKC0hskMrZdleR+syc0+NwA5
-        8rOjHLeQY2CvTJPjYgSPQndH8v3bBVwr1gQpxHCxE47JQ5pjbg65Kcty/penugui92s6rWdAGGNZ
-        9PMaXN4eyeHkS9vGeXsX/pBirYwKu8KTCNb0HgJbhwM9RAC3w/y6VyNB523ruGD7i4bv1slyrIfT
-        2iaabY6QLQs9Uy3TxRv1iopYKB1mG0Ap5I6qSTqtS3SVsjMQzVz/3c1btUfnyjT/U34CUpJjqgrn
-        qVLyteMpzVN/1f9KO015aBgD+UclqWBFvt9ERbXo9HhrGJ4DU1vUyjTknVfjwdWuOM9EthSblGqM
-        DtFvAAAA//8DAAa3CUN+AwAA
+        H4sIAAAAAAAAAwAAAP//jFLBbtQwFLznK6x33qA4LZvdPVKEEEKVgO1hVVWRa78kbh3b2C8IVO2/
+        IyfbTQpF4uKD5814ZvyeMsZAK9gxkJ0g2XuTv/tefT58/bhfv/fy8OXTXg03F4+HD5vq+lo+wCox
+        3P0DSnpmvZGu9wZJOzvBMqAgTKq8esurdbHdrkegdwpNorWe8kuX99rqvCzKy7yocr45sTunJUbY
+        sduMMcaexjP5tAp/wo4Vq+ebHmMULcLuPMQYBGfSDYgYdSRhCVYzKJ0ltKP1m29XbK/JIOMsZ1ed
+        8ISB8eV0wGaIIjm2gzELQFjrSKTEo8+7E3I8OzOu9cHdxz+o0GirY1cHFNHZ5CKS8zCix4yxu7GB
+        4UUo8MH1nmpyjzg+x3lRToIwNz/D2xNGjoRZsjhfvSJYKyShTVyUCFLIDtXMnRsXg9JuAWSL2H+7
+        eU17iq5t+z/yMyAlekJV+4BKy5eJ57GAaTH/NXaueTQMEcMPLbEmjSF9hcJGDGZaF4i/ImFfN9q2
+        GHzQ0840vl6XorwQG44NZMfsNwAAAP//AwBzDQNjQQMAAA==
     headers:
       CF-RAY:
-      - 95a85edadb8e699a-DFW
+      - 95aaea163d4f710b-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -106,7 +129,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 16:52:03 GMT
+      - Sun, 06 Jul 2025 00:16:37 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -122,13 +145,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '600'
+      - '362'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '605'
+      - '369'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -136,13 +159,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999127'
+      - '3998645'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 13ms
+      - 20ms
       x-request-id:
-      - req_1295b8c5ff9bbf33c5a52c4bf4792cd2
+      - req_3d536021a92e22dddcc8a24cd6f79b53
     status:
       code: 200
       message: OK

@@ -22,30 +22,55 @@ interactions:
       Use multiple tools when necessary for comprehensive answers\n- Present your
       findings in clear, helpful markdown format\n- Avoid repeating instructions or
       disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
-      data extraction system with advanced verification capabilities.\n\nEXTRACTION
-      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
-      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Extract the section number for the definition of ''County''.\"\n3.
-      VERIFY: Before outputting, internally validate your extraction by:\n   - Confirming
-      the requested information ACTUALLY EXISTS in the document\n   - Cross-referencing
-      multiple sources if available\n   - Checking for logical consistency (dates
-      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
-      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
-      text actually appears in the source material\n   - For lists/collections: searching
-      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
-      the requested information does not exist or is not applicable to this document,
-      return null\n- If a question doesn''t make sense for this document type, return
-      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
-      If data is not found after thorough search, return null/empty rather than guessing\n-
-      If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context\n- For dates, ensure they
-      follow logical chronology and are actually present\n- For names/entities, verify
-      exact spelling from the source\n- For boolean questions, only return true/false
-      if you can definitively answer based on document content\n\nYour response must
-      be ONLY the extracted data in the format of: a JSON integer value\n\nNo explanations,
-      no process description, no confidence scores - just the final verified JSON.\n\nJSON
-      Schema for your response:\n```json\n{\n  \"type\": \"integer\"\n}\n```"},{"role":"user","content":"Extract
-      the section number for the definition of ''County''."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      data extraction system with NO PRIOR KNOWLEDGE about any documents. You must
+      ONLY use information obtained through the provided tools.\n\nAVAILABLE TOOLS
+      FOR DOCUMENT ANALYSIS:\n- similarity_search: Semantic vector search to find
+      relevant passages based on meaning\n- load_document_md_summary: Access markdown
+      summary of the document (if available)\n- load_document_txt_extract: Load plain
+      text extract of document (full or partial)\n- get_document_notes: Retrieve human-created
+      notes attached to this document\n- search_document_notes: Search through notes
+      for specific keywords\n- get_document_summary: Get the latest human-prepared
+      summary content\n- add_exact_string_annotations: Find exact string matches in
+      the document\n- Other document-specific tools may be available\n\nCRITICAL OPERATING
+      PRINCIPLES:\n1. You have ZERO knowledge about this document except what you
+      discover through tools\n2. NEVER assume, infer, or use any information not explicitly
+      found via tool calls\n3. If you cannot find requested information after thorough
+      search, return null\n4. Your answers must be 100% traceable to specific tool
+      results\n\nEXTRACTION METHODOLOGY:\n\nPHASE 1 - COMPREHENSIVE SEARCH:\n1. Analyze
+      the extraction request: \"Extract the section number for the definition of ''County''.\"\n2.
+      Plan multiple search strategies using different tools and query variations\n3.
+      Execute searches systematically:\n   - Try semantic search with various phrasings\n   -
+      Load document summary if relevant\n   - Search notes if they might contain the
+      information\n   - Access document text for detailed inspection\n4. Collect ALL
+      potentially relevant information\n\nPHASE 2 - INITIAL EXTRACTION:\n1. Review
+      all gathered information\n2. Extract ONLY data that directly answers the request\n3.
+      For each piece of extracted data, note its source (which tool, what result)\n4.
+      If information is ambiguous or conflicting, prefer the most authoritative source\n5.
+      If required information is not found, prepare to return null for those fields\n\nPHASE
+      3 - BACKWARD VERIFICATION (CRITICAL):\n1. Take your proposed answer and work
+      backwards\n2. For EACH data point in your answer:\n   - Can you cite the EXACT
+      tool call and result that provided this information?\n   - Does the source material
+      actually say what you claim it says?\n   - Is this a direct quote/fact or are
+      you interpreting/inferring?\n3. If ANY data point fails verification:\n   -
+      Remove unverifiable data\n   - Search again with more targeted queries\n   -
+      If still not found, that field should be null\n\nPHASE 4 - ITERATION IF NEEDED:\nIf
+      backward verification revealed gaps or errors:\n1. Identify what specific information
+      is missing or wrong\n2. Formulate new, more targeted search queries\n3. Return
+      to PHASE 1 with these specific queries\n4. Repeat until either:\n   - All data
+      is verified with clear sources, OR\n   - You''ve exhausted search options and
+      must return null\n\nVERIFICATION RULES:\n- Dates must be explicitly stated in
+      the source material (not inferred from context)\n- Numbers must be exact matches
+      from the document (not calculated or estimated)\n- Names/entities must appear
+      verbatim (not paraphrased or corrected)\n- Boolean values require explicit supporting
+      statements\n- Lists must be complete based on the source (not \"including but
+      not limited to\")\n- For relationships, both entities and the relationship must
+      be explicitly stated\n\nOUTPUT RULES:\n- Return ONLY the extracted data in this
+      exact format: \n\nan integer value\n\n- No explanations, confidence scores,
+      or meta-commentary\n- Use null/empty for missing data rather than placeholders\n-
+      The entire response must be valid string representation of desired answer convertible
+      to the target type\n\nUser has provided the following additional context (if
+      blank, nothing provided):\n\n"},{"role":"user","content":"Extract the section
+      number for the definition of ''County''."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"additionalProperties":false,"properties":{"response":{"type":"integer"}},"required":["response"],"type":"object"},"strict":true}}]}'
     headers:
       accept:
@@ -55,12 +80,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '4038'
+      - '6005'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
-        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
+      - __cf_bm=4_gmVURDuZKY2geW67mrcJmHfSge7MQ6SQYwvcO3Rcw-1751760736-1.0.1.1-OHBOavi5r3Bj3TshtVcWhIDYemLMOc.LZZ.Zh8OP7xw7dvNPNBJfUURLqOsW68hVAMUCQMTAsp1NZRACyCHj7Ptlaw9kkWMvvPLkqb7MCRg;
+        _cfuvid=nJAMzKDSO8HRLgzCw8QUEzEHfaRUzTBvizMw8371j24-1751760736988-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -88,18 +113,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNNj5swEL3zK6w5hwrI53Lcr1ZatT1VarW7QhMzEG+M7dqm2ijKf6+A
-        BEg2lcoBWX7zZt68Ge8DxkDkkDLgG/S8MjK8/R19o/z7u5Czm9gnX8r5nXz4ulpN1zv8AZOGoddv
-        xP2J9YnrykjyQqsO5pbQU5M1Xs7j5XSWxKsWqHROsqGVxoczHVZCiTCJklkYLcN4dWRvtODkIGXP
-        AWOM7dt/o1Pl9A4piyanm4qcw5Ig7YMYA6tlcwPonHAelYfJAHKtPKlGuqqlHAFea5lxlHIo3H37
-        0XkwC6XMop+Pm+Th842pnt628qm8/XUvtjW/G9XrUu9MK6ioFe9NGuH9fXpRjDFQWHVcoVBmllwt
-        /QWfMUBb1hUp32iH/QtYckYrRy+QRgc4iz4E186vIycsFbVD+dEiVEp7bJS2Hr0ekUM/DqlLY/Xa
-        XVAb8cJtMkvo2i7HZgcnIa0EqM/mCcbqyvjM6y21RZfzpMsKw84NaDw7gl57lCPWYjG5ki/LyaNo
-        B97vGEe+oXygDruGdS70CAhGvX9Ucy13179Q5f+kHwDOyXjKM2MpF/y84yHMUvMk/xXWu9wKBkf2
-        j+CUeUG2mUdOBZ4WC9zOeaqyQqiSrLGifS1QmGyRYDLFVUwFBIfgLwAAAP//AwAvVtRkOwQAAA==
+        H4sIAAAAAAAAAwAAAP//jFNdb9swDHz3rxD4HA9xmiapH4sW+2g7oBiwIl0Lg5FpR50sqZI8NAjy
+        3wfZie2kHTA/GAKPR56O1DZiDEQOKQO+Rs8rI+PL1/k3t7pVq++vd1/vl29082V59rAhur2gSxgF
+        hl69EPcH1ieuKyPJC61amFtCT6FqMj9P5rPx4mLSAJXOSQZaaXw81XEllIgn48k0Hs/jZLFnr7Xg
+        5CBlvyLGGNs2/6BT5fQGKRuPDpGKnMOSIO2SGAOrZYgAOiecR+Vh1INcK08qSFe1lAPAay0zjlL2
+        jdtvOzj3ZqGU2eYOZ4V8fLkx1w8JPf5YGnV/9fOzGfRrS29MI6ioFe9MGuBdPD1pxhgorFquUCgz
+        S66W/oTPGKAt64qUD9ph+wSWnNHK0ROk4x0cZe+ij87PAycsFbVD+d4iVEp7DEobj573yK4bh9Sl
+        sXrlTqhBvHDrzBK65pZDs6ODkEYC1EfzBGN1ZXzm9W9qmibJ+X760C/dAJ7uQa89yiFtdkCOKmY5
+        eRTNyLst48jXlPfcftuwzoUeANHg9u/lfFS7dUCo8n/K9wDnZDzlmbGUC3585T7NUniU/0rrfG4E
+        gyP7R3DKvCAbJpJTgYfVArdxnqqsEKoka6xo3gsUJptNcHKGi4QKiHbRXwAAAP//AwBcCyeSPQQA
+        AA==
     headers:
       CF-RAY:
-      - 95a85c4eb9bb6b0a-DFW
+      - 95aae78c2d9ef066-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -107,7 +133,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 16:50:18 GMT
+      - Sun, 06 Jul 2025 00:14:53 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -123,13 +149,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '459'
+      - '483'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '462'
+      - '493'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -137,13 +163,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999111'
+      - '3998629'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 13ms
+      - 20ms
       x-request-id:
-      - req_5e555e806aa47d3f7dd1cec1c044e3fb
+      - req_ae0d1cf1facd72c3b5814449c6d1e6a2
     status:
       code: 200
       message: OK

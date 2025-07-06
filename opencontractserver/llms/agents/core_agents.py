@@ -368,6 +368,7 @@ class CoreAgent(Protocol):
         tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        extra_context: Optional[str] = None,
         **kwargs
     ) -> Optional[T]:
         """Performs a one-shot query to extract structured data matching the target_type.
@@ -382,6 +383,7 @@ class CoreAgent(Protocol):
             tools: An optional, single-use list of tools for this call.
             temperature: An optional, single-use temperature setting.
             max_tokens: An optional, single-use max_tokens setting.
+            extra_context: An optional, single-use extra_context setting.
             **kwargs: Additional framework-specific options.
 
         Returns:
@@ -552,6 +554,7 @@ class CoreAgentBase(ABC):
         tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        extra_context: Optional[str] = None,
         **kwargs
     ) -> Optional[T]:
         """Framework-agnostic wrapper for structured response extraction.
@@ -567,6 +570,7 @@ class CoreAgentBase(ABC):
             tools: Optional tools override.
             temperature: Optional temperature override.
             max_tokens: Optional max_tokens override.
+            extra_context: Optional extra_context override.
             **kwargs: Additional framework-specific options.
 
         Returns:
@@ -582,6 +586,7 @@ class CoreAgentBase(ABC):
                 tools=tools,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                extra_context=extra_context,
                 **kwargs
             )
             return result
@@ -623,6 +628,7 @@ class CoreAgentBase(ABC):
         tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        extra_context: Optional[str] = None,
         **kwargs
     ) -> Optional[T]:  # pragma: no cover – abstract
         """Framework-specific structured response extraction.
@@ -638,6 +644,7 @@ class CoreAgentBase(ABC):
             tools: Optional tools override.
             temperature: Optional temperature override.
             max_tokens: Optional max_tokens override.
+            extra_context: Optional extra_context override.
             **kwargs: Additional framework-specific options.
 
         Returns:

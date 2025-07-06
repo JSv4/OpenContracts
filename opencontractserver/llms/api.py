@@ -275,6 +275,7 @@ class AgentAPI:
         max_tokens: Optional[int] = None,
         tools: Optional[list[ToolType]] = None,
         embedder: Optional[str] = None,
+        extra_context: Optional[str] = None,
         **kwargs,
     ) -> Optional[T]:
         """
@@ -296,6 +297,7 @@ class AgentAPI:
             max_tokens: Maximum tokens in response
             tools: List of tools to use during extraction
             embedder: Custom embedder path
+            extra_context: Additional context for extraction
             **kwargs: Additional framework-specific options
 
         Returns:
@@ -365,6 +367,8 @@ class AgentAPI:
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
+            extra_context=extra_context,
+            **kwargs,  # Pass through any additional kwargs like extra_context
         )
 
     @staticmethod
@@ -381,6 +385,7 @@ class AgentAPI:
         max_tokens: Optional[int] = None,
         tools: Optional[list[ToolType]] = None,
         embedder: Optional[str] = None,
+        extra_context: Optional[str] = None,
         **kwargs,
     ) -> Optional[T]:
         """
@@ -401,6 +406,7 @@ class AgentAPI:
             max_tokens: Maximum tokens in response
             tools: List of tools to use during extraction
             embedder: Custom embedder path
+            extra_context: Additional context for extraction
             **kwargs: Additional framework-specific options
 
         Returns:
@@ -459,6 +465,8 @@ class AgentAPI:
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
+            extra_context=extra_context,
+            **kwargs,  # Pass through any additional kwargs like extra_context
         )
 
 

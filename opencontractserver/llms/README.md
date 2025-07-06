@@ -294,6 +294,19 @@ if result:
    - Return `None` for missing data rather than inventing values
    - This behavior can be overridden with a custom `system_prompt`
 
+6. **Extra Context Support**: Pass additional guidance via `extra_context`:
+   ```python
+   result = await agent.structured_response(
+       prompt="Extract warranty terms",
+       target_type=WarrantyTerms,
+       extra_context="""
+       This is a software license agreement.
+       Warranties are typically in Section 7 or Exhibit C.
+       Look for both express warranties and warranty disclaimers.
+       """
+   )
+   ```
+
 **Framework Support:**
 - ✅ **PydanticAI**: Fully implemented with native `output_type` support
 - ⚠️ **LlamaIndex**: Returns `None` (not yet implemented)

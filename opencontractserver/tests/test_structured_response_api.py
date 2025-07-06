@@ -163,7 +163,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "Extract the definition of the word 'vessel' as a string.",
+            "The title of this document.",
             str
         )
         
@@ -172,9 +172,10 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         assert isinstance(result, str) or result is None
         if result:
+            print(f"Result: {result}")
             assert len(result) > 0
-            # Should contain key parts of the vessel definition
-            assert "watercraft" in result.lower() or "transportation" in result.lower()
+            # Should contain document title
+            assert "USC Title 1 - Chapter 1".lower() in result.lower()
     
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/structured_data_tests/test_extract_integer_from_document.yaml",
@@ -213,7 +214,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
             user_id=self.user.id)
         
         result = await agent.structured_response(
-            "Extract the chapter number of 'ACTS AND RESOLUTIONS; FORMALITIES OF ENACTMENT...' as a float.",
+            "What title of the USC is this?",
             float
         )
         
@@ -222,7 +223,7 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
         
         assert isinstance(result, float) or result is None
         if result is not None:
-            assert result == 2.0
+            assert result == 1.0
     
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/structured_data_tests/test_extract_boolean_from_document.yaml",

@@ -22,30 +22,52 @@ interactions:
       Use multiple tools when necessary for comprehensive answers\n- Present your
       findings in clear, helpful markdown format\n- Avoid repeating instructions or
       disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
-      data extraction system with advanced verification capabilities.\n\nEXTRACTION
-      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
-      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Extract contact information (phone, email, fax) for the enactor
-      of this title.\"\n3. VERIFY: Before outputting, internally validate your extraction
-      by:\n   - Confirming the requested information ACTUALLY EXISTS in the document\n   -
-      Cross-referencing multiple sources if available\n   - Checking for logical consistency
-      (dates in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or
-      generic values (like \"N/A\" unless actually in the document)\n   - Confirming
-      extracted text actually appears in the source material\n   - For lists/collections:
-      searching again with different queries to ensure completeness\n\nCRITICAL RULES:\n-
-      If the requested information does not exist or is not applicable to this document,
-      return null\n- If a question doesn''t make sense for this document type, return
-      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
-      If data is not found after thorough search, return null/empty rather than guessing\n-
-      If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context\n- For dates, ensure they
-      follow logical chronology and are actually present\n- For names/entities, verify
-      exact spelling from the source\n- For boolean questions, only return true/false
-      if you can definitively answer based on document content\n\nYour response must
-      be ONLY the extracted data in the format of: a JSON object matching the ''ContactInfo''
-      model structure\n\nNo explanations, no process description, no confidence scores
-      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
-      {\n    \"phone\": {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
+      data extraction system with NO PRIOR KNOWLEDGE about any documents. You must
+      ONLY use information obtained through the provided tools.\n\nAVAILABLE TOOLS
+      FOR DOCUMENT ANALYSIS:\n- similarity_search: Semantic vector search to find
+      relevant passages based on meaning\n- load_document_md_summary: Access markdown
+      summary of the document (if available)\n- load_document_txt_extract: Load plain
+      text extract of document (full or partial)\n- get_document_notes: Retrieve human-created
+      notes attached to this document\n- search_document_notes: Search through notes
+      for specific keywords\n- get_document_summary: Get the latest human-prepared
+      summary content\n- add_exact_string_annotations: Find exact string matches in
+      the document\n- Other document-specific tools may be available\n\nCRITICAL OPERATING
+      PRINCIPLES:\n1. You have ZERO knowledge about this document except what you
+      discover through tools\n2. NEVER assume, infer, or use any information not explicitly
+      found via tool calls\n3. If you cannot find requested information after thorough
+      search, return null\n4. Your answers must be 100% traceable to specific tool
+      results\n\nEXTRACTION METHODOLOGY:\n\nPHASE 1 - COMPREHENSIVE SEARCH:\n1. Analyze
+      the extraction request: \"Extract contact information (phone, email, fax) for
+      the enactor of this title.\"\n2. Plan multiple search strategies using different
+      tools and query variations\n3. Execute searches systematically:\n   - Try semantic
+      search with various phrasings\n   - Load document summary if relevant\n   -
+      Search notes if they might contain the information\n   - Access document text
+      for detailed inspection\n4. Collect ALL potentially relevant information\n\nPHASE
+      2 - INITIAL EXTRACTION:\n1. Review all gathered information\n2. Extract ONLY
+      data that directly answers the request\n3. For each piece of extracted data,
+      note its source (which tool, what result)\n4. If information is ambiguous or
+      conflicting, prefer the most authoritative source\n5. If required information
+      is not found, prepare to return null for those fields\n\nPHASE 3 - BACKWARD
+      VERIFICATION (CRITICAL):\n1. Take your proposed answer and work backwards\n2.
+      For EACH data point in your answer:\n   - Can you cite the EXACT tool call and
+      result that provided this information?\n   - Does the source material actually
+      say what you claim it says?\n   - Is this a direct quote/fact or are you interpreting/inferring?\n3.
+      If ANY data point fails verification:\n   - Remove unverifiable data\n   - Search
+      again with more targeted queries\n   - If still not found, that field should
+      be null\n\nPHASE 4 - ITERATION IF NEEDED:\nIf backward verification revealed
+      gaps or errors:\n1. Identify what specific information is missing or wrong\n2.
+      Formulate new, more targeted search queries\n3. Return to PHASE 1 with these
+      specific queries\n4. Repeat until either:\n   - All data is verified with clear
+      sources, OR\n   - You''ve exhausted search options and must return null\n\nVERIFICATION
+      RULES:\n- Dates must be explicitly stated in the source material (not inferred
+      from context)\n- Numbers must be exact matches from the document (not calculated
+      or estimated)\n- Names/entities must appear verbatim (not paraphrased or corrected)\n-
+      Boolean values require explicit supporting statements\n- Lists must be complete
+      based on the source (not \"including but not limited to\")\n- For relationships,
+      both entities and the relationship must be explicitly stated\n\nOUTPUT RULES:\n-
+      Return ONLY the extracted data in this exact format: \n\na JSON object matching
+      the ''ContactInfo'' model with this schema:\n{\n  \"properties\": {\n    \"phone\":
+      {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
       \"null\"\n        }\n      ],\n      \"default\": null,\n      \"description\":
       \"Phone number if present\",\n      \"title\": \"Phone\"\n    },\n    \"email\":
       {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
@@ -54,8 +76,12 @@ interactions:
       [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
       \"null\"\n        }\n      ],\n      \"default\": null,\n      \"description\":
       \"Fax number if present\",\n      \"title\": \"Fax\"\n    }\n  },\n  \"title\":
-      \"ContactInfo\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Extract
-      contact information (phone, email, fax) for the enactor of this title."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      \"ContactInfo\",\n  \"type\": \"object\"\n}\n\n- No explanations, confidence
+      scores, or meta-commentary\n- Use null/empty for missing data rather than placeholders\n-
+      The entire response must be valid string representation of desired answer convertible
+      to the target type\n\nUser has provided the following additional context (if
+      blank, nothing provided):\n\n"},{"role":"user","content":"Extract contact information
+      (phone, email, fax) for the enactor of this title."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"properties":{"phone":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Phone
       number if present"},"email":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Email
       if present"},"fax":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Fax
@@ -68,12 +94,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '5141'
+      - '7151'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
-        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
+      - __cf_bm=4_gmVURDuZKY2geW67mrcJmHfSge7MQ6SQYwvcO3Rcw-1751760736-1.0.1.1-OHBOavi5r3Bj3TshtVcWhIDYemLMOc.LZZ.Zh8OP7xw7dvNPNBJfUURLqOsW68hVAMUCQMTAsp1NZRACyCHj7Ptlaw9kkWMvvPLkqb7MCRg;
+        _cfuvid=nJAMzKDSO8HRLgzCw8QUEzEHfaRUzTBvizMw8371j24-1751760736988-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -101,19 +127,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xTUW+bMBB+51dY9xwmoCRpeYw6qQ9btU6apq2pkGsf4NTYjm2mVFH++wQkQNJM
-        Gg/Ivs/f3Xefz/uAEBAcMgKsop7VRoarbfS0ffj8s57HK/S7ZoNvv1a/F/Noa00Es5ahXzfI/In1
-        ienaSPRCqx5mFqnHNmu8nMfLmzSNFx1Qa46ypZXGh6kOa6FEmERJGkbLML49sistGDrIyHNACCH7
-        7t/qVBx3kJFodorU6BwtEbLhECFgtWwjQJ0TzlPlYTaCTCuPqpWuGikngNda5oxKORbuv/1kPZpF
-        pczv7+On7z+aJH18+LLgfLP82nxbVfxxUq9P/W46QUWj2GDSBB/i2UUxQkDRuucKRWVu0TXSX/AJ
-        AWrLpkblW+2wX4OptMI1ZF2Pa8CaCjluC7o7bg5wlukQXFu/TFyyWDSOyo/2UaW0p20XnX8vR+Qw
-        XJXUpbH61V1Q28aEq3KL1HUOTC8iOAnpJEBzdtdgrK6Nz71+w67o3d28zwrjPI5okhxBrz2VYzyO
-        4uXsSsKco6eim4ZhABllFfKROw4ibbjQEyCYNP9RzrXcvQFClf+TfgQYQ+OR58YiF+y85fGYxfa9
-        /uvYYHMnGBzaP4Jh7gXa9kI4FvQ0deDencc6L4Qq0RoruqcEhckXCU1u6G2MBQSH4C8AAAD//wMA
-        QVBIfFgEAAA=
+        H4sIAAAAAAAAAwAAAP//jFNNj9MwEL3nV1hzblCS7Rc5gkBw6QGxLIiuIq8zSQ3+wp5AV1X/O0rS
+        Jmm3SOQQ2X5+M2/ejA8RYyBLyBmIHSehnYrf/Fpt7r7ZL/fv6fPcLJsHerte6f3z1/tAHmYtwz79
+        QEFn1ithtVNI0poeFh45YRs1XS3S1TJN1q87QNsSVUurHcVzG2tpZJwl2TxOVnG6PrF3VgoMkLPv
+        EWOMHbp/q9OUuIecJbPzicYQeI2QD5cYA29VewI8BBmIG4LZCAprCE0r3TRKTQCyVhWCKzUm7r/D
+        ZD2axZUqPv3ZpMmHOW1qr+wmW2iqHz6+C3aSrw/97DpBVWPEYNIEH87zq2SMgeG650rDVeExNIqu
+        +IwB93Wj0VCrHQ5bcDtrcAt5V+MWUHOpxm3F96fNES4iHaNb68eJSx6rJnD10j5ujCXeVtH593hC
+        jkOrlK2dt0/hitoWJsOu8MhD58C0EdFZSCcBmoteg/NWOyrI/sQuaTpPFn1YGAdyhLPsBJIlrqa0
+        bDW7EbEokbjsxmGYQMHFDsuRO04ib0ppJ0A0qf6lnFuxewekqf8n/AgIgY6wLJzHUorLksdrHtsH
+        +69rg8+dYAjof0uBBUn0bUdKrPh57CA8B0JdVNLU6J2X3VuCyhXLjGd3fJ1iBdEx+gsAAP//AwD2
+        O/AeWQQAAA==
     headers:
       CF-RAY:
-      - 95a86128ab55f094-DFW
+      - 95aaec590cc66b49-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -121,7 +147,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 16:53:37 GMT
+      - Sun, 06 Jul 2025 00:18:09 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -137,13 +163,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '557'
+      - '486'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '560'
+      - '490'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -151,13 +177,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3998908'
+      - '3998416'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 16ms
+      - 23ms
       x-request-id:
-      - req_bf8ada04a63404bdb285e4b8a89a84ee
+      - req_e381198158c2794395cd7c80258d78cc
     status:
       code: 200
       message: OK

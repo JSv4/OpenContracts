@@ -93,11 +93,18 @@ T = TypeVar("T")
 def _get_structured_extraction_prompt(
     prompt: str,
     target_type: Type[T],
-    agent_system_prompt: Optional[str] = None
+    agent_system_prompt: Optional[str] = None,
+    extra_context: Optional[str] = None
 ) -> str:
     """
     Generates a system prompt specifically for one-shot structured data extraction,
     with robust support for primitives, Pydantic models, and collections.
+    
+    Args:
+        prompt: The extraction request from the user
+        target_type: The target type to extract data into
+        agent_system_prompt: Optional base system prompt to incorporate
+        extra_context: Optional additional context to include in the prompt
     """
     from typing import get_args, get_origin
     from pydantic import BaseModel, TypeAdapter
@@ -110,41 +117,94 @@ def _get_structured_extraction_prompt(
     # To make the prompt more human-readable and guide the LLM better,
     # we can provide a simplified text description of the target type.
     type_description = _get_type_description(target_type)
-    
-    schema_as_string = json.dumps(json_schema, indent=2)
+    print(f"Type description: {type_description}")
 
-    extraction_instructions = f"""You are a highly-intelligent data extraction system with advanced verification capabilities.
+    # Build extra context section if provided
+    extra_context_section = ""
+    if extra_context:
+        extra_context_section = f"""
+<ADDITIONAL_CONTEXT>
+{extra_context}
+</ADDITIONAL_CONTEXT>
+"""
+
+    extraction_instructions = f"""You are a highly-intelligent data extraction system with NO PRIOR KNOWLEDGE about any documents. You must ONLY use information obtained through the provided tools.
+
+AVAILABLE TOOLS FOR DOCUMENT ANALYSIS:
+- similarity_search: Semantic vector search to find relevant passages based on meaning
+- load_document_md_summary: Access markdown summary of the document (if available)
+- load_document_txt_extract: Load plain text extract of document (full or partial)
+- get_document_notes: Retrieve human-created notes attached to this document
+- search_document_notes: Search through notes for specific keywords
+- get_document_summary: Get the latest human-prepared summary content
+- add_exact_string_annotations: Find exact string matches in the document
+- Other document-specific tools may be available
+
+CRITICAL OPERATING PRINCIPLES:
+1. You have ZERO knowledge about this document except what you discover through tools
+2. NEVER assume, infer, or use any information not explicitly found via tool calls
+3. If you cannot find requested information after thorough search, return null
+4. Your answers must be 100% traceable to specific tool results
 
 EXTRACTION METHODOLOGY:
-1. GATHER: Use available tools (similarity_search, load_document_md_summary, etc.) to find ALL relevant information
-2. EXTRACT: Identify the specific data requested in: "{prompt}"
-3. VERIFY: Before outputting, internally validate your extraction by:
-   - Confirming the requested information ACTUALLY EXISTS in the document
-   - Cross-referencing multiple sources if available
-   - Checking for logical consistency (dates in order, numbers reasonable, etc.)
-   - Ensuring no placeholder or generic values (like "N/A" unless actually in the document)
-   - Confirming extracted text actually appears in the source material
-   - For lists/collections: searching again with different queries to ensure completeness
 
-CRITICAL RULES:
-- If the requested information does not exist or is not applicable to this document, return null
-- If a question doesn't make sense for this document type, return null
-- NEVER invent, guess, or infer data that isn't explicitly present
-- If data is not found after thorough search, return null/empty rather than guessing
-- If multiple conflicting values exist, choose the most authoritative/recent
-- For numeric values, verify they make sense in context
-- For dates, ensure they follow logical chronology and are actually present
-- For names/entities, verify exact spelling from the source
-- For boolean questions, only return true/false if you can definitively answer based on document content
+PHASE 1 - COMPREHENSIVE SEARCH:
+1. Analyze the extraction request: "{prompt}"
+2. Plan multiple search strategies using different tools and query variations
+3. Execute searches systematically:
+   - Try semantic search with various phrasings
+   - Load document summary if relevant
+   - Search notes if they might contain the information
+   - Access document text for detailed inspection
+4. Collect ALL potentially relevant information
 
-Your response must be ONLY the extracted data in the format of: {type_description}
+PHASE 2 - INITIAL EXTRACTION:
+1. Review all gathered information
+2. Extract ONLY data that directly answers the request
+3. For each piece of extracted data, note its source (which tool, what result)
+4. If information is ambiguous or conflicting, prefer the most authoritative source
+5. If required information is not found, prepare to return null for those fields
 
-No explanations, no process description, no confidence scores - just the final verified JSON.
+PHASE 3 - BACKWARD VERIFICATION (CRITICAL):
+1. Take your proposed answer and work backwards
+2. For EACH data point in your answer:
+   - Can you cite the EXACT tool call and result that provided this information?
+   - Does the source material actually say what you claim it says?
+   - Is this a direct quote/fact or are you interpreting/inferring?
+3. If ANY data point fails verification:
+   - Remove unverifiable data
+   - Search again with more targeted queries
+   - If still not found, that field should be null
 
-JSON Schema for your response:
-```json
-{schema_as_string}
-```"""
+PHASE 4 - ITERATION IF NEEDED:
+If backward verification revealed gaps or errors:
+1. Identify what specific information is missing or wrong
+2. Formulate new, more targeted search queries
+3. Return to PHASE 1 with these specific queries
+4. Repeat until either:
+   - All data is verified with clear sources, OR
+   - You've exhausted search options and must return null
+
+VERIFICATION RULES:
+- Dates must be explicitly stated in the source material (not inferred from context)
+- Numbers must be exact matches from the document (not calculated or estimated)
+- Names/entities must appear verbatim (not paraphrased or corrected)
+- Boolean values require explicit supporting statements
+- Lists must be complete based on the source (not "including but not limited to")
+- For relationships, both entities and the relationship must be explicitly stated
+
+OUTPUT RULES:
+- Return ONLY the extracted data in this exact format: 
+
+{type_description}
+
+- No explanations, confidence scores, or meta-commentary
+- Use null/empty for missing data rather than placeholders
+- The entire response must be valid string representation of desired answer convertible to the target type
+
+User has provided the following additional context (if blank, nothing provided):
+{extra_context_section}
+"""
 
     if agent_system_prompt:
         return f"""<BACKGROUND_CONTEXT>
@@ -159,55 +219,70 @@ JSON Schema for your response:
 def _get_type_description(target_type: Type[Any]) -> str:
     """Create a simple, human-readable description of a type."""
     from typing import get_args, get_origin
-    from pydantic import BaseModel
+    from pydantic import BaseModel, TypeAdapter
+    import json
     
     origin = get_origin(target_type)
     
-    if origin is list:
+    # Handle iterables with recursive descriptions
+    if origin is list or target_type is list:
         args = get_args(target_type)
         if args:
-            inner_type = args[0]
-            if hasattr(inner_type, '__name__'):
-                inner_type_name = inner_type.__name__
-            else:
-                inner_type_name = str(inner_type)
-            return f"a JSON array of {inner_type_name} values"
+            inner_desc = _get_type_description(args[0])
+            return f"a JSON array where each element is {inner_desc}"
         return "a JSON array"
-    elif origin is tuple:
+    
+    elif origin is tuple or target_type is tuple:
         args = get_args(target_type)
         if args:
-            type_names = [getattr(t, '__name__', str(t)) for t in args]
-            return f"a JSON array with exactly {len(args)} elements: [{', '.join(type_names)}]"
+            if len(args) == 2 and args[1] is ...:  # Tuple[T, ...]
+                inner_desc = _get_type_description(args[0])
+                return f"a JSON array of variable length where each element is {inner_desc}"
+            else:
+                element_descriptions = [_get_type_description(t) for t in args]
+                return f"a JSON array with exactly {len(args)} elements: [{', '.join(element_descriptions)}]"
         return "a JSON array (tuple)"
-    elif origin is set:
+    
+    elif origin is set or target_type is set:
         args = get_args(target_type)
         if args:
-            inner_type = args[0]
-            inner_type_name = getattr(inner_type, '__name__', str(inner_type))
-            return f"a JSON array of unique {inner_type_name} values"
+            inner_desc = _get_type_description(args[0])
+            return f"a JSON array of unique values where each element is {inner_desc}"
         return "a JSON array of unique values"
-    elif origin is dict:
-        args = get_args(target_type)
-        if args and len(args) >= 2:
-            key_type = getattr(args[0], '__name__', str(args[0]))
-            value_type = getattr(args[1], '__name__', str(args[1]))
-            return f"a JSON object with {key_type} keys and {value_type} values"
-        return "a JSON object"
-    elif hasattr(target_type, '__mro__') and BaseModel in target_type.__mro__:
-        return f"a JSON object matching the '{target_type.__name__}' model structure"
+    
+    # For dicts and complex objects, use JSON schema
+    elif origin is dict or target_type is dict or (hasattr(target_type, '__mro__') and BaseModel in target_type.__mro__):
+        type_adapter = TypeAdapter(target_type)
+        json_schema = type_adapter.json_schema()
+        # Format the schema nicely
+        schema_str = json.dumps(json_schema, indent=2)
+        if origin is dict or target_type is dict:
+            return f"a JSON object matching this schema:\n{schema_str}"
+        else:
+            return f"a JSON object matching the '{target_type.__name__}' model with this schema:\n{schema_str}"
+    
+    # Handle primitives with plain descriptions
     else:
-        # Primitives and other types
         type_name = getattr(target_type, '__name__', str(target_type))
         if type_name == 'str':
-            return "a JSON string value"
+            return "a plain string value"
         elif type_name == 'int':
-            return "a JSON integer value"
+            return "an integer value"
         elif type_name == 'float':
-            return "a JSON number value"
+            return "a numeric value"
         elif type_name == 'bool':
-            return "a JSON boolean value (true or false)"
+            return "a boolean value (true or false)"
+        elif type_name == 'NoneType' or target_type is type(None):
+            return "null"
         else:
-            return f"a JSON value of type '{type_name}'"
+            # For any other complex type, use JSON schema
+            try:
+                type_adapter = TypeAdapter(target_type)
+                json_schema = type_adapter.json_schema()
+                schema_str = json.dumps(json_schema, indent=2)
+                return f"a value matching this JSON schema:\n{schema_str}"
+            except:
+                return f"a JSON value of type '{type_name}'"
 
 
 def _to_source_node(raw: Any) -> SourceNode:
@@ -840,6 +915,7 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
         tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        extra_context: Optional[str] = None,
         **kwargs
     ) -> Optional[T]:
         """PydanticAI implementation of structured response extraction.
@@ -872,10 +948,12 @@ class PydanticAICoreAgent(CoreAgentBase, TimelineStreamMixin):
             if system_prompt:
                 final_system_prompt = system_prompt
             else:
+                # Use the explicit extra_context parameter (may be None)
                 final_system_prompt = _get_structured_extraction_prompt(
                     prompt, 
                     target_type, 
-                    self.config.system_prompt
+                    self.config.system_prompt,
+                    extra_context
                 )
 
             # Create a temporary agent with structured output

@@ -22,30 +22,52 @@ interactions:
       Use multiple tools when necessary for comprehensive answers\n- Present your
       findings in clear, helpful markdown format\n- Avoid repeating instructions or
       disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
-      data extraction system with advanced verification capabilities.\n\nEXTRACTION
-      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
-      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Extract metadata about the ''21st Century Language Act of 2012''.\"\n3.
-      VERIFY: Before outputting, internally validate your extraction by:\n   - Confirming
-      the requested information ACTUALLY EXISTS in the document\n   - Cross-referencing
-      multiple sources if available\n   - Checking for logical consistency (dates
-      in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or generic
-      values (like \"N/A\" unless actually in the document)\n   - Confirming extracted
-      text actually appears in the source material\n   - For lists/collections: searching
-      again with different queries to ensure completeness\n\nCRITICAL RULES:\n- If
-      the requested information does not exist or is not applicable to this document,
-      return null\n- If a question doesn''t make sense for this document type, return
-      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
-      If data is not found after thorough search, return null/empty rather than guessing\n-
-      If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context\n- For dates, ensure they
-      follow logical chronology and are actually present\n- For names/entities, verify
-      exact spelling from the source\n- For boolean questions, only return true/false
-      if you can definitively answer based on document content\n\nYour response must
-      be ONLY the extracted data in the format of: a JSON object matching the ''DocumentMetadata''
-      model structure\n\nNo explanations, no process description, no confidence scores
-      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
-      {\n    \"title\": {\n      \"title\": \"Title\",\n      \"type\": \"string\"\n    },\n    \"public_law_number\":
+      data extraction system with NO PRIOR KNOWLEDGE about any documents. You must
+      ONLY use information obtained through the provided tools.\n\nAVAILABLE TOOLS
+      FOR DOCUMENT ANALYSIS:\n- similarity_search: Semantic vector search to find
+      relevant passages based on meaning\n- load_document_md_summary: Access markdown
+      summary of the document (if available)\n- load_document_txt_extract: Load plain
+      text extract of document (full or partial)\n- get_document_notes: Retrieve human-created
+      notes attached to this document\n- search_document_notes: Search through notes
+      for specific keywords\n- get_document_summary: Get the latest human-prepared
+      summary content\n- add_exact_string_annotations: Find exact string matches in
+      the document\n- Other document-specific tools may be available\n\nCRITICAL OPERATING
+      PRINCIPLES:\n1. You have ZERO knowledge about this document except what you
+      discover through tools\n2. NEVER assume, infer, or use any information not explicitly
+      found via tool calls\n3. If you cannot find requested information after thorough
+      search, return null\n4. Your answers must be 100% traceable to specific tool
+      results\n\nEXTRACTION METHODOLOGY:\n\nPHASE 1 - COMPREHENSIVE SEARCH:\n1. Analyze
+      the extraction request: \"Extract metadata about the ''21st Century Language
+      Act of 2012''.\"\n2. Plan multiple search strategies using different tools and
+      query variations\n3. Execute searches systematically:\n   - Try semantic search
+      with various phrasings\n   - Load document summary if relevant\n   - Search
+      notes if they might contain the information\n   - Access document text for detailed
+      inspection\n4. Collect ALL potentially relevant information\n\nPHASE 2 - INITIAL
+      EXTRACTION:\n1. Review all gathered information\n2. Extract ONLY data that directly
+      answers the request\n3. For each piece of extracted data, note its source (which
+      tool, what result)\n4. If information is ambiguous or conflicting, prefer the
+      most authoritative source\n5. If required information is not found, prepare
+      to return null for those fields\n\nPHASE 3 - BACKWARD VERIFICATION (CRITICAL):\n1.
+      Take your proposed answer and work backwards\n2. For EACH data point in your
+      answer:\n   - Can you cite the EXACT tool call and result that provided this
+      information?\n   - Does the source material actually say what you claim it says?\n   -
+      Is this a direct quote/fact or are you interpreting/inferring?\n3. If ANY data
+      point fails verification:\n   - Remove unverifiable data\n   - Search again
+      with more targeted queries\n   - If still not found, that field should be null\n\nPHASE
+      4 - ITERATION IF NEEDED:\nIf backward verification revealed gaps or errors:\n1.
+      Identify what specific information is missing or wrong\n2. Formulate new, more
+      targeted search queries\n3. Return to PHASE 1 with these specific queries\n4.
+      Repeat until either:\n   - All data is verified with clear sources, OR\n   -
+      You''ve exhausted search options and must return null\n\nVERIFICATION RULES:\n-
+      Dates must be explicitly stated in the source material (not inferred from context)\n-
+      Numbers must be exact matches from the document (not calculated or estimated)\n-
+      Names/entities must appear verbatim (not paraphrased or corrected)\n- Boolean
+      values require explicit supporting statements\n- Lists must be complete based
+      on the source (not \"including but not limited to\")\n- For relationships, both
+      entities and the relationship must be explicitly stated\n\nOUTPUT RULES:\n-
+      Return ONLY the extracted data in this exact format: \n\na JSON object matching
+      the ''DocumentMetadata'' model with this schema:\n{\n  \"properties\": {\n    \"title\":
+      {\n      \"title\": \"Title\",\n      \"type\": \"string\"\n    },\n    \"public_law_number\":
       {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
       \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Public
       Law Number\"\n    },\n    \"date_enacted\": {\n      \"anyOf\": [\n        {\n          \"type\":
@@ -55,7 +77,11 @@ interactions:
       \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Sponsor\"\n    },\n    \"committee\":
       {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
       \"null\"\n        }\n      ],\n      \"default\": null,\n      \"title\": \"Committee\"\n    }\n  },\n  \"required\":
-      [\n    \"title\"\n  ],\n  \"title\": \"DocumentMetadata\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Extract
+      [\n    \"title\"\n  ],\n  \"title\": \"DocumentMetadata\",\n  \"type\": \"object\"\n}\n\n-
+      No explanations, confidence scores, or meta-commentary\n- Use null/empty for
+      missing data rather than placeholders\n- The entire response must be valid string
+      representation of desired answer convertible to the target type\n\nUser has
+      provided the following additional context (if blank, nothing provided):\n\n"},{"role":"user","content":"Extract
       metadata about the ''21st Century Language Act of 2012''."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"properties":{"title":{"type":"string"},"public_law_number":{"anyOf":[{"type":"string"},{"type":"null"}]},"date_enacted":{"anyOf":[{"type":"string"},{"type":"null"}]},"sponsor":{"anyOf":[{"type":"string"},{"type":"null"}]},"committee":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["title"],"type":"object"}}}]}'
     headers:
@@ -66,12 +92,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '5382'
+      - '7392'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
-        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
+      - __cf_bm=4_gmVURDuZKY2geW67mrcJmHfSge7MQ6SQYwvcO3Rcw-1751760736-1.0.1.1-OHBOavi5r3Bj3TshtVcWhIDYemLMOc.LZZ.Zh8OP7xw7dvNPNBJfUURLqOsW68hVAMUCQMTAsp1NZRACyCHj7Ptlaw9kkWMvvPLkqb7MCRg;
+        _cfuvid=nJAMzKDSO8HRLgzCw8QUEzEHfaRUzTBvizMw8371j24-1751760736988-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -99,20 +125,20 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xU227bMAx991cIfE4Gx0mbzm9bsBYYil2LIttcGIxEO1plyZPoLUWQfx/sXOxe
-        BswPhsDDQx4d0t5GQoBWkAqQa2RZ1Wb89lf86Tuu3oUmudmoxKuNWn6JrzZysfp2C6OW4VY/SfKR
-        9Uq6qjbE2tk9LD0hU1t1Mj+bzKez6XTeAZVTZFpaWfN45saVtnqcxMlsHM/Hk4sDe+20pACp+BEJ
-        IcS2e7c6raINpCIeHSMVhYAlQXpKEgK8M20EMAQdGC3DqAels0y2lW4bYwYAO2dyicb0jffPdnDu
-        zUJjcr+8/Lr8TB/Ollc31x/D9fn9+cXl+8Vi0G9f+qHuBBWNlSeTBvgpnj5pJgRYrPZcbdHknkJj
-        +AlfCEBfNhVZbrXDNgPWbCiDNINkElgsyHLjH8Q12rLBksQbycIVIoknSQajDOpmZbTMDf7JbVOt
-        yGeQdv5koJApJ4uSSfXRUDsb3CBNuqrSzESH0A4eadxFL53vBv57KpqA5vlg0FrH2PrTTebugOxO
-        S2BcWXu3Ck+orWU6rHNPGDpvhyOOjkI6CdA82iKovatqztndU9d0Ep9N92WhX/Uens0OIDtGM6S9
-        no9eqJgrYtTdop12W6Jck+q5/Y5jo7QbANHg9s/lvFR774C25f+U7wEpqWZSee1Jafn4yn2ap/ZX
-        8K+0k8+dYAjkf2tJOWvy7UQUFXhcaAgPganKC21L8rXX3VcKRZ2fJ5hM8WJCBUS76C8AAAD//wMA
-        6inTkLMEAAA=
+        H4sIAAAAAAAAAwAAAP//jFTbbtNAEH33V6zmOUGxmyaV31okBLQIELSVgqvVZj12tuyN3XFLiPLv
+        yM7F7gUJP1irOXNmzp4Ze5MwBqqEnIFcCZLG6/HFr/mVl5cXV9Vs/efTzSJLTy/N6rNb3H5cSBi1
+        DLe8R0kH1hvpjNdIytkdLAMKwrZqOj9N57N0kp50gHEl6pZWexpP3dgoq8bZJJuOJ/NxerZnr5yS
+        GCFnPxLGGNt071anLfE35GwyOkQMxihqhPyYxBgEp9sIiBhVJGEJRj0onSW0rXTbaD0AyDnNpdC6
+        b7x7NoNzb5bQmn/9kslvFK/P39GH++/65uz64b58vH0/6LcrvfadoKqx8mjSAD/G82fNGAMrzI6r
+        rNA8YGw0PeMzBiLUjUFLrXbYFECKNBaQF5ClkdhbtNSENbsStm5EjexcEnMVyyZpVsCoAN8stZJc
+        i0duG7PEUEDe+VNAKQg5WiEJyz4avbPRDdKkM0YRIe5DW3iicZu8dr4b+B+waqLQLwcjrHUkWn+6
+        ydztke1xCbSrfXDL+IzaWqbiigcUsfN2OOLkIKSTAM2TLQIfnPHEyf3Ermk6nZ3sykK/6j08ne5B
+        ciT0gHY6mY9eqchLJKG6RTvuthRyhWXP7XdcNKVyAyAZ3P6lnNdq7xxQtv6f8j0gJXrCkvuApZJP
+        r9ynBWx/Bf9KO/rcCYaI4UFJ5KQwtBMpsRKHhYa4joSGV8rWGHxQ3VcKleezTGQn4izFCpJt8hcA
+        AP//AwCWMMEmswQAAA==
     headers:
       CF-RAY:
-      - 95a85f350df56b6d-DFW
+      - 95aaea7dbf79eafa-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -120,7 +146,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 16:52:18 GMT
+      - Sun, 06 Jul 2025 00:16:54 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -136,13 +162,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '909'
+      - '754'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '912'
+      - '760'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -150,13 +176,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3998861'
+      - '3998370'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 17ms
+      - 24ms
       x-request-id:
-      - req_31fea21e48635f88269646e15d7c316e
+      - req_9c3c5dfccc4a79f3eff8cd7d80e4661d
     status:
       code: 200
       message: OK

@@ -22,37 +22,59 @@ interactions:
       Use multiple tools when necessary for comprehensive answers\n- Present your
       findings in clear, helpful markdown format\n- Avoid repeating instructions or
       disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
-      data extraction system with advanced verification capabilities.\n\nEXTRACTION
-      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
-      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Extract the enactment date of the ''Born-Alive Infants Protection
-      Act of 2002''.\"\n3. VERIFY: Before outputting, internally validate your extraction
-      by:\n   - Confirming the requested information ACTUALLY EXISTS in the document\n   -
-      Cross-referencing multiple sources if available\n   - Checking for logical consistency
-      (dates in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or
-      generic values (like \"N/A\" unless actually in the document)\n   - Confirming
-      extracted text actually appears in the source material\n   - For lists/collections:
-      searching again with different queries to ensure completeness\n\nCRITICAL RULES:\n-
-      If the requested information does not exist or is not applicable to this document,
-      return null\n- If a question doesn''t make sense for this document type, return
-      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
-      If data is not found after thorough search, return null/empty rather than guessing\n-
-      If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context\n- For dates, ensure they
-      follow logical chronology and are actually present\n- For names/entities, verify
-      exact spelling from the source\n- For boolean questions, only return true/false
-      if you can definitively answer based on document content\n\nYour response must
-      be ONLY the extracted data in the format of: a JSON object matching the ''ContractDates''
-      model structure\n\nNo explanations, no process description, no confidence scores
-      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"$defs\":
-      {\n    \"ContractDate\": {\n      \"description\": \"A single important date
-      in a contract.\",\n      \"properties\": {\n        \"date\": {\n          \"description\":
-      \"Date in ISO format (YYYY-MM-DD)\",\n          \"title\": \"Date\",\n          \"type\":
-      \"string\"\n        },\n        \"description\": {\n          \"description\":
-      \"What this date represents\",\n          \"title\": \"Description\",\n          \"type\":
-      \"string\"\n        },\n        \"is_deadline\": {\n          \"description\":
-      \"Whether this is a deadline\",\n          \"title\": \"Is Deadline\",\n          \"type\":
-      \"boolean\"\n        }\n      },\n      \"required\": [\n        \"date\",\n        \"description\",\n        \"is_deadline\"\n      ],\n      \"title\":
+      data extraction system with NO PRIOR KNOWLEDGE about any documents. You must
+      ONLY use information obtained through the provided tools.\n\nAVAILABLE TOOLS
+      FOR DOCUMENT ANALYSIS:\n- similarity_search: Semantic vector search to find
+      relevant passages based on meaning\n- load_document_md_summary: Access markdown
+      summary of the document (if available)\n- load_document_txt_extract: Load plain
+      text extract of document (full or partial)\n- get_document_notes: Retrieve human-created
+      notes attached to this document\n- search_document_notes: Search through notes
+      for specific keywords\n- get_document_summary: Get the latest human-prepared
+      summary content\n- add_exact_string_annotations: Find exact string matches in
+      the document\n- Other document-specific tools may be available\n\nCRITICAL OPERATING
+      PRINCIPLES:\n1. You have ZERO knowledge about this document except what you
+      discover through tools\n2. NEVER assume, infer, or use any information not explicitly
+      found via tool calls\n3. If you cannot find requested information after thorough
+      search, return null\n4. Your answers must be 100% traceable to specific tool
+      results\n\nEXTRACTION METHODOLOGY:\n\nPHASE 1 - COMPREHENSIVE SEARCH:\n1. Analyze
+      the extraction request: \"Extract the enactment date of the ''Born-Alive Infants
+      Protection Act of 2002''.\"\n2. Plan multiple search strategies using different
+      tools and query variations\n3. Execute searches systematically:\n   - Try semantic
+      search with various phrasings\n   - Load document summary if relevant\n   -
+      Search notes if they might contain the information\n   - Access document text
+      for detailed inspection\n4. Collect ALL potentially relevant information\n\nPHASE
+      2 - INITIAL EXTRACTION:\n1. Review all gathered information\n2. Extract ONLY
+      data that directly answers the request\n3. For each piece of extracted data,
+      note its source (which tool, what result)\n4. If information is ambiguous or
+      conflicting, prefer the most authoritative source\n5. If required information
+      is not found, prepare to return null for those fields\n\nPHASE 3 - BACKWARD
+      VERIFICATION (CRITICAL):\n1. Take your proposed answer and work backwards\n2.
+      For EACH data point in your answer:\n   - Can you cite the EXACT tool call and
+      result that provided this information?\n   - Does the source material actually
+      say what you claim it says?\n   - Is this a direct quote/fact or are you interpreting/inferring?\n3.
+      If ANY data point fails verification:\n   - Remove unverifiable data\n   - Search
+      again with more targeted queries\n   - If still not found, that field should
+      be null\n\nPHASE 4 - ITERATION IF NEEDED:\nIf backward verification revealed
+      gaps or errors:\n1. Identify what specific information is missing or wrong\n2.
+      Formulate new, more targeted search queries\n3. Return to PHASE 1 with these
+      specific queries\n4. Repeat until either:\n   - All data is verified with clear
+      sources, OR\n   - You''ve exhausted search options and must return null\n\nVERIFICATION
+      RULES:\n- Dates must be explicitly stated in the source material (not inferred
+      from context)\n- Numbers must be exact matches from the document (not calculated
+      or estimated)\n- Names/entities must appear verbatim (not paraphrased or corrected)\n-
+      Boolean values require explicit supporting statements\n- Lists must be complete
+      based on the source (not \"including but not limited to\")\n- For relationships,
+      both entities and the relationship must be explicitly stated\n\nOUTPUT RULES:\n-
+      Return ONLY the extracted data in this exact format: \n\na JSON object matching
+      the ''ContractDates'' model with this schema:\n{\n  \"$defs\": {\n    \"ContractDate\":
+      {\n      \"description\": \"A single important date in a contract.\",\n      \"properties\":
+      {\n        \"date\": {\n          \"description\": \"Date in ISO format (YYYY-MM-DD)\",\n          \"title\":
+      \"Date\",\n          \"type\": \"string\"\n        },\n        \"description\":
+      {\n          \"description\": \"What this date represents\",\n          \"title\":
+      \"Description\",\n          \"type\": \"string\"\n        },\n        \"is_deadline\":
+      {\n          \"description\": \"Whether this is a deadline\",\n          \"title\":
+      \"Is Deadline\",\n          \"type\": \"boolean\"\n        }\n      },\n      \"required\":
+      [\n        \"date\",\n        \"description\",\n        \"is_deadline\"\n      ],\n      \"title\":
       \"ContractDate\",\n      \"type\": \"object\"\n    }\n  },\n  \"description\":
       \"All important dates found in a contract.\",\n  \"properties\": {\n    \"effective_date\":
       {\n      \"anyOf\": [\n        {\n          \"type\": \"string\"\n        },\n        {\n          \"type\":
@@ -63,7 +85,11 @@ interactions:
       \"Contract expiration date\",\n      \"title\": \"Expiration Date\"\n    },\n    \"key_dates\":
       {\n      \"description\": \"Other important dates\",\n      \"items\": {\n        \"$ref\":
       \"#/$defs/ContractDate\"\n      },\n      \"title\": \"Key Dates\",\n      \"type\":
-      \"array\"\n    }\n  },\n  \"title\": \"ContractDates\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Extract
+      \"array\"\n    }\n  },\n  \"title\": \"ContractDates\",\n  \"type\": \"object\"\n}\n\n-
+      No explanations, confidence scores, or meta-commentary\n- Use null/empty for
+      missing data rather than placeholders\n- The entire response must be valid string
+      representation of desired answer convertible to the target type\n\nUser has
+      provided the following additional context (if blank, nothing provided):\n\n"},{"role":"user","content":"Extract
       the enactment date of the ''Born-Alive Infants Protection Act of 2002''."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"All
       important dates found in a contract.","parameters":{"properties":{"effective_date":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Contract
       effective date"},"expiration_date":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"Contract
@@ -80,12 +106,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '6456'
+      - '8466'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
-        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
+      - __cf_bm=4_gmVURDuZKY2geW67mrcJmHfSge7MQ6SQYwvcO3Rcw-1751760736-1.0.1.1-OHBOavi5r3Bj3TshtVcWhIDYemLMOc.LZZ.Zh8OP7xw7dvNPNBJfUURLqOsW68hVAMUCQMTAsp1NZRACyCHj7Ptlaw9kkWMvvPLkqb7MCRg;
+        _cfuvid=nJAMzKDSO8HRLgzCw8QUEzEHfaRUzTBvizMw8371j24-1751760736988-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -113,20 +139,21 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFRNb9swDL37Vwi89BIPjhsvgW/t0EMXFFuxFShQFwYr0YlaWXIluV0R
-        5L8PUprY/RgwHwyBj+/xiaS9SRgDKaBkwNfoedup9PQxu7g6P3++/3b/28nltV0+X10W8+VlUVw0
-        MAkMc3dP3O9ZX7hpO0VeGr2DuSX0FFSn82I6P55NZ18j0BpBKtBWnU9nJm2llmme5bM0m6fTxSt7
-        bSQnByW7SRhjbBPfwacW9AdKlk32kZacwxVBeUhiDKxRIQLonHQetYfJAHKjPelgXfdKjQBvjKo5
-        KjUU3j2b0XloFipVf+8Wy2tbWHP6+Iue5j8urvDsjLfrUb2d9EsXDTW95ocmjfBDvHxXjDHQ2O64
-        UqOqLble+Xd8xgDtqm9J++AdNhU80Est0JOroLzZVBDOFZQV5FmWp9kizYoKJhUIctzKLhSP8JlG
-        7oMQCwxmGubXxI5OjdXpiZJPxM51g9o79tMaT9E1O+E+ZAbpo6gqXS0IhZI6FG1QOdrebuGN6W3y
-        2fl2NBBLTe9QfZwUam08htJxVLevyPawFcqsOmvu3Dtq6KF069oSutjs8cyTvZFoAfo3awWdNW3n
-        a28eKBad5vnxThaG3R/gIn8FvfGoxrR5MflEsRbkUcbNOyw7R74mMXCHpcdeSDMCktHtP9r5THvX
-        AalX/yM/AJxT50nUnSUh+dsrD2mWwr/hX2mHPkfD4Mg+SU61l2TDRAQ1uN9wcC/OU1s3Uq/IdlbG
-        zxaarv6aY36Miyk1kGyTvwAAAP//AwB2b7TOxAQAAA==
+        H4sIAAAAAAAAAwAAAP//7FRdT9swFH3Pr7D8wkuDkhRa6BudGKIMBGIDbSuKjH3TGBw72DdsbdX/
+        PjmhTShMYu/LQ2Tfcz+Oj33vMiCESkFHhPKcIS9KFY6fhqfiwo5/HeeY3Dzg2T48fTm5P789vo5P
+        aM9HmPsH4LiO2uWmKBWgNLqBuQWG4LPGw/14OIgO4v0aKIwA5cNmJYZ7JiyklmESJXthNAzjg5fo
+        3EgOjo7Iz4AQQpb13/PUAn7TEYl6a0sBzrEZ0NHGiRBqjfIWypyTDplG2mtBbjSC9tR1pVQHQGNU
+        yplSbeHmW3bWrVhMqXSSFF8/Lb6fmcv5RXxzdf15Afnk0h126jWp52VNKKs034jUwTf20VYxQqhm
+        RRMrNVOpBVcp3IonhDI7qwrQ6LnT5ZQ+wjwVDMFN/WGWU+o3fj2lU9ojUyrAcStLX7UxH2vG0acg
+        3pWYjGAOZGdsrA6PlHwGcqozptGRS2sQar7kiKP3TKIo2dltEkuXCmBCSV3Xy5hysLpb0VeMV53d
+        qvchrY/OeDYRxeL222IyjpLBj3Mxt9Hz+X+t/0Xrzfqu8/ItZJVj6m1LMK0NMl+97om7YOvGqDKz
+        0pp7txXqBZQuTy0wVyvdba5gTaSmQKtX/UtLa4oSUzSPUBeNB/1+k5a2Q6YDR4MXFA0y1QGG/cPe
+        OylTAchk3eObscIZz0G0se14YZWQpgMEneO/5fNe7kYCqWcfSd8CnEOJINLSgpD89ZlbNwt+Cv/N
+        bSN0TZg6sM+SQ4oSrL8SARlbv2/q5g6hSDOpZ2BLK+sBSbMyHSQs6bODGDIarII/AAAA//8DAGkF
+        ZOEuBgAA
     headers:
       CF-RAY:
-      - 95a85a902b767103-DFW
+      - 95aae5a5dcb0f058-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -134,7 +161,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 16:49:07 GMT
+      - Sun, 06 Jul 2025 00:13:36 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -150,13 +177,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '970'
+      - '1394'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '973'
+      - '1397'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -164,13 +191,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3998707'
+      - '3998216'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 19ms
+      - 26ms
       x-request-id:
-      - req_7737accd417908a373a4518bcf36c7a2
+      - req_4b369b2692177cd9a4dc901bdbd37bf1
     status:
       code: 200
       message: OK

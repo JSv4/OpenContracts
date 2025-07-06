@@ -22,34 +22,59 @@ interactions:
       Use multiple tools when necessary for comprehensive answers\n- Present your
       findings in clear, helpful markdown format\n- Avoid repeating instructions or
       disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
-      data extraction system with advanced verification capabilities.\n\nEXTRACTION
-      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
-      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Extract some data that definitely won''t match this complex
-      structure\"\n3. VERIFY: Before outputting, internally validate your extraction
-      by:\n   - Confirming the requested information ACTUALLY EXISTS in the document\n   -
-      Cross-referencing multiple sources if available\n   - Checking for logical consistency
-      (dates in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or
-      generic values (like \"N/A\" unless actually in the document)\n   - Confirming
-      extracted text actually appears in the source material\n   - For lists/collections:
-      searching again with different queries to ensure completeness\n\nCRITICAL RULES:\n-
-      If the requested information does not exist or is not applicable to this document,
-      return null\n- If a question doesn''t make sense for this document type, return
-      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
-      If data is not found after thorough search, return null/empty rather than guessing\n-
-      If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context\n- For dates, ensure they
-      follow logical chronology and are actually present\n- For names/entities, verify
-      exact spelling from the source\n- For boolean questions, only return true/false
-      if you can definitively answer based on document content\n\nYour response must
-      be ONLY the extracted data in the format of: a JSON object matching the ''ComplexModel''
-      model structure\n\nNo explanations, no process description, no confidence scores
-      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
-      {\n    \"nested_data\": {\n      \"additionalProperties\": {\n        \"items\":
-      {\n          \"additionalProperties\": {\n            \"type\": \"number\"\n          },\n          \"type\":
-      \"object\"\n        },\n        \"type\": \"array\"\n      },\n      \"title\":
-      \"Nested Data\",\n      \"type\": \"object\"\n    }\n  },\n  \"required\": [\n    \"nested_data\"\n  ],\n  \"title\":
-      \"ComplexModel\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Extract
+      data extraction system with NO PRIOR KNOWLEDGE about any documents. You must
+      ONLY use information obtained through the provided tools.\n\nAVAILABLE TOOLS
+      FOR DOCUMENT ANALYSIS:\n- similarity_search: Semantic vector search to find
+      relevant passages based on meaning\n- load_document_md_summary: Access markdown
+      summary of the document (if available)\n- load_document_txt_extract: Load plain
+      text extract of document (full or partial)\n- get_document_notes: Retrieve human-created
+      notes attached to this document\n- search_document_notes: Search through notes
+      for specific keywords\n- get_document_summary: Get the latest human-prepared
+      summary content\n- add_exact_string_annotations: Find exact string matches in
+      the document\n- Other document-specific tools may be available\n\nCRITICAL OPERATING
+      PRINCIPLES:\n1. You have ZERO knowledge about this document except what you
+      discover through tools\n2. NEVER assume, infer, or use any information not explicitly
+      found via tool calls\n3. If you cannot find requested information after thorough
+      search, return null\n4. Your answers must be 100% traceable to specific tool
+      results\n\nEXTRACTION METHODOLOGY:\n\nPHASE 1 - COMPREHENSIVE SEARCH:\n1. Analyze
+      the extraction request: \"Extract some data that definitely won''t match this
+      complex structure\"\n2. Plan multiple search strategies using different tools
+      and query variations\n3. Execute searches systematically:\n   - Try semantic
+      search with various phrasings\n   - Load document summary if relevant\n   -
+      Search notes if they might contain the information\n   - Access document text
+      for detailed inspection\n4. Collect ALL potentially relevant information\n\nPHASE
+      2 - INITIAL EXTRACTION:\n1. Review all gathered information\n2. Extract ONLY
+      data that directly answers the request\n3. For each piece of extracted data,
+      note its source (which tool, what result)\n4. If information is ambiguous or
+      conflicting, prefer the most authoritative source\n5. If required information
+      is not found, prepare to return null for those fields\n\nPHASE 3 - BACKWARD
+      VERIFICATION (CRITICAL):\n1. Take your proposed answer and work backwards\n2.
+      For EACH data point in your answer:\n   - Can you cite the EXACT tool call and
+      result that provided this information?\n   - Does the source material actually
+      say what you claim it says?\n   - Is this a direct quote/fact or are you interpreting/inferring?\n3.
+      If ANY data point fails verification:\n   - Remove unverifiable data\n   - Search
+      again with more targeted queries\n   - If still not found, that field should
+      be null\n\nPHASE 4 - ITERATION IF NEEDED:\nIf backward verification revealed
+      gaps or errors:\n1. Identify what specific information is missing or wrong\n2.
+      Formulate new, more targeted search queries\n3. Return to PHASE 1 with these
+      specific queries\n4. Repeat until either:\n   - All data is verified with clear
+      sources, OR\n   - You''ve exhausted search options and must return null\n\nVERIFICATION
+      RULES:\n- Dates must be explicitly stated in the source material (not inferred
+      from context)\n- Numbers must be exact matches from the document (not calculated
+      or estimated)\n- Names/entities must appear verbatim (not paraphrased or corrected)\n-
+      Boolean values require explicit supporting statements\n- Lists must be complete
+      based on the source (not \"including but not limited to\")\n- For relationships,
+      both entities and the relationship must be explicitly stated\n\nOUTPUT RULES:\n-
+      Return ONLY the extracted data in this exact format: \n\na JSON object matching
+      the ''ComplexModel'' model with this schema:\n{\n  \"properties\": {\n    \"nested_data\":
+      {\n      \"additionalProperties\": {\n        \"items\": {\n          \"additionalProperties\":
+      {\n            \"type\": \"number\"\n          },\n          \"type\": \"object\"\n        },\n        \"type\":
+      \"array\"\n      },\n      \"title\": \"Nested Data\",\n      \"type\": \"object\"\n    }\n  },\n  \"required\":
+      [\n    \"nested_data\"\n  ],\n  \"title\": \"ComplexModel\",\n  \"type\": \"object\"\n}\n\n-
+      No explanations, confidence scores, or meta-commentary\n- Use null/empty for
+      missing data rather than placeholders\n- The entire response must be valid string
+      representation of desired answer convertible to the target type\n\nUser has
+      provided the following additional context (if blank, nothing provided):\n\n"},{"role":"user","content":"Extract
       some data that definitely won''t match this complex structure"}],"model":"gpt-4o-mini","stream":false,"temperature":2.0,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"properties":{"nested_data":{"additionalProperties":{"items":{"additionalProperties":{"type":"number"},"type":"object"},"type":"array"},"type":"object"}},"required":["nested_data"],"type":"object"}}}]}'
     headers:
@@ -60,12 +85,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '4589'
+      - '6599'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
-        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
+      - __cf_bm=4_gmVURDuZKY2geW67mrcJmHfSge7MQ6SQYwvcO3Rcw-1751760736-1.0.1.1-OHBOavi5r3Bj3TshtVcWhIDYemLMOc.LZZ.Zh8OP7xw7dvNPNBJfUURLqOsW68hVAMUCQMTAsp1NZRACyCHj7Ptlaw9kkWMvvPLkqb7MCRg;
+        _cfuvid=nJAMzKDSO8HRLgzCw8QUEzEHfaRUzTBvizMw8371j24-1751760736988-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -93,18 +118,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPJbtswEL3rK4g5W4V3u7rVPTltXTRd0gWBwFAjmTE3k1Sb1PC/B5Ss
-        xU4KVAeBmMf35s3CQ0QI8AwSAmxLPZNGxKv98NPVG3X9cf1FfsbN2734KX/M/yzu/27mKxgEhr67
-        R+Yb1iumpRHouVY1zCxSj0F1tJiNFpPpZDmpAKkzFIFWGB9PdSy54vF4OJ7Gw0U8Wp7YW80ZOkjI
-        r4gQQg7VP/hUGT5AQoaDJiLROVogJO0lQsBqESJAnePOU+Vh0IFMK48qWFelED3Aay1SRoXoEtff
-        oXfumkWFSL9v1nZ+Y95/Lffvrlffrja7fP3B71738tXSj6YylJeKtU3q4W08uUhGCCgqay5XVKQW
-        XSn8BZ8QoLYoJSofvMPhCGf4MXrpfNur3WJeOiqeN4UqpT0N3qqu3J6QYzsAoQtj9Z27oAa73G1T
-        i9RVdfXbGzVGKgtQnk0QjNXS+NTrHVZJl9NZrQrdlnXo6LQL4LWnoseaNawzvTRDT3k14narGGVb
-        zDpqt120zLjuAVGv9uduXtKu6+eq+B/5DmAMjccsNRYzzs4r7q5ZDI/wX9faLleGwaH9zRmmnqMN
-        88gwp80qgXt0HmWac1WgNZZX7wNyk87HdDyhyxHmEB2jJwAAAP//AwDs+In0LQQAAA==
+        H4sIAAAAAAAAAwAAAP//jFPBjpswEL3zFZbPoQpsSCi3tpeoVdWuqlatqhWamAG8MbZjm3S3Uf59
+        ZUiAZFOpHJA1z2/mzZvxISCE8oJmhLIaHGu0CN/vVp9/7r49zj9tbV0sF+n+fv/x+9vqw/aXc3Tm
+        GWrziMydWW+YarRAx5XsYWYQHPqs0SqJVstonqw6oFEFCk+rtAsXKmy45GE8jxfhfBVG6YldK87Q
+        0oz8Dggh5ND9vU5Z4BPNyHx2jjRoLVRIs+ESIdQo4SMUrOXWgew1n0CmpEPppctWiAnglBI5AyHG
+        wv13mJxHs0CI/O/X+6eNLH+s07WNYf2nMbt3mERfJvX61M+6E1S2kg0mTfAhnl0VI4RKaHoulyBy
+        g7YV7opPCAVTtQ1K57XTw5Fe4Mfg1vlh0rvBsrUgXpsCUioHXlvnysMJOQ4DEKrSRm3sFdXL5bbO
+        DYLt+praG5yFdBJoezFBqo1qtMud2mJXNIqTpE9LxzUb4Tg9gU45EFNaeje7kTEv0AHvhjzsFQNW
+        YzFyx/2CtuBqAgST7l/LuZW7d4DL6n/SjwBjqB0WuTZYcHbZ8njNoH+G/7o2+NwJphbNnjPMHUfj
+        J1JgCedlovbZOmzykssKjTa8eyG01PkyhvgO0ghLGhyDFwAAAP//AwAHpqXeLwQAAA==
     headers:
       CF-RAY:
-      - 95a860560ab36c62-DFW
+      - 95aaeb91bc84e7db-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -112,7 +137,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 16:53:03 GMT
+      - Sun, 06 Jul 2025 00:17:38 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -128,13 +153,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '346'
+      - '625'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '349'
+      - '630'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -142,13 +167,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3999004'
+      - '3998513'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 14ms
+      - 22ms
       x-request-id:
-      - req_19febbfc0fe276b0664a6c9699afe110
+      - req_bb6e76cae896b0bfed7e219120642cb9
     status:
       code: 200
       message: OK
@@ -175,35 +200,60 @@ interactions:
       Use multiple tools when necessary for comprehensive answers\n- Present your
       findings in clear, helpful markdown format\n- Avoid repeating instructions or
       disclaimers in your responses\n</BACKGROUND_CONTEXT>\n\nYou are a highly-intelligent
-      data extraction system with advanced verification capabilities.\n\nEXTRACTION
-      METHODOLOGY:\n1. GATHER: Use available tools (similarity_search, load_document_md_summary,
-      etc.) to find ALL relevant information\n2. EXTRACT: Identify the specific data
-      requested in: \"Extract some data that definitely won''t match this complex
-      structure\"\n3. VERIFY: Before outputting, internally validate your extraction
-      by:\n   - Confirming the requested information ACTUALLY EXISTS in the document\n   -
-      Cross-referencing multiple sources if available\n   - Checking for logical consistency
-      (dates in order, numbers reasonable, etc.)\n   - Ensuring no placeholder or
-      generic values (like \"N/A\" unless actually in the document)\n   - Confirming
-      extracted text actually appears in the source material\n   - For lists/collections:
-      searching again with different queries to ensure completeness\n\nCRITICAL RULES:\n-
-      If the requested information does not exist or is not applicable to this document,
-      return null\n- If a question doesn''t make sense for this document type, return
-      null\n- NEVER invent, guess, or infer data that isn''t explicitly present\n-
-      If data is not found after thorough search, return null/empty rather than guessing\n-
-      If multiple conflicting values exist, choose the most authoritative/recent\n-
-      For numeric values, verify they make sense in context\n- For dates, ensure they
-      follow logical chronology and are actually present\n- For names/entities, verify
-      exact spelling from the source\n- For boolean questions, only return true/false
-      if you can definitively answer based on document content\n\nYour response must
-      be ONLY the extracted data in the format of: a JSON object matching the ''ComplexModel''
-      model structure\n\nNo explanations, no process description, no confidence scores
-      - just the final verified JSON.\n\nJSON Schema for your response:\n```json\n{\n  \"properties\":
-      {\n    \"nested_data\": {\n      \"additionalProperties\": {\n        \"items\":
-      {\n          \"additionalProperties\": {\n            \"type\": \"number\"\n          },\n          \"type\":
-      \"object\"\n        },\n        \"type\": \"array\"\n      },\n      \"title\":
-      \"Nested Data\",\n      \"type\": \"object\"\n    }\n  },\n  \"required\": [\n    \"nested_data\"\n  ],\n  \"title\":
-      \"ComplexModel\",\n  \"type\": \"object\"\n}\n```"},{"role":"user","content":"Extract
-      some data that definitely won''t match this complex structure"},{"role":"assistant","tool_calls":[{"id":"call_XNIr6WpLUuqKRBVJNkfIMtk9","type":"function","function":{"name":"final_result","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_XNIr6WpLUuqKRBVJNkfIMtk9","content":"1
+      data extraction system with NO PRIOR KNOWLEDGE about any documents. You must
+      ONLY use information obtained through the provided tools.\n\nAVAILABLE TOOLS
+      FOR DOCUMENT ANALYSIS:\n- similarity_search: Semantic vector search to find
+      relevant passages based on meaning\n- load_document_md_summary: Access markdown
+      summary of the document (if available)\n- load_document_txt_extract: Load plain
+      text extract of document (full or partial)\n- get_document_notes: Retrieve human-created
+      notes attached to this document\n- search_document_notes: Search through notes
+      for specific keywords\n- get_document_summary: Get the latest human-prepared
+      summary content\n- add_exact_string_annotations: Find exact string matches in
+      the document\n- Other document-specific tools may be available\n\nCRITICAL OPERATING
+      PRINCIPLES:\n1. You have ZERO knowledge about this document except what you
+      discover through tools\n2. NEVER assume, infer, or use any information not explicitly
+      found via tool calls\n3. If you cannot find requested information after thorough
+      search, return null\n4. Your answers must be 100% traceable to specific tool
+      results\n\nEXTRACTION METHODOLOGY:\n\nPHASE 1 - COMPREHENSIVE SEARCH:\n1. Analyze
+      the extraction request: \"Extract some data that definitely won''t match this
+      complex structure\"\n2. Plan multiple search strategies using different tools
+      and query variations\n3. Execute searches systematically:\n   - Try semantic
+      search with various phrasings\n   - Load document summary if relevant\n   -
+      Search notes if they might contain the information\n   - Access document text
+      for detailed inspection\n4. Collect ALL potentially relevant information\n\nPHASE
+      2 - INITIAL EXTRACTION:\n1. Review all gathered information\n2. Extract ONLY
+      data that directly answers the request\n3. For each piece of extracted data,
+      note its source (which tool, what result)\n4. If information is ambiguous or
+      conflicting, prefer the most authoritative source\n5. If required information
+      is not found, prepare to return null for those fields\n\nPHASE 3 - BACKWARD
+      VERIFICATION (CRITICAL):\n1. Take your proposed answer and work backwards\n2.
+      For EACH data point in your answer:\n   - Can you cite the EXACT tool call and
+      result that provided this information?\n   - Does the source material actually
+      say what you claim it says?\n   - Is this a direct quote/fact or are you interpreting/inferring?\n3.
+      If ANY data point fails verification:\n   - Remove unverifiable data\n   - Search
+      again with more targeted queries\n   - If still not found, that field should
+      be null\n\nPHASE 4 - ITERATION IF NEEDED:\nIf backward verification revealed
+      gaps or errors:\n1. Identify what specific information is missing or wrong\n2.
+      Formulate new, more targeted search queries\n3. Return to PHASE 1 with these
+      specific queries\n4. Repeat until either:\n   - All data is verified with clear
+      sources, OR\n   - You''ve exhausted search options and must return null\n\nVERIFICATION
+      RULES:\n- Dates must be explicitly stated in the source material (not inferred
+      from context)\n- Numbers must be exact matches from the document (not calculated
+      or estimated)\n- Names/entities must appear verbatim (not paraphrased or corrected)\n-
+      Boolean values require explicit supporting statements\n- Lists must be complete
+      based on the source (not \"including but not limited to\")\n- For relationships,
+      both entities and the relationship must be explicitly stated\n\nOUTPUT RULES:\n-
+      Return ONLY the extracted data in this exact format: \n\na JSON object matching
+      the ''ComplexModel'' model with this schema:\n{\n  \"properties\": {\n    \"nested_data\":
+      {\n      \"additionalProperties\": {\n        \"items\": {\n          \"additionalProperties\":
+      {\n            \"type\": \"number\"\n          },\n          \"type\": \"object\"\n        },\n        \"type\":
+      \"array\"\n      },\n      \"title\": \"Nested Data\",\n      \"type\": \"object\"\n    }\n  },\n  \"required\":
+      [\n    \"nested_data\"\n  ],\n  \"title\": \"ComplexModel\",\n  \"type\": \"object\"\n}\n\n-
+      No explanations, confidence scores, or meta-commentary\n- Use null/empty for
+      missing data rather than placeholders\n- The entire response must be valid string
+      representation of desired answer convertible to the target type\n\nUser has
+      provided the following additional context (if blank, nothing provided):\n\n"},{"role":"user","content":"Extract
+      some data that definitely won''t match this complex structure"},{"role":"assistant","tool_calls":[{"id":"call_zPQxbnfVH8Hs2aHwmrqAe51O","type":"function","function":{"name":"final_result","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_zPQxbnfVH8Hs2aHwmrqAe51O","content":"1
       validation errors: [\n  {\n    \"type\": \"missing\",\n    \"loc\": [\n      \"nested_data\"\n    ],\n    \"msg\":
       \"Field required\",\n    \"input\": {}\n  }\n]\n\nFix the errors and try again."}],"model":"gpt-4o-mini","stream":false,"temperature":2.0,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
       final response which ends this conversation","parameters":{"properties":{"nested_data":{"additionalProperties":{"items":{"additionalProperties":{"type":"number"},"type":"object"},"type":"array"},"type":"object"}},"required":["nested_data"],"type":"object"}}}]}'
@@ -215,12 +265,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '5006'
+      - '7016'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=v9Slg21i2yr0blW7WDX1hu7JKBc1EZ_aTLYSmJATqOA-1751734072-1.0.1.1-RSuNwUxbx7LA1Ekz1C5d5zepwxxBjV6y9v59Rg.wdc5AZ0Ptfv52eGr9ywiPhBL2Io5Huzg0XMfWomOHBDuBQCR.yu4hknV9TPgPNg_wp.w;
-        _cfuvid=kMKUTBGLMaKftLBwLgoFNITkjQukVlSgpJGCbONDQEU-1751734072392-0.0.1.1-604800000
+      - __cf_bm=4_gmVURDuZKY2geW67mrcJmHfSge7MQ6SQYwvcO3Rcw-1751760736-1.0.1.1-OHBOavi5r3Bj3TshtVcWhIDYemLMOc.LZZ.Zh8OP7xw7dvNPNBJfUURLqOsW68hVAMUCQMTAsp1NZRACyCHj7Ptlaw9kkWMvvPLkqb7MCRg;
+        _cfuvid=nJAMzKDSO8HRLgzCw8QUEzEHfaRUzTBvizMw8371j24-1751760736988-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -248,19 +298,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//zFRbb5swFH7nV1h+DlNI6HJ5a9ZpXXbRsnXt1KlCJ+YA3ozt2qZaEuW/
-        T4YGSNpJfRwPyJzP3znfubELCKE8pXNCWQGOlVqEi/vharm8toWDzx8vvnBT6Tfm7WV8kxZXN3Tg
-        GWr9C5k7sF4xVWqBjivZwMwgOPReo8lZNBnH4+m4BkqVovC0XLswVmHJJQ9Hw1EcDidhNH1kF4oz
-        tHROfgaEELKr316nTPEPnZPh4GAp0VrIkc7bS4RQo4S3ULCWWwfS0UEHMiUdSi9dVkL0AKeUSBgI
-        0QVunl3v3BULhEiW2fb7p+j8dmY/rKax2C5glX3d4EMvXuN6o2tBWSVZW6Qe3trnJ8EIoRLKhssl
-        iMSgrYQ74RNCweRVidJ57XS3p0f4vve1H7wos/X14pv+kZ3D8mri3l9sbyNr38WX9/9zZu35rtdV
-        g1llQTxtN0ipHHhtdb/vgpP6UKFybdTanlC9XG6LxCDYOq/+4AQHIbUEWh3NJtVGldolTv3GOugs
-        GjVeabc/HTqePYJOORA91lk0eMZfkqIDXg9vuy8MWIFpR+32BqqUqx4Q9HJ/quY5303+XOYvcd8B
-        jKF2mCbaYMrZccbdNYP+9/Kva22Va8HUonngDBPH0fh+pJjBYZSo3ViHZZJxmaPRhtebTzOdvB7B
-        aAzTCDMa7IO/AAAA//8DANtPrVwHBQAA
+        H4sIAAAAAAAAAwAAAP//zFRdb5swFH3nV1h+DlMgDSS8tdLaqVnTqWqmrlOFjLmAM2N7tqlWRfnv
+        E9CAk7bSHscDMj4+5577YXYeQpjlOEGYVsTSWnH/4nd88yO+vYNHZtdX8v7q+8XqLsz0NovpFzxp
+        GTLbArUH1icqa8XBMil6mGogFlrVIJ4HcRRM54sOqGUOvKWVyvpn0q+ZYH44Dc/8aewHi1d2JRkF
+        gxP000MIoV33bn2KHP7gBE0nh50ajCEl4GQ4hBDWkrc7mBjDjCXC4skIUiksiNa6aDh3ACslTynh
+        fAzcPztnPRaLcJ6G28elfq7KaqNnrIius/PNJXsQ0onXS7+ozlDRCDoUycGH/eQkGEJYkLrnMkF4
+        qsE03J7wEcJEl00Nwrbe8W6Pj/C987Wf/FNmn1fzy2uzXn2NmvvbdXYebei3m+VD+T9nNqyfnK5q
+        KBpD+Nt2EyGkJa23rt9P3kl9MJel0jIzJ9TWLjNVqoGYLi93cLyDkc4Cbo5mEysta2VTK39BFzSY
+        hWEvi8cLNMKz5StopSXcpUXB5B3FNAdLWDe+w42hhFaQO9xgHg6ZkCZncsSmnlOAt47ek++LwETp
+        qHwoPwKUgrKQp0pDzuhx1uMxDe0/5qNjQ6k7w9iAfmYUUstAt03JoSCHecLmxVio04KJErTSrLv+
+        uFBpFJJwRhYBFNjbe38BAAD//wMAWh8FAgwFAAA=
     headers:
       CF-RAY:
-      - 95a86058be6f6c62-DFW
+      - 95aaeb9658cce7db-DFW
       Connection:
       - keep-alive
       Content-Encoding:
@@ -268,7 +318,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 05 Jul 2025 16:53:04 GMT
+      - Sun, 06 Jul 2025 00:17:38 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -284,13 +334,13 @@ interactions:
       openai-organization:
       - user-54labie7aicgek5urzpgydpm
       openai-processing-ms:
-      - '667'
+      - '628'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '670'
+      - '634'
       x-ratelimit-limit-requests:
       - '5000'
       x-ratelimit-limit-tokens:
@@ -298,13 +348,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '4999'
       x-ratelimit-remaining-tokens:
-      - '3998961'
+      - '3998470'
       x-ratelimit-reset-requests:
       - 12ms
       x-ratelimit-reset-tokens:
-      - 15ms
+      - 22ms
       x-request-id:
-      - req_4f97fcc16be9548646fe512dcd926746
+      - req_c4d9452fa4a1eed77eac703af0c1721b
     status:
       code: 200
       message: OK

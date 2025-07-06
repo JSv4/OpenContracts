@@ -58,7 +58,7 @@ class Column(BaseOCModel):
         max_length=1024,
         null=False,
         blank=False,
-        default="opencontractserver.tasks.data_extract_tasks.oc_llama_index_doc_query",
+        default="opencontractserver.tasks.data_extract_tasks.doc_extract_query_task",
     )
 
     class Meta:

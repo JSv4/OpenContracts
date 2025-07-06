@@ -1502,6 +1502,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
             get_document_notes_tool,
             name="get_document_notes",
             description="Retrieve all notes attached to this document in the current corpus.",
+            requires_corpus=True,
         )
 
         load_text_tool = PydanticAIToolFactory.from_function(
@@ -1538,6 +1539,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
                 "truncate_length": "Optionally truncate to this many characters",
                 "from_start": "If true, truncate from the beginning; otherwise from the end",
             },
+            requires_corpus=True,
         )
 
         async def get_document_summary_diff_tool(from_version: int, to_version: int):
@@ -1574,6 +1576,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
             parameter_descriptions={
                 "limit": "Optional maximum number of versions to return (newest first)",
             },
+            requires_corpus=True,
         )
 
         get_summary_diff_wrapped = PydanticAIToolFactory.from_function(
@@ -1584,6 +1587,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
                 "from_version": "Starting version number",
                 "to_version": "Ending version number",
             },
+            requires_corpus=True,
         )
 
         update_summary_wrapped = PydanticAIToolFactory.from_function(
@@ -1594,6 +1598,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
                 "new_content": "Full markdown content for the new summary version",
             },
             requires_approval=True,
+            requires_corpus=True,
         )
 
         # -----------------------------
@@ -1643,6 +1648,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
                 "content": "Full markdown content of the note",
             },
             requires_approval=True,
+            requires_corpus=True,
         )
 
         update_note_tool_wrapped = PydanticAIToolFactory.from_function(
@@ -1664,6 +1670,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
                 "search_term": "Keyword or phrase to search for (case-insensitive)",
                 "limit": "Maximum number of results to return",
             },
+            requires_corpus=True,
         )
 
         # -----------------------------
@@ -1749,6 +1756,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
                 "label_type": "Optional label type override",
             },
             requires_approval=True,
+            requires_corpus=True,
         )
 
         add_exact_ann_tool_wrapped = PydanticAIToolFactory.from_function(
@@ -1759,6 +1767,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
                 "entries": "List of objects with keys 'label_text' and 'exact_string'",
             },
             requires_approval=True,
+            requires_corpus=True,
         )
 
         # Merge caller-supplied tools (if any) after the default one so callers
@@ -1925,6 +1934,7 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
                 "truncate_length": "Optionally truncate the description to this many characters",
                 "from_start": "If true, truncate from beginning else from end",
             },
+            requires_corpus=True,
         )
 
         update_corpus_desc_tool_wrapped = PydanticAIToolFactory.from_function(
@@ -1934,6 +1944,7 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
             parameter_descriptions={
                 "new_content": "Full markdown content",
             },
+            requires_corpus=True,
         )
 
         # -----------------------------
@@ -2057,6 +2068,7 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
             list_documents_tool,
             name="list_documents",
             description="List all documents in the current corpus with basic metadata.",
+            requires_corpus=True,
         )
 
         ask_doc_tool_wrapped = PydanticAIToolFactory.from_function(
@@ -2067,6 +2079,7 @@ class PydanticAICorpusAgent(PydanticAICoreAgent):
                 "document_id": "ID of the document to query (must be in this corpus)",
                 "question": "The natural-language question to ask the document agent",
             },
+            requires_corpus=True,
         )
 
         # Merge caller-supplied tools (if any) after the default ones so callers can

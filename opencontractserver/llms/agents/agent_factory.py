@@ -25,7 +25,7 @@ class UnifiedAgentFactory:
     @staticmethod
     async def create_document_agent(
         document: Union[str, int, Document],
-        corpus: Union[str, int, Corpus],
+        corpus: Optional[Union[str, int, Corpus]] = None,
         framework: AgentFramework = AgentFramework.LLAMA_INDEX,
         user_id: Optional[int] = None,
         # Enhanced conversation management
@@ -113,16 +113,18 @@ class UnifiedAgentFactory:
                 if isinstance(document, Document)
                 else await Document.objects.aget(id=document)
             )
-            corpus_obj = (
-                corpus
-                if isinstance(corpus, Corpus)
-                else await Corpus.objects.aget(id=corpus)
-            )
+            corpus_obj = None
+            if corpus is not None:
+                corpus_obj = (
+                    corpus
+                    if isinstance(corpus, Corpus)
+                    else await Corpus.objects.aget(id=corpus)
+                )
         except Exception:
             doc_obj = None
             corpus_obj = None
 
-        public_context = _is_public(doc_obj) or _is_public(corpus_obj)
+        public_context = _is_public(doc_obj) or (corpus_obj and _is_public(corpus_obj))
 
         filtered_tools: list[Union[CoreTool, Callable, str]] = []
         if tools:
@@ -130,6 +132,13 @@ class UnifiedAgentFactory:
                 if public_context and isinstance(t, CoreTool) and t.requires_approval:
                     logger.warning(
                         "Skipping approval-required tool '%s' for public context",
+                        t.name,
+                    )
+                    continue
+                # Filter out corpus-dependent tools when no corpus provided
+                if corpus is None and isinstance(t, CoreTool) and t.requires_corpus:
+                    logger.info(
+                        "Skipping corpus-required tool '%s' - no corpus provided for document agent",
                         t.name,
                     )
                     continue

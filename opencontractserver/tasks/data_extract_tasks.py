@@ -25,216 +25,6 @@ from opencontractserver.shared.decorators import celery_task_with_async_to_sync
 logger = logging.getLogger(__name__)
 
 
-def _assemble_and_trim_for_token_limit(
-    first_page_structural_annots: list[str],
-    raw_node_texts: list[str],
-    relationship_intro: list[str],
-    relationship_mermaid: list[str],
-    relationship_detailed: list[str],
-    max_token_length: int,
-    token_length_func: callable,
-    logger: logging.Logger,
-) -> str:
-    """
-    Take several lists that represent different categories of textual context
-    (structural annotations, retrieved node text, relationship intros, diagrams,
-    and detailed relationships) and iteratively trim them to fit under a specified
-    token limit. If it is impossible to get under the token limit (even after removing
-    all items from all lists), return None.
-
-    This process trims in the following order:
-      1) relationship_detailed
-      2) relationship_mermaid
-      3) relationship_intro
-      4) first_page_structural_annots
-      5) raw_node_texts
-
-    Each list is reduced line-by-line (i.e., item-by-item from the end)
-    until the token limit is met or the list is exhausted, after which the next
-    category is trimmed. If everything must be removed to try to fit, but it still
-    exceeds the token limit, return None. Otherwise, return the final combined string,
-    including some wrapper headings for clarity and additional instructions about
-    each section's purpose, if the section is non-empty.
-
-    Sections that contain IDs or node references (like Node123) are included so
-    that the LLM can map those IDs to context found in the mermaid diagram lines
-    or the references in the 'retrieved relevant sections'. These unique identifiers
-    help cross-reference the relevant relationships and annotation text.
-
-    Args:
-        first_page_structural_annots (list[str]): Lines derived from "first page" structural context.
-        raw_node_texts (list[str]): Lines from the retrieved node text.
-        relationship_intro (list[str]): Introductory lines explaining relationship context.
-        relationship_mermaid (list[str]): The mermaid diagram lines describing relationships visually.
-        relationship_detailed (list[str]): Detailed relationship lines (more verbose text),
-                                           possibly containing unique IDs to track references.
-        max_token_length (int): The maximum allowed token count for the assembled context.
-        token_length_func (callable): A function that calculates the token length for a given string.
-        logger (logging.Logger): Logger used to provide info/warnings/errors about trimming steps.
-
-    Returns:
-        Optional[str]: The fully composed text with partial or full context if we fit
-                      in the limit, or None if trimming everything is insufficient.
-    """
-
-    def build_context_text() -> str:
-        """
-        Re-assemble the final context string from the (possibly) trimmed lists.
-        Only include headings and explanations for sections that remain non-empty.
-        """
-        sections: list[str] = []
-
-        # Relationship Intro
-        if relationship_intro:
-            intro_text = (
-                "========== Relationship Introduction ==========\n"
-                "These lines provide a general introduction to how certain sections or clauses in this "
-                "document interconnect. They help explain why the following relationships or diagrams "
-                "may be relevant for answering the question.\n"
-            )
-            sections.append(intro_text + "\n".join(relationship_intro))
-
-        # Relationship Mermaid
-        if relationship_mermaid:
-            mermaid_text = (
-                "========== Relationship Diagram ==========\n"
-                "This mermaid diagram shows how the retrieved sections connect to other parts of the document. "
-                "Nodes labeled as 'NodeXYZ' reference specific sections of text that might also appear in the "
-                "detailed relationships or the retrieved sections below. If a node is marked [↑], it was deemed "
-                "directly relevant to the overarching query.\n"
-            )
-            sections.append(mermaid_text + "\n".join(relationship_mermaid))
-
-        # Relationship Detailed
-        if relationship_detailed:
-            detailed_text = (
-                "========== Detailed Relationship Descriptions ==========\n"
-                "Below are line-by-line descriptions of the relationships among key sections. "
-                "Identifiers like Node123 link back to the nodes found in the mermaid diagram, "
-                "and may coincide with sections appearing in the 'retrieved relevant sections.' "
-                "This is particularly useful for mapping which parts of the text reference one another.\n"
-            )
-            sections.append(detailed_text + "\n".join(relationship_detailed))
-
-        # Structural context
-        if first_page_structural_annots:
-            structural_heading = (
-                "========== Contents of First Page (for intro/context) ==========\n"
-                "This excerpt is from the first page of the document, which can provide general context "
-                "on the structure or introductory content.\n"
-            )
-            structural_footer = "\n========== End of First Page ==========\n"
-            sections.append(
-                structural_heading
-                + "\n".join(first_page_structural_annots)
-                + structural_footer
-            )
-
-        # Retrieved node text
-        if raw_node_texts:
-            retrieved_heading = (
-                "========== Retrieved Relevant Sections ==========\n"
-                "These sections were identified as highly relevant to your query. If a node ID "
-                "here (e.g., Node123) was also present in the relationship diagram, it indicates "
-                "that these sections are linked to one another, or potentially to other sections "
-                "of the document.\n"
-            )
-            retrieved_footer = "\n========== End of Retrieved Sections ==========\n"
-            sections.append(
-                retrieved_heading + "\n".join(raw_node_texts) + retrieved_footer
-            )
-
-        # Join all
-        return "\n".join(sections)
-
-    def current_length() -> int:
-        """Measure the current token length of our assembled text."""
-        return token_length_func(build_context_text())
-
-    def trim_list_in_reverse(target_list: list[str], label: str) -> bool:
-        """
-        Trim items from the end of 'target_list' one by one until
-        our built text is under the token limit or we exhaust 'target_list'.
-        Returns True if we have reached or fallen under the limit,
-        False if the list is fully cleared and the text remains too long.
-        """
-        while target_list and current_length() > max_token_length:
-            target_list.pop()  # remove last entry
-        if current_length() <= max_token_length:
-            logger.info(f"Trimming {label} succeeded in fitting under the limit.")
-            return True
-        else:
-            if not target_list:
-                logger.warning(f"Entire {label} list removed, still over limit.")
-            return False
-
-    # ---------------------------------------------------------------------------
-    # 1) Check if we already fit without trimming
-    # ---------------------------------------------------------------------------
-    if current_length() <= max_token_length:
-        return build_context_text()
-
-    logger.warning(
-        f"Initial context exceeds token limit ({current_length()} > {max_token_length}). Starting to trim."
-    )
-
-    # ---------------------------------------------------------------------------
-    # 2) Trim relationship_detailed
-    # ---------------------------------------------------------------------------
-    if relationship_detailed:
-        logger.warning("Trimming relationship_detailed lines first...")
-        if trim_list_in_reverse(relationship_detailed, "relationship_detailed"):
-            if current_length() <= max_token_length:
-                return build_context_text()
-
-    # ---------------------------------------------------------------------------
-    # 3) Trim relationship_mermaid
-    # ---------------------------------------------------------------------------
-    if relationship_mermaid:
-        logger.warning("Trimming relationship_mermaid lines next...")
-        if trim_list_in_reverse(relationship_mermaid, "relationship_mermaid"):
-            if current_length() <= max_token_length:
-                return build_context_text()
-
-    # ---------------------------------------------------------------------------
-    # 4) Trim relationship_intro
-    # ---------------------------------------------------------------------------
-    if relationship_intro:
-        logger.warning("Trimming relationship_intro lines next...")
-        if trim_list_in_reverse(relationship_intro, "relationship_intro"):
-            if current_length() <= max_token_length:
-                return build_context_text()
-
-    # ---------------------------------------------------------------------------
-    # 5) Trim first_page_structural_annots
-    # ---------------------------------------------------------------------------
-    if first_page_structural_annots:
-        logger.warning("Trimming first_page_structural_annots lines next...")
-        if trim_list_in_reverse(
-            first_page_structural_annots, "first_page_structural_annots"
-        ):
-            if current_length() <= max_token_length:
-                return build_context_text()
-
-    # ---------------------------------------------------------------------------
-    # 6) Trim raw_node_texts
-    # ---------------------------------------------------------------------------
-    if raw_node_texts:
-        logger.warning("Trimming raw_node_texts lines next...")
-        if trim_list_in_reverse(raw_node_texts, "raw_node_texts"):
-            if current_length() <= max_token_length:
-                return build_context_text()
-
-    # ---------------------------------------------------------------------------
-    # 7) If all are exhausted and still over the limit, return None
-    # ---------------------------------------------------------------------------
-    logger.error(
-        f"Context still exceeds token limit ({current_length()} > {max_token_length}) "
-        "after removing all items. Returning None."
-    )
-    return None
-
-
 @sync_to_async
 def get_annotation_label_text(annotation):
     """
@@ -302,7 +92,7 @@ def get_column_extraction_params(datacell):
 
 
 @celery_task_with_async_to_sync()
-async def oc_llama_index_doc_query(
+async def doc_extract_query_task(
     cell_id: int, similarity_top_k: int = 10, max_token_length: int = 64000
 ) -> None:
     """
@@ -380,10 +170,8 @@ async def oc_llama_index_doc_query(
         document = datacell.document
         column = datacell.column
         
-        # Get corpus ID (required for agent)
+        # Get corpus ID (None if document isn't in a corpus - that's OK now!)
         corpus_id = await sync_get_corpus_id(document)
-        if not corpus_id:
-            raise ValueError(f"Document {document.id} is not in any corpus!")
 
         # 2. Parse the output type
         output_type = parse_model_or_primitive(column.output_type)

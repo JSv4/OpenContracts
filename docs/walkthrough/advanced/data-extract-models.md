@@ -60,8 +60,9 @@ class Column(BaseOCModel):
     limit_to_label = models.CharField(max_length=512, null=True, blank=True)
     instructions = models.TextField(null=True, blank=True)
     task_name = models.CharField(max_length=1024, null=False, blank=False)
-    agentic = models.BooleanField(default=False)
-    extract_is_list = models.BooleanField(default=False)
+    creator = models.ForeignKey(User, on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 ```
 
 - **name**: The name of the column.
@@ -73,8 +74,9 @@ class Column(BaseOCModel):
 - **limit_to_label**: A label to limit the extraction scope.
 - **instructions**: Instructions for the extraction process.
 - **task_name**: The name of the registered celery extract task to use to process (lets you define and deploy custom ones).
-- **agentic**: Boolean indicating if the extraction is agentic.
-- **extract_is_list**: Boolean indicating if the extraction result is a list.
+- **creator**: The user who created this column.
+- **created**: Timestamp when the column was created.
+- **modified**: Timestamp when the column was last modified.
 
 **Usage**: Columns are linked to fieldsets and specify detailed criteria for each piece of data to be extracted.
 
@@ -130,6 +132,7 @@ class Datacell(BaseOCModel):
     completed = models.DateTimeField(null=True, blank=True)
     failed = models.DateTimeField(null=True, blank=True)
     stacktrace = models.TextField(null=True, blank=True)
+    creator = models.ForeignKey(User, on_delete=models.CASCADE)
 ```
 
 - **extract**: ForeignKey linking to the `Extract` model.
@@ -142,6 +145,7 @@ class Datacell(BaseOCModel):
 - **completed**: Timestamp when the datacell processing completed.
 - **failed**: Timestamp when the datacell processing failed.
 - **stacktrace**: Text field for storing error stack traces.
+- **creator**: The user who created this datacell.
 
 **Usage**: Datacells store the results of extracting specific fields from documents, linking back to the extract and
 column definitions. They also track the status and any errors during extraction.

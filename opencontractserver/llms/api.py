@@ -39,7 +39,7 @@ class AgentAPI:
     @staticmethod
     async def for_document(
         document: DocumentType,
-        corpus: CorpusType,
+        corpus: Optional[CorpusType] = None,
         *,
         framework: Optional[FrameworkType] = None,
         user_id: Optional[int] = None,
@@ -263,7 +263,7 @@ class AgentAPI:
     @staticmethod
     async def get_structured_response_from_document(
         document: DocumentType,
-        corpus: CorpusType,
+        corpus: Optional[CorpusType],
         prompt: str,
         target_type: Type[T],
         *,
@@ -286,7 +286,7 @@ class AgentAPI:
 
         Args:
             document: Document ID, instance, or path
-            corpus: Corpus ID, instance, or path  
+            corpus: Corpus ID, instance, or path (optional - None for documents not in a corpus)
             prompt: Natural language prompt for data extraction
             target_type: Python type for the desired output (e.g., int, str, list[str], MyPydanticModel)
             framework: "llama_index" or "pydantic_ai" (defaults to pydantic_ai for structured extraction)

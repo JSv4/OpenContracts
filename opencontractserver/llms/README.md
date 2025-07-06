@@ -22,8 +22,8 @@ from opencontractserver.llms import agents
 # corpus_obj = Corpus.objects.get(id=1)
 
 # Create a document agent
-# Note: The '''corpus''' parameter is required for document agents.
-agent = await agents.for_document(document=123, corpus=1) # Replace 1 with your actual corpus_id or object
+# Note: The '''corpus''' parameter is optional - use None for documents not in a corpus
+agent = await agents.for_document(document=123, corpus=1) # Replace 1 with your actual corpus_id or object, or use None
 
 # Chat with rich responses
 response = await agent.chat("What are the key terms in this contract?")
@@ -49,6 +49,15 @@ dates = await agent.structured_response(
 if dates:
     print(f"Effective: {dates.effective_date}")
     print(f"Expires: {dates.expiration_date}")
+
+# NEW: Document agents now work without corpus!
+# Perfect for analyzing standalone documents or one-off extractions
+standalone_agent = await agents.for_document(document=456, corpus=None)
+simple_result = await standalone_agent.structured_response(
+    "What type of document is this?", 
+    str
+)
+print(f"Document type: {simple_result}")
 ```
 
 ## Core Concepts
@@ -81,7 +90,7 @@ custom_tool = tools.create_from_function(
 # Example: Using AgentAPI convenience methods for structured extraction
 result = await agents.get_structured_response_from_document(
     document=123,
-    corpus=1,
+    corpus=1,  # Or None for standalone documents
     prompt="Extract key contract terms",
     target_type=ContractTerms,
     framework=AgentFramework.PYDANTIC_AI,
@@ -119,8 +128,12 @@ from opencontractserver.llms.types import AgentFramework
 # document_obj = Document.objects.get(id=123) # Example document
 
 # Document agent with default framework (LlamaIndex)
-# The '''corpus''' parameter is required.
+# The '''corpus''' parameter is optional - can be None for standalone documents
 agent = await agents.for_document(document=123, corpus=1) # Use actual document/corpus IDs or objects
+
+# Document agent for standalone document (not in any corpus)
+standalone_agent = await agents.for_document(document=123, corpus=None)
+# Corpus-dependent tools are automatically filtered out - agent still works!
 
 # Corpus agent with specific framework
 agent = await agents.for_corpus(
@@ -471,6 +484,75 @@ agent = await agents.for_document(
     document=123, # Use actual document ID or object
     corpus=1,     # Use actual corpus ID or object
     tools=[risk_tool]
+)
+```
+
+#### Corpus-Dependent Tools
+
+Some tools require a corpus context to function properly (e.g., tools that create notes or search across corpus documents). The framework provides automatic tool filtering for documents not in a corpus:
+
+```python
+from opencontractserver.llms.tools.tool_factory import CoreTool
+
+def create_corpus_note(title: str, content: str, corpus_id: int) -> str:
+    """Create a note within the corpus context."""
+    # This tool needs a corpus to function
+    return f"Created note '{title}' in corpus {corpus_id}"
+
+# Mark tool as requiring corpus
+corpus_tool = CoreTool.from_function(
+    create_corpus_note,
+    description="Create a note in the corpus",
+    requires_corpus=True  # ← Corpus requirement flag
+)
+
+# For documents IN a corpus - tool is available
+agent = await agents.for_document(
+    document=123,
+    corpus=456,  # Document is in this corpus
+    tools=[corpus_tool]  # Tool will be included
+)
+
+# For documents NOT in a corpus - tool is automatically filtered out
+agent = await agents.for_document(
+    document=123,
+    corpus=None,  # No corpus context
+    tools=[corpus_tool]  # Tool will be skipped with info log
+)
+# Agent creation succeeds, corpus-dependent tools are gracefully omitted
+```
+
+**Key Features:**
+
+- **Graceful Degradation**: Corpus-dependent tools are automatically filtered when `corpus=None`
+- **Informative Logging**: Framework logs which tools are skipped and why
+- **No Errors**: Agent creation never fails due to missing corpus - tools just adapt
+- **Backward Compatibility**: Existing tools without `requires_corpus=True` work everywhere
+
+**Built-in Tools with Corpus Requirements:**
+
+Most built-in document tools work without corpus context, but some corpus-specific operations may require it:
+
+```python
+# These tools work with or without corpus
+safe_tools = [
+    "load_md_summary",           # Document summary access
+    "get_md_summary_token_length", # Token counting
+    "load_document_txt_extract"  # Raw text access
+]
+
+# These tools may require corpus context (marked with requires_corpus=True)
+corpus_tools = [
+    "get_notes_for_document_corpus",  # Notes tied to corpus context
+    "add_document_note",              # Creating corpus-scoped notes
+    # Framework handles filtering automatically
+]
+
+# Use both safely - framework filters as needed
+agent = await agents.for_document(
+    document=123,
+    corpus=None,  # No corpus
+    tools=safe_tools + corpus_tools  # Mixed tools - filtering handled automatically
 )
 ```
 
@@ -1502,7 +1584,7 @@ async def test_structured_response(db, document_factory, corpus_factory): # Assu
     # 
     # class ContractDates(BaseModel):
     #     effective_date: str = Field(description="Effective date")
-    #     expiration_date: Optional[str] = Field(None, description="Expiration date")
+    #     expiration_date: str = Field(description="Expiration date")
     # 
     # test_corpus = await corpus_factory.create()
     # test_document = await document_factory.create(corpus=test_corpus)
@@ -1688,10 +1770,6 @@ User Query → PydanticAI Agent → Execution Graph Stream
 │ SourceEvent: [SourceNode, SourceNode, ...]         │
 │ ThoughtEvent: "Tool returned result"               │
 ├─────────────────────────────────────────────────────┤
-│ ThoughtEvent: "[ask_document] Calling tool..."     │  ← Nested agent events
-│ ContentEvent: "The payment terms state..."         │  ← From child agent
-│ SourceEvent: [SourceNode from child, ...]          │  ← Child's sources
-├─────────────────────────────────────────────────────┤
 │ FinalEvent: Complete answer + all sources + usage  │
 └─────────────────────────────────────────────────────┘
                     ↓
@@ -1749,3 +1827,34 @@ async for event in agent.stream("Complex legal analysis"):
 This framework represents the evolution of OpenContracts' LLM capabilities, providing a foundation for sophisticated document analysis while maintaining simplicity and elegance in its API design.
 
 ---
+
+### Default Tool Reference
+
+| Tool Name | Short Description | Requires Approval | Requires Corpus |
+|-----------|------------------|-------------------|-----------------|
+| similarity_search | Semantic vector search for relevant passages in the **current document** | No | No (document-level store) |
+| load_md_summary \| load_document_md_summary | Load markdown summary of the document | No | No |
+| get_md_summary_token_length | Approximate token length of markdown summary | No | No |
+| load_document_txt_extract | Load full or partial plain-text extract | No | No |
+| get_notes_for_document_corpus | Retrieve notes attached to document *within the active corpus* | No | Yes |
+| get_note_content_token_length | Token length of a single note | No | Yes |
+| get_partial_note_content | Slice a note's content (start/end) | No | Yes |
+| search_document_notes | Search notes for a keyword | No | Yes |
+| add_document_note | Create a new note for the document | **Yes** | Yes |
+| update_document_note | Update an existing note (new revision) | **Yes** | Yes |
+| duplicate_annotations | Duplicate annotations with a new label | **Yes** | Yes |
+| add_exact_string_annotations | Add annotations for exact string matches | **Yes** | Yes |
+| get_document_summary | Get latest markdown summary content | No | Yes |
+| get_document_summary_versions | Version history of document summary | No | Yes |
+| get_document_summary_diff | Unified diff between two summary versions | No | Yes |
+| update_document_summary | Create / update document summary | **Yes** | Yes |
+| get_corpus_description | Retrieve corpus markdown description | No | Yes (corpus agents) |
+| update_corpus_description | Update corpus description | No | Yes |
+| list_documents | List documents in the current corpus | No | Yes |
+| ask_document | Ask a nested question to a document agent | No | Yes |
+
+**Legend**  
+• **Requires Approval**: Tool execution pauses until a human approves the call.  
+• **Requires Corpus**: Tool is automatically filtered when `corpus=None`.
+
+> **Note**: You can create your own tools with `CoreTool.from_function(...)` and set `requires_approval=True` or `requires_corpus=True` as needed. The framework will enforce approval gates and automatic corpus filtering for you.

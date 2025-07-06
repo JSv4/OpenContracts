@@ -23,7 +23,7 @@ OpenContracts is an **Apache-2 Licensed** enterprise document analytics tool. It
 6. **LlamaIndex Integration** - Use our vector stores (powered by pgvector) and any manual or automatically annotated features
    to let an LLM intelligently answer questions.
 7. **Data Extract** - ask multiple questions across hundreds of documents using complex LLM-powered querying behavior.
-   Our sample implementation uses LlamaIndex + Marvin.
+   Our sample implementation uses our battle-tested agent framework for precise data extraction and natural language querying.
 8. **Custom Data Extract** - Custom data extract pipelines can be used on the frontend to query documents in bulk.
 
 ![Grid Review And Sources.gif](assets/images/gifs/Grid_Review_And_Sources.gif)

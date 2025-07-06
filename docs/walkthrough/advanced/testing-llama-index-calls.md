@@ -108,10 +108,10 @@ per usual:
 
 ```python
 import vcr
-from django.test import TestCase
+from django.test import TransactionTestCase
 
 
-class ExtractsTaskTestCase(TestCase):
+class ExtractsTaskTestCase(TransactionTestCase):
 
     def test_run_extract_task(self):
         print(f"{self.extract.documents.all()}")
@@ -123,16 +123,18 @@ Add a vcr.py decorator naming the target fixture location:
 
 ```python
 import vcr
-from django.test import TestCase
+from django.test import TransactionTestCase
 
 
-class ExtractsTaskTestCase(TestCase):
+class ExtractsTaskTestCase(TransactionTestCase):
 
     @vcr.use_cassette("fixtures/vcr_cassettes/test_run_extract_task.yaml", filter_headers=['authorization'])
     def test_run_extract_task(self):
         print(f"{self.extract.documents.all()}")
 
         # Call your LLMs or LLM framework here
+        # If testing async Celery tasks, use .apply() for synchronous execution
+        # your_async_task.si(task_id).apply()
         ...
 
 ```
@@ -145,6 +147,15 @@ responses are capture. You'll obviously need to provide your API credentials, wh
 On subsequent runs, VCR will intercept calls to recorded endpoints with identical data and return
 the recorded responses, letting you full test your use of LlamaIndex without needing to patch the library or its
 dependencies.
+
+## Important Notes for Async Tasks
+
+When testing async Celery tasks with VCR:
+
+1. **Use `TransactionTestCase`** instead of `TestCase` for better database transaction handling
+2. **Call tasks synchronously** with `.apply()` method in tests
+3. **The new async decorators** (`@celery_task_with_async_to_sync`) handle async-to-sync conversion automatically
+4. **Database connections** are properly managed without manual intervention
 
 ## Pitfalls
 

@@ -18,7 +18,7 @@ OpenContracts can turn any collection of documents into a **spread-sheet-like da
 Everything is orchestrated by two Celery tasks:
 
 * **`run_extract`** – creates the individual cells and queues work.
-* **`oc_llama_index_doc_query`** – performs the actual extraction using our agent framework.
+* **`doc_extract_query_task`** – performs the actual extraction using our agent framework.
 
 
 ## Orchestration (`run_extract`)
@@ -26,20 +26,20 @@ Everything is orchestrated by two Celery tasks:
 ```18:54:opencontractserver/tasks/extract_orchestrator_tasks.py
 @shared_task
 def run_extract(extract_id: Optional[str | int], user_id: str | int):
-    ...  # creates Datacells and queues oc_llama_index_doc_query for each
+    ...  # creates Datacells and queues doc_extract_query_task for each
 ```
 
 Key facts verified in the code-above:
 
 * One **`Datacell`** is created per *document × column* pair.
-* Each cell's `column.task_name` is used to look up the Celery task to invoke (defaults to `opencontractserver.tasks.data_extract_tasks.oc_llama_index_doc_query`).
+* Each cell's `column.task_name` is used to look up the Celery task to invoke (defaults to `opencontractserver.tasks.data_extract_tasks.doc_extract_query_task`).
 * A `chord(group(*tasks))` waits for all cells then calls `mark_extract_complete`.
 
 
-## Per-cell pipeline (`oc_llama_index_doc_query`)
+## Per-cell pipeline (`doc_extract_query_task`)
 
 ```309:330:opencontractserver/tasks/data_extract_tasks.py
-async def oc_llama_index_doc_query(
+async def doc_extract_query_task(
     cell_id: int, similarity_top_k: int = 10, max_token_length: int = 64000
 ) -> None:
     """OpenContracts' BLAZING FAST agent-based data extraction pipeline."""
@@ -70,7 +70,7 @@ While the structured response API doesn't expose sources directly (by design –
 ```mermaid
 sequenceDiagram
     participant R as run_extract
-    participant Q as oc_llama_index_doc_query
+    participant Q as doc_extract_query_task
     participant A as Agent Framework
     participant LLM as Language Model
     R->>Q: enqueue for each (document, column)
@@ -104,11 +104,11 @@ Note: The `agentic` field has been removed – all extractions now use our power
 
 ## Async Task Decorators
 
-The `oc_llama_index_doc_query` task uses our `@celery_task_with_async_to_sync()` decorator to handle async functions in Celery:
+The `doc_extract_query_task` task uses our `@celery_task_with_async_to_sync()` decorator to handle async functions in Celery:
 
 ```python
 @celery_task_with_async_to_sync()
-async def oc_llama_index_doc_query(
+async def doc_extract_query_task(
     cell_id: int, similarity_top_k: int = 10, max_token_length: int = 64000
 ) -> None:
     # ... async implementation
@@ -134,7 +134,7 @@ from django.test import TransactionTestCase
 class ExtractionTestCase(TransactionTestCase):
     def test_extraction(self):
         # Create datacell...
-        oc_llama_index_doc_query.si(datacell.id).apply()
+        doc_extract_query_task.si(datacell.id).apply()
         # Assert results...
 ```
 

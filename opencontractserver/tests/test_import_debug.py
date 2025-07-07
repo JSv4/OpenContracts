@@ -1,11 +1,17 @@
-"""Debug test to isolate import issues."""
+"""Debug script to isolate import issues."""
 import sys
 import time
 import traceback
+import os
+
+# Set up Django before any imports
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.test')
+import django
+django.setup()
 
 
-def test_debug_imports():
-    """Test that helps debug import issues in CI."""
+def debug_imports():
+    """Script that helps debug import issues in CI."""
     print("=== Starting import debug test ===", flush=True)
     print(f"Python version: {sys.version}", flush=True)
     print(f"Python path: {sys.path}", flush=True)
@@ -82,4 +88,7 @@ def test_debug_imports():
             traceback.print_exc()
     
     print("\n=== Import debug test completed ===", flush=True)
-    assert True  # Always pass to see the output 
+
+
+if __name__ == "__main__":
+    debug_imports() 

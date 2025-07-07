@@ -203,51 +203,33 @@ jobs:
           docker stats --no-stream
           free -h
 
-      - name: Install debugging tools in container
-        run: |
-          docker compose -f test.yml run django apt-get update && apt-get install -y strace gdb
+      # Skip installing debugging tools - not needed for basic import debugging
 
-      - name: Build Pytest Coverage File
-        env:
-          PYTHONFAULTHANDLER: 1
-          PYTHONUNBUFFERED: 1
-          PYTEST_TIMEOUT: 300
-        timeout-minutes: 10
+      - name: Run nest_asyncio Debug Test
+        timeout-minutes: 2
+        continue-on-error: true
         run: |
-          # Add timeout and verbose debugging
+          echo "=== Testing nest_asyncio in isolation ==="
           docker compose -f test.yml run \
             -e PYTHONFAULTHANDLER=1 \
             -e PYTHONUNBUFFERED=1 \
-            -e PYTEST_TIMEOUT=300 \
-            django bash -c "
-              echo '=== Python environment info ==='
-              python --version
-              pip list | grep -E '(llama|openai|pytest|django)'
-              echo '=== Starting pytest with debug flags ==='
-              echo '--- First, run import debug test ---'
-              python -X dev -u -m pytest \
-                -vvv \
-                --tb=short \
-                --timeout=60 \
-                --timeout-method=thread \
-                -o log_cli=true \
-                -o log_cli_level=DEBUG \
-                --capture=no \
-                opencontractserver/tests/test_import_debug.py \
-                || echo 'Import debug test failed with exit code: $?'
-              
-              echo '--- Now run the actual test ---'
-              python -X dev -u -m pytest \
-                -vvv \
-                --tb=short \
-                --timeout=300 \
-                --timeout-method=thread \
-                -o log_cli=true \
-                -o log_cli_level=DEBUG \
-                --capture=no \
-                opencontractserver/tests/test_agent_factory.py::TestUnifiedAgentFactory::test_create_document_agent_llama_index \
-                || echo 'Test failed with exit code: $?'
-            "
+            django python -u opencontractserver/tests/test_nest_asyncio_debug.py || echo "nest_asyncio test failed with code: $?"
+
+      - name: Run Import Debug Test
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          echo "=== Running full import debug ==="
+          docker compose -f test.yml run \
+            -e PYTHONFAULTHANDLER=1 \
+            -e PYTHONUNBUFFERED=1 \
+            django python -u opencontractserver/tests/test_import_debug.py || echo "Import debug failed with code: $?"
+
+      - name: Build Pytest Coverage File
+        timeout-minutes: 20
+        run: |
+          # Run the full test suite
+          docker compose -f test.yml run django coverage run -m pytest --cov-report=xml --cov -x -v
 
       - name: Upload Coverage Reports to Codecov
         env:

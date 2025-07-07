@@ -74,6 +74,12 @@ jobs:
           ci_env=`bash <(curl -s https://codecov.io/env)`
           echo "$ci_env"
 
+      - name: Delete frontend files
+        run: |
+          rm -rf docs/
+          rm -rf frontend/
+          rm -rf site/
+
       - name: Build the Stack
         run:  docker compose -f test.yml build
 

@@ -189,9 +189,65 @@ jobs:
       - name: Log Disk Space Before Pytest
         run: df -h
 
-      - name: Build Pytest Coverage File
+      - name: Check Container Health
         run: |
-          docker compose -f test.yml run django coverage run -m pytest --cov-report=xml --cov
+          echo "=== Docker containers status ==="
+          docker compose -f test.yml ps
+          echo "=== Container logs (last 20 lines each) ==="
+          for container in $(docker compose -f test.yml ps -q); do
+            name=$(docker inspect -f '{{.Name}}' $container | sed 's/^\///')
+            echo "--- Logs for $name ---"
+            docker logs --tail 20 $container 2>&1 || true
+          done
+          echo "=== Memory usage ==="
+          docker stats --no-stream
+          free -h
+
+      - name: Install debugging tools in container
+        run: |
+          docker compose -f test.yml run django apt-get update && apt-get install -y strace gdb
+
+      - name: Build Pytest Coverage File
+        env:
+          PYTHONFAULTHANDLER: 1
+          PYTHONUNBUFFERED: 1
+          PYTEST_TIMEOUT: 300
+        timeout-minutes: 10
+        run: |
+          # Add timeout and verbose debugging
+          docker compose -f test.yml run \
+            -e PYTHONFAULTHANDLER=1 \
+            -e PYTHONUNBUFFERED=1 \
+            -e PYTEST_TIMEOUT=300 \
+            django bash -c "
+              echo '=== Python environment info ==='
+              python --version
+              pip list | grep -E '(llama|openai|pytest|django)'
+              echo '=== Starting pytest with debug flags ==='
+              echo '--- First, run import debug test ---'
+              python -X dev -u -m pytest \
+                -vvv \
+                --tb=short \
+                --timeout=60 \
+                --timeout-method=thread \
+                -o log_cli=true \
+                -o log_cli_level=DEBUG \
+                --capture=no \
+                opencontractserver/tests/test_import_debug.py \
+                || echo 'Import debug test failed with exit code: $?'
+              
+              echo '--- Now run the actual test ---'
+              python -X dev -u -m pytest \
+                -vvv \
+                --tb=short \
+                --timeout=300 \
+                --timeout-method=thread \
+                -o log_cli=true \
+                -o log_cli_level=DEBUG \
+                --capture=no \
+                opencontractserver/tests/test_agent_factory.py::TestUnifiedAgentFactory::test_create_document_agent_llama_index \
+                || echo 'Test failed with exit code: $?'
+            "
 
       - name: Upload Coverage Reports to Codecov
         env:

@@ -54,7 +54,7 @@ jobs:
         with:
           # this might remove tools that are actually needed,
           # if set to "true" but frees about 6 GB
-          tool-cache: false
+          tool-cache: true
 
           # all of these default to true, but feel free to set to
           # "false" if necessary for your workflow
@@ -80,8 +80,24 @@ jobs:
           rm -rf frontend/
           rm -rf site/
 
+      - name: Remove pre-installed docker images
+        run: |
+          sudo rm -rf /var/lib/docker
+          sudo mkdir /var/lib/docker
+
+      - name: Remove CodeQL bundle
+        run: sudo rm -rf /opt/hostedtoolcache/CodeQL
+
+      - name: Remove pip cache
+        run: |
+          pip cache dir
+          pip cache purge
+
       - name: Build the Stack
         run:  docker compose -f test.yml build
+
+      - name: Prune everything after build
+        run: docker system prune -af --volumes
 
       - name: Clean Docker build cache and networks
         run: |
@@ -150,9 +166,6 @@ jobs:
 
       - name: Log Disk Space Before Pytest
         run: df -h
-
-      - name: Nuke tool-cache directory
-        run: sudo rm -rf /opt/hostedtoolcache
 
       - name: Build Pytest Coverage File
         run: |

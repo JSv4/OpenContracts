@@ -80,11 +80,6 @@ jobs:
           rm -rf frontend/
           rm -rf site/
 
-      - name: Remove pre-installed docker images
-        run: |
-          sudo rm -rf /var/lib/docker
-          sudo mkdir /var/lib/docker
-
       - name: Remove CodeQL bundle
         run: sudo rm -rf /opt/hostedtoolcache/CodeQL
 

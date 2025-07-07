@@ -148,6 +148,12 @@ jobs:
           name: docker-compose-logs
           path: docker-compose-logs.txt
 
+      - name: Log Disk Space Before Pytest
+        run: df -h
+
+      - name: Nuke tool-cache directory
+        run: sudo rm -rf /opt/hostedtoolcache
+
       - name: Build Pytest Coverage File
         run: |
           docker compose -f test.yml run django coverage run -m pytest --cov-report=xml --cov

@@ -58,12 +58,28 @@ jobs:
 
           # all of these default to true, but feel free to set to
           # "false" if necessary for your workflow
-          android: false
-          dotnet: false
-          haskell: false
+          android: true
+          dotnet: true
+          haskell: true
           large-packages: true
           docker-images: true
           swap-storage: true
+
+      - name: Remove additional unnecessary tools
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/local/julia*
+          sudo rm -rf /usr/share/miniconda
+          sudo rm -rf /usr/local/share/chromium
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /opt/hostedtoolcache
+          df -h
 
       - name: Checkout Code Repository
         uses: actions/checkout@v4.2.2
@@ -91,18 +107,18 @@ jobs:
       - name: Build the Stack
         run:  docker compose -f test.yml build
 
-      - name: Prune everything after build
-        run: docker system prune -af --volumes
-
-      - name: Clean Docker build cache and networks
+      - name: Aggressive Docker cleanup after build
         run: |
-          docker builder prune -f
-          docker network prune -f
-          df -h
-
-      - name: Clean Docker volumes
-        run: |
-          docker volume prune -f
+          # Remove all build cache
+          docker builder prune -af
+          # Remove any dangling images
+          docker image prune -af
+          # List all images to see what we have
+          docker images
+          # Clean build cache
+          docker buildx prune -af
+          # Final system prune
+          docker system prune -af --volumes
           df -h
 
       - name: Run DB Migrations
@@ -142,6 +158,17 @@ jobs:
       - name: Verify Docker Containers
         run: |
           docker compose -f test.yml ps
+
+      - name: Final cleanup before tests
+        run: |
+          # Remove any stopped containers
+          docker container prune -f
+          # Remove unused networks
+          docker network prune -f
+          # Show current disk usage
+          df -h
+          # Show docker disk usage
+          docker system df
 
       - name: Inspect Docker Network
         run: |

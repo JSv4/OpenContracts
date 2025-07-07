@@ -144,4 +144,7 @@ RUN echo "RUN STAGE GITHUB_ACTIONS: $GITHUB_ACTIONS" && \
 # copy application code to WORKDIR
 COPY . ${APP_HOME}
 
+# Clean up pip cache
+RUN pip cache purge
+
 ENTRYPOINT ["/entrypoint"]

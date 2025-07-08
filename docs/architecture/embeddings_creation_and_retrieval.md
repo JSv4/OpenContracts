@@ -142,7 +142,7 @@ Framework adapters are thin wrappers that translate between the core API and spe
      # 1. Create your own adapter class that inherits from BasePydanticVectorStore
      # 2. Wrap CoreAnnotationVectorStore functionality
      # 3. Convert between LlamaIndex and OpenContracts types
-     
+
      # Example structure (not implemented):
      # class MyLlamaIndexVectorStore(BasePydanticVectorStore):
      #     def __init__(self, core_store: CoreAnnotationVectorStore):

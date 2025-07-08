@@ -18,10 +18,6 @@ from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.api import agents
-from opencontractserver.llms.agents.core_agents import (
-    UnifiedChatResponse,
-    SourceNode,
-)
 
 User = get_user_model()
 
@@ -77,15 +73,15 @@ class TestLongConversationAPI(TestCase):
             mock_run_result.data = "Test response"
             mock_run_result.all_messages = MagicMock(return_value=[])
             mock_llm_agent.run.return_value = mock_run_result
-            
+
             # Mock the Agent constructor to return our mock
             MockPydanticAgent.return_value = mock_llm_agent
 
             # Create real agent through the API - no user_id means anonymous
             agent = await agents.for_document(
-                self.document.id, 
+                self.document.id,
                 self.corpus.id,
-                framework="pydantic_ai"  # Use PydanticAI which we're mocking
+                framework="pydantic_ai",  # Use PydanticAI which we're mocking
             )
 
             # Verify conversation metadata
@@ -135,15 +131,15 @@ class TestLongConversationAPI(TestCase):
             mock_run_result.data = "Test response"
             mock_run_result.all_messages = MagicMock(return_value=[])
             mock_llm_agent.run.return_value = mock_run_result
-            
+
             MockPydanticAgent.return_value = mock_llm_agent
 
             # Create real agent with user_id for persistence
             agent = await agents.for_document(
-                self.document.id, 
-                self.corpus.id, 
+                self.document.id,
+                self.corpus.id,
                 user_id=self.user.id,
-                framework="pydantic_ai"
+                framework="pydantic_ai",
             )
 
             # Verify conversation metadata
@@ -184,9 +180,7 @@ class TestLongConversationAPI(TestCase):
 
             # Create anonymous agent
             agent = await agents.for_document(
-                self.document.id, 
-                self.corpus.id,
-                framework="pydantic_ai"
+                self.document.id, self.corpus.id, framework="pydantic_ai"
             )  # Anonymous
 
             # Test the actual message storage methods
@@ -240,10 +234,10 @@ class TestLongConversationAPI(TestCase):
 
             # Create agent with user_id for persistence
             agent = await agents.for_document(
-                self.document.id, 
-                self.corpus.id, 
+                self.document.id,
+                self.corpus.id,
                 user_id=self.user.id,
-                framework="pydantic_ai"
+                framework="pydantic_ai",
             )
 
             # Simulate storing a user message
@@ -296,10 +290,10 @@ class TestLongConversationAPI(TestCase):
 
             # Create first agent session
             agent1 = await agents.for_document(
-                self.document.id, 
-                self.corpus.id, 
+                self.document.id,
+                self.corpus.id,
                 user_id=self.user.id,
-                framework="pydantic_ai"
+                framework="pydantic_ai",
             )
             conversation_id = agent1.get_conversation_id()
 
@@ -312,7 +306,7 @@ class TestLongConversationAPI(TestCase):
                 self.corpus.id,
                 user_id=self.user.id,
                 conversation_id=conversation_id,
-                framework="pydantic_ai"
+                framework="pydantic_ai",
             )
 
             # Verify it's the same conversation
@@ -333,9 +327,7 @@ class TestLongConversationAPI(TestCase):
             # Find our message
             user_messages = [msg for msg in messages if msg.msg_type == "HUMAN"]
             self.assertTrue(
-                any(
-                    "First session message" in msg.content for msg in user_messages
-                ),
+                any("First session message" in msg.content for msg in user_messages),
                 "Should preserve message history across sessions",
             )
 
@@ -352,9 +344,7 @@ class TestLongConversationAPI(TestCase):
 
             # Create anonymous agent
             agent1 = await agents.for_document(
-                self.document.id, 
-                self.corpus.id,
-                framework="pydantic_ai"
+                self.document.id, self.corpus.id, framework="pydantic_ai"
             )  # No user_id
             conversation_id = agent1.get_conversation_id()
 
@@ -364,10 +354,10 @@ class TestLongConversationAPI(TestCase):
 
             # Try to "continue" the conversation (should create a new anonymous one)
             agent2 = await agents.for_document(
-                self.document.id, 
-                self.corpus.id, 
+                self.document.id,
+                self.corpus.id,
                 conversation_id=conversation_id,
-                framework="pydantic_ai"
+                framework="pydantic_ai",
             )
 
             # Both should be None since anonymous conversations aren't stored
@@ -389,8 +379,7 @@ class TestLongConversationAPI(TestCase):
 
             # Create anonymous corpus agent
             agent = await agents.for_corpus(
-                self.corpus.id,
-                framework="pydantic_ai"
+                self.corpus.id, framework="pydantic_ai"
             )  # Anonymous
 
             # Verify anonymous behavior
@@ -436,7 +425,7 @@ class TestLongConversationAPI(TestCase):
             mock_run_result.data = "Test response"
             mock_run_result.all_messages = MagicMock(return_value=[])
             mock_llm_agent.run.return_value = mock_run_result
-            
+
             MockPydanticAgent.return_value = mock_llm_agent
 
             # Create persistent corpus agent
@@ -445,7 +434,7 @@ class TestLongConversationAPI(TestCase):
                 user_id=self.user.id,
                 conversation_id=None,  # Explicitly None
                 conversation=None,  # Explicitly None
-                framework="pydantic_ai"
+                framework="pydantic_ai",
             )
 
             # Verify persistent behavior
@@ -480,9 +469,7 @@ class TestLongConversationAPI(TestCase):
 
             # Create anonymous agent
             agent = await agents.for_document(
-                self.document.id, 
-                self.corpus.id,
-                framework="pydantic_ai"
+                self.document.id, self.corpus.id, framework="pydantic_ai"
             )  # Anonymous
 
             # Test multiple message storage operations
@@ -494,9 +481,7 @@ class TestLongConversationAPI(TestCase):
 
             for question in questions:
                 user_msg_id = await agent.store_user_message(question)
-                llm_msg_id = await agent.store_llm_message(
-                    f"Response to: {question}"
-                )
+                llm_msg_id = await agent.store_llm_message(f"Response to: {question}")
 
                 # Verify anonymous message IDs
                 self.assertEqual(
@@ -532,14 +517,12 @@ class TestLongConversationAPI(TestCase):
             mock_run_result.data = "Test response"
             mock_run_result.all_messages = MagicMock(return_value=[])
             mock_llm_agent.run.return_value = mock_run_result
-            
+
             MockPydanticAgent.return_value = mock_llm_agent
 
             # Test anonymous conversation info
             anonymous_agent = await agents.for_document(
-                self.document.id, 
-                self.corpus.id,
-                framework="pydantic_ai"
+                self.document.id, self.corpus.id, framework="pydantic_ai"
             )
             anonymous_info = anonymous_agent.get_conversation_info()
 
@@ -553,10 +536,10 @@ class TestLongConversationAPI(TestCase):
 
             # Test persistent conversation info
             persistent_agent = await agents.for_document(
-                self.document.id, 
-                self.corpus.id, 
+                self.document.id,
+                self.corpus.id,
                 user_id=self.user.id,
-                framework="pydantic_ai"
+                framework="pydantic_ai",
             )
             persistent_info = persistent_agent.get_conversation_info()
 

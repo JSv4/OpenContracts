@@ -72,7 +72,7 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
     ):
         mock_config = AgentConfig()
         mock_get_config.return_value = mock_config
-        
+
         # Mock the agent instance
         mock_agent_instance = AsyncMock(spec=CoreAgent)
         mock_pydantic_agent_class.create = AsyncMock(return_value=mock_agent_instance)
@@ -122,7 +122,7 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
     ):
         mock_config = AgentConfig()
         mock_get_config.return_value = mock_config
-        
+
         # Mock the agent instance
         mock_agent_instance = AsyncMock(spec=CoreAgent)
         mock_pydantic_agent_class.create = AsyncMock(return_value=mock_agent_instance)
@@ -130,7 +130,7 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
         agent = await UnifiedAgentFactory.create_corpus_agent(
             self.corpus1, framework=AgentFramework.PYDANTIC_AI
         )
-        
+
         mock_get_config.assert_called_once_with(
             user_id=None,
             model_name="gpt-4o-mini",  # Default from factory
@@ -166,39 +166,35 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
         # Make corpus public
         self.corpus1.is_public = True
         await self.corpus1.asave()
-        
+
         # Create a tool that requires approval
         approval_tool = CoreTool.from_function(
-            lambda x: f"approval: {x}",
-            name="approval_tool",
-            requires_approval=True
+            lambda x: f"approval: {x}", name="approval_tool", requires_approval=True
         )
-        
+
         # Create a tool that doesn't require approval
         normal_tool = CoreTool.from_function(
-            lambda x: f"normal: {x}",
-            name="normal_tool",
-            requires_approval=False
+            lambda x: f"normal: {x}", name="normal_tool", requires_approval=False
         )
-        
+
         # Mock the agent creation
         mock_agent_instance = AsyncMock(spec=CoreAgent)
         mock_pydantic_agent_class.create = AsyncMock(return_value=mock_agent_instance)
-        
+
         await UnifiedAgentFactory.create_document_agent(
             self.doc1,
             self.corpus1,
             framework=AgentFramework.PYDANTIC_AI,
             tools=[approval_tool, normal_tool],
         )
-        
+
         # Check that create was called
         mock_pydantic_agent_class.create.assert_called_once()
-        
+
         # Get the config that was passed to create
         call_args = mock_pydantic_agent_class.create.call_args
         config = call_args[0][2]  # Third argument is the config
-        
+
         # Verify that approval tool was filtered out
         self.assertEqual(len(config.tools), 1)
         self.assertEqual(config.tools[0].name, "normal_tool")
@@ -210,33 +206,29 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
         """Test that corpus-required tools are filtered when no corpus is provided."""
         # Create a tool that requires corpus
         corpus_tool = CoreTool.from_function(
-            lambda x: f"corpus: {x}",
-            name="corpus_tool",
-            requires_corpus=True
+            lambda x: f"corpus: {x}", name="corpus_tool", requires_corpus=True
         )
-        
+
         # Create a tool that doesn't require corpus
         normal_tool = CoreTool.from_function(
-            lambda x: f"normal: {x}",
-            name="normal_tool",
-            requires_corpus=False
+            lambda x: f"normal: {x}", name="normal_tool", requires_corpus=False
         )
-        
+
         # Mock the agent creation
         mock_agent_instance = AsyncMock(spec=CoreAgent)
         mock_pydantic_agent_class.create = AsyncMock(return_value=mock_agent_instance)
-        
+
         await UnifiedAgentFactory.create_document_agent(
             self.doc1,
             corpus=None,  # No corpus provided
             framework=AgentFramework.PYDANTIC_AI,
             tools=[corpus_tool, normal_tool],
         )
-        
+
         # Get the config that was passed to create
         call_args = mock_pydantic_agent_class.create.call_args
         config = call_args[0][2]  # Third argument is the config
-        
+
         # Verify that corpus tool was filtered out
         self.assertEqual(len(config.tools), 1)
         self.assertEqual(config.tools[0].name, "normal_tool")
@@ -312,16 +304,22 @@ class TestConvertToolsForFramework(TestAgentFactorySetup):
     def test_string_tools_are_skipped(self, mock_core_create_tools: MagicMock):
         """Test that string tool names are skipped in conversion."""
         mock_core_create_tools.return_value = []
-        
+
         tools_input = ["tool_name_1", self.core_tool_instance, "tool_name_2"]
-        
-        with self.assertLogs("opencontractserver.llms.agents.agent_factory", level="DEBUG") as cm:
+
+        with self.assertLogs(
+            "opencontractserver.llms.agents.agent_factory", level="DEBUG"
+        ) as cm:
             _convert_tools_for_framework(tools_input, AgentFramework.PYDANTIC_AI)
-        
+
         # Check that string tools generated debug messages
-        self.assertIn("Tool name 'tool_name_1' will be resolved by framework", str(cm.output))
-        self.assertIn("Tool name 'tool_name_2' will be resolved by framework", str(cm.output))
-        
+        self.assertIn(
+            "Tool name 'tool_name_1' will be resolved by framework", str(cm.output)
+        )
+        self.assertIn(
+            "Tool name 'tool_name_2' will be resolved by framework", str(cm.output)
+        )
+
         # Only the CoreTool instance should be passed to create_tools
         args, _ = mock_core_create_tools.call_args
         passed_core_tools_list = args[0]

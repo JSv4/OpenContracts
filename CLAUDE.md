@@ -176,8 +176,8 @@ agent = await agents.for_document(
 ```
 
 #### Framework Selection
-- **LlamaIndex**: Simple integration, stable API, traditional streaming
-- **PydanticAI**: Rich observability, event-based streaming, full execution graph visibility (recommended for new projects)
+- **LlamaIndex**: *Framework adapter removed* - implement custom adapter following CoreAgent protocol
+- **PydanticAI**: Rich observability, event-based streaming, full execution graph visibility (recommended)
 
 #### Event-Based Streaming (PydanticAI)
 ```python
@@ -275,7 +275,7 @@ The framework follows a layered architecture:
 ```
 API Layer (agents, embeddings, vector_stores, tools)
     ↓
-Framework Adapter Layer (llama_index_agents.py, pydantic_ai_agents.py)
+Framework Adapter Layer (pydantic_ai_agents.py)
     ↓
 Core Agent Protocol & Unified Tool System
     ↓

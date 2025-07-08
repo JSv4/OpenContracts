@@ -26,7 +26,7 @@ class UnifiedAgentFactory:
     async def create_document_agent(
         document: Union[str, int, Document],
         corpus: Optional[Union[str, int, Corpus]] = None,
-        framework: AgentFramework = AgentFramework.LLAMA_INDEX,
+        framework: AgentFramework = AgentFramework.PYDANTIC_AI,
         user_id: Optional[int] = None,
         # Enhanced conversation management
         conversation: Optional[Conversation] = None,
@@ -153,15 +153,7 @@ class UnifiedAgentFactory:
             _convert_tools_for_framework(tools, framework) if tools else []
         )
 
-        if framework == AgentFramework.LLAMA_INDEX:
-            from opencontractserver.llms.agents.llama_index_agents import (
-                LlamaIndexDocumentAgent,
-            )
-
-            return await LlamaIndexDocumentAgent.create(
-                document, corpus, config, framework_tools
-            )
-        elif framework == AgentFramework.PYDANTIC_AI:
+        if framework == AgentFramework.PYDANTIC_AI:
             from opencontractserver.llms.agents.pydantic_ai_agents import (
                 PydanticAIDocumentAgent,
             )
@@ -175,7 +167,7 @@ class UnifiedAgentFactory:
     @staticmethod
     async def create_corpus_agent(
         corpus: Union[str, int, Corpus],
-        framework: AgentFramework = AgentFramework.LLAMA_INDEX,
+        framework: AgentFramework = AgentFramework.PYDANTIC_AI,
         user_id: Optional[int] = None,
         # Enhanced conversation management
         conversation: Optional[Conversation] = None,
@@ -287,13 +279,7 @@ class UnifiedAgentFactory:
             _convert_tools_for_framework(tools, framework) if tools else []
         )
 
-        if framework == AgentFramework.LLAMA_INDEX:
-            from opencontractserver.llms.agents.llama_index_agents import (
-                LlamaIndexCorpusAgent,
-            )
-
-            return await LlamaIndexCorpusAgent.create(corpus, config, framework_tools)
-        elif framework == AgentFramework.PYDANTIC_AI:
+        if framework == AgentFramework.PYDANTIC_AI:
             from opencontractserver.llms.agents.pydantic_ai_agents import (
                 PydanticAICorpusAgent,
             )
@@ -368,7 +354,7 @@ async def create_document_agent(
     """
     if framework is None:
         framework = getattr(
-            settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+            settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.PYDANTIC_AI
         )
     if isinstance(framework, str):
         framework = AgentFramework(framework)
@@ -417,7 +403,7 @@ async def create_corpus_agent(
     """
     if framework is None:
         framework = getattr(
-            settings, "LLMS_CORPUS_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+            settings, "LLMS_CORPUS_AGENT_FRAMEWORK", AgentFramework.PYDANTIC_AI
         )
     if isinstance(framework, str):
         framework = AgentFramework(framework)

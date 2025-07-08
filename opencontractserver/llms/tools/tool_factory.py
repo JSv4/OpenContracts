@@ -141,13 +141,7 @@ class UnifiedToolFactory:
         Returns:
             Framework-specific tool instance
         """
-        if framework == AgentFramework.LLAMA_INDEX:
-            from opencontractserver.llms.tools.llama_index_tools import (
-                LlamaIndexToolFactory,
-            )
-
-            return LlamaIndexToolFactory.create_tool(tool)
-        elif framework == AgentFramework.PYDANTIC_AI:
+        if framework == AgentFramework.PYDANTIC_AI:
             from opencontractserver.llms.tools.pydantic_ai_tools import (
                 PydanticAIToolFactory,
             )
@@ -167,13 +161,7 @@ class UnifiedToolFactory:
         Returns:
             List of framework-specific tool instances
         """
-        if framework == AgentFramework.LLAMA_INDEX:
-            from opencontractserver.llms.tools.llama_index_tools import (
-                LlamaIndexToolFactory,
-            )
-
-            return LlamaIndexToolFactory.create_tools(tools)
-        elif framework == AgentFramework.PYDANTIC_AI:
+        if framework == AgentFramework.PYDANTIC_AI:
             from opencontractserver.llms.tools.pydantic_ai_tools import (
                 PydanticAIToolFactory,
             )
@@ -207,20 +195,7 @@ class UnifiedToolFactory:
         Returns:
             Framework-specific tool instance
         """
-        if framework == AgentFramework.LLAMA_INDEX:
-            from opencontractserver.llms.tools.llama_index_tools import (
-                LlamaIndexToolFactory,
-            )
-
-            return LlamaIndexToolFactory.from_function(
-                func=func,
-                name=name,
-                description=description,
-                parameter_descriptions=parameter_descriptions,
-                requires_approval=requires_approval,
-                requires_corpus=requires_corpus,
-            )
-        elif framework == AgentFramework.PYDANTIC_AI:
+        if framework == AgentFramework.PYDANTIC_AI:
             from opencontractserver.llms.tools.pydantic_ai_tools import (
                 PydanticAIToolFactory,
             )

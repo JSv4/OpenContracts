@@ -991,8 +991,8 @@ The framework follows a layered architecture that separates concerns and enables
 ┌─────────────────────────────────────────┐
 │           API Layer                     │  ← api.py (agents, embeddings, vector_stores, tools)
 ├─────────────────────────────────────────┤
-│        Framework Adapter Layer          │  ← agents/llama_index_agents.py
-│ (Implements CoreAgent for specific SDK) │     agents/pydantic_ai_agents.py
+│        Framework Adapter Layer          │  ← agents/pydantic_ai_agents.py
+│ (Implements CoreAgent for specific SDK) │     (llama_index adapter removed)
 ├─────────────────────────────────────────┤
 │         Core Agent Protocol             │  ← agents/core_agents.py (Defines .chat, .stream)
 │         & Unified Tool System           │  ← tools/ (CoreTool, UnifiedToolFactory)
@@ -1018,8 +1018,8 @@ The framework follows a layered architecture that separates concerns and enables
    - Converts string framework names to enums, resolves tools, creates contexts.
    - Delegates to framework-specific implementations.
 
-3. **Framework Adapters** (e.g., `agents/llama_index_agents.py`):
-   - E.g., `LlamaIndexDocumentAgent.create()` builds the actual LLM integration.
+3. **Framework Adapters** (e.g., `agents/pydantic_ai_agents.py`):
+   - E.g., `PydanticAIDocumentAgent.create()` builds the actual LLM integration.
    - Creates vector stores, configures embeddings, sets up the underlying LlamaIndex agent.
    - Returns a framework-specific agent that implements the `CoreAgent` protocol.
 
@@ -1049,20 +1049,17 @@ The framework follows a layered architecture that separates concerns and enables
 #### LlamaIndex Integration
 
 ```python
-# LlamaIndex agents use:
+# LlamaIndex agents:
+# Note: The LlamaIndex framework adapter has been removed from the codebase.
+# For LlamaIndex integration, you would need to implement your own adapter
+# following the CoreAgent protocol defined in agents/core_agents.py.
+# 
+# Key components that were previously available:
 # - ChatEngine for conversation management
 # - FunctionTool for tool integration
-# - BasePydanticVectorStore for vector search (via LlamaIndexAnnotationVectorStore)
-# - Custom embedding models via OpenContractsPipelineEmbedding (from opencontractserver.llms.embedders.custom_pipeline_embedding)
+# - BasePydanticVectorStore for vector search
+# - Custom embedding models via OpenContractsPipelineEmbedding
 # - Traditional 3-phase streaming (START, CONTENT chunks, FINISH)
-
-from opencontractserver.llms.agents.llama_index_agents import LlamaIndexDocumentAgent
-from opencontractserver.llms.vector_stores.llama_index_vector_stores import LlamaIndexAnnotationVectorStore
-from opencontractserver.llms.embedders.custom_pipeline_embedding import OpenContractsPipelineEmbedding
-
-# Framework-specific features
-# agent = await LlamaIndexDocumentAgent.create(document_obj, corpus_obj, config, conversation_manager, tools)
-# The OpenContractsPipelineEmbedding can be configured in AgentConfig or used directly with LlamaIndex components.
 
 # LlamaIndex streaming produces UnifiedStreamResponse objects
 async for chunk in llamaindex_agent.stream("Analyze contract"):
@@ -1114,7 +1111,7 @@ Choose your framework based on your needs:
 
 | Framework | Best For | Streaming Type | Structured Response | Visibility |
 |-----------|----------|----------------|---------------------|------------|
-| **LlamaIndex** | Simple integration, stable API | Traditional (START/CONTENT/FINISH) | ❌ Not implemented | Basic content streaming |
+| **LlamaIndex** | *Removed - implement custom adapter* | Traditional (START/CONTENT/FINISH) | ❌ Not implemented | Basic content streaming |
 | **PydanticAI** | Rich observability, debugging UIs | Event-based (thought/content/sources/final) | ✅ Full support | Full execution graph visibility |
 
 ```python
@@ -1338,12 +1335,9 @@ query = VectorSearchQuery(
 
 ```python
 # LlamaIndex vector store
-from opencontractserver.llms.vector_stores.llama_index_vector_stores import LlamaIndexAnnotationVectorStore
-
-# llama_store = LlamaIndexAnnotationVectorStore(
-#     user_id=123, # Optional
-#     corpus_id=456 # Or document_id, depending on desired scope
-# )
+# Note: The LlamaIndex vector store adapter has been removed.
+# For LlamaIndex integration, implement your own adapter following
+# the CoreAnnotationVectorStore interface.
 
 # PydanticAI vector store
 from opencontractserver.llms.vector_stores.pydantic_ai_vector_stores import PydanticAIAnnotationVectorStore
@@ -1729,7 +1723,7 @@ To add support for a new LLM framework (e.g., LangChain, Haystack):
    - Update `vector_stores/vector_store_factory.py`.
 
 6. **Testing**:
-   - Create comprehensive tests following the patterns in existing test files (e.g., `test_llama_index_agents.py`, `test_pydantic_ai_agents.py`).
+   - Create comprehensive tests following the patterns in existing test files (e.g., `test_pydantic_ai_agents.py`).
    - Test the public `chat()`, `stream()`, and `structured_response()` methods (which are provided by `CoreAgentBase`), conversation management, tool usage, and error handling.
    - Note that `_chat_raw()`, `_stream_raw()`, and `_structured_response_raw()` methods are internal implementation details and typically don't require separate testing—the public API tests exercise them indirectly.
 

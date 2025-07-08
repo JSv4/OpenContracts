@@ -76,8 +76,8 @@ def debug_imports():
     # Test the mock paths
     print("\n5. Testing mock paths...", flush=True)
     paths = [
-        "opencontractserver.llms.agents.llama_index_agents.LlamaIndexDocumentAgent",
         "opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIDocumentAgent",
+        # Note: llama_index_agents module has been removed from the codebase
     ]
 
     for path in paths:

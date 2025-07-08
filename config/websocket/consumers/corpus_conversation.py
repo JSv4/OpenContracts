@@ -286,7 +286,7 @@ class CorpusQueryConsumer(AsyncWebsocketConsumer):
                     # document consumer: every delta with ``content`` becomes an
                     # ASYNC_CONTENT frame and when ``is_complete`` flips to ``True`` we
                     # dispatch the mandatory ASYNC_FINISH so the front-end can close
-                    # the stream gracefully.
+                    # the stream gracefully. NOTE - removed LlamaIndex adapters but leaving this.
                     # ------------------------------------------------------------------
                     if hasattr(event, "content") and event.content:
                         await self.send_standard_message(

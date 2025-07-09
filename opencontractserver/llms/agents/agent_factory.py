@@ -120,7 +120,11 @@ class UnifiedAgentFactory:
                     if isinstance(corpus, Corpus)
                     else await Corpus.objects.aget(id=corpus)
                 )
+        except (Document.DoesNotExist, Corpus.DoesNotExist):
+            # Re-raise these exceptions so callers can handle them appropriately
+            raise
         except Exception:
+            # For other exceptions (e.g., network errors), default to private
             doc_obj = None
             corpus_obj = None
 
@@ -254,7 +258,11 @@ class UnifiedAgentFactory:
                 if isinstance(corpus, Corpus)
                 else await Corpus.objects.aget(id=corpus)
             )
+        except Corpus.DoesNotExist:
+            # Re-raise this exception so callers can handle it appropriately
+            raise
         except Exception:
+            # For other exceptions (e.g., network errors), default to private
             corpus_obj = None
 
         public_context = _is_public(corpus_obj)

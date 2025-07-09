@@ -113,7 +113,7 @@ class AgentAPI:
         # Resolve default framework if caller did not specify one
         if framework is None:
             framework = getattr(
-                settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+                settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.PYDANTIC_AI
             )
         if isinstance(framework, str):
             framework = AgentFramework(framework)
@@ -225,7 +225,7 @@ class AgentAPI:
         # Resolve default framework if caller did not specify one
         if framework is None:
             framework = getattr(
-                settings, "LLMS_CORPUS_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+                settings, "LLMS_CORPUS_AGENT_FRAMEWORK", AgentFramework.PYDANTIC_AI
             )
         if isinstance(framework, str):
             framework = AgentFramework(framework)
@@ -593,7 +593,7 @@ class VectorStoreAPI:
         # Resolve default framework if caller did not specify one
         if framework is None:
             framework = getattr(
-                settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+                settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.PYDANTIC_AI
             )
 
         # Normalize framework

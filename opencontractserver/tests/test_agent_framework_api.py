@@ -91,7 +91,7 @@ class TestAgentAPIHypermodern(TestAPISetup):
         args, kwargs = mock_create_doc_agent.call_args
         self.assertEqual(args[0], self.doc1.id)
         self.assertEqual(args[1], self.corpus1.id)
-        self.assertEqual(kwargs["framework"], AgentFramework.LLAMA_INDEX)  # Default
+        self.assertEqual(kwargs["framework"], AgentFramework.PYDANTIC_AI)  # Default
         self.assertIsInstance(agent, CoreAgent)
 
     @patch(
@@ -124,7 +124,7 @@ class TestAgentAPIHypermodern(TestAPISetup):
         await agents.for_document(
             self.doc1.id,
             self.corpus1.id,
-            framework="llama_index",
+            framework="pydantic_ai",
             user_id=self.user.id,
             model="gpt-4-turbo",
             system_prompt="You are helpful.",
@@ -142,7 +142,7 @@ class TestAgentAPIHypermodern(TestAPISetup):
 
         self.assertEqual(args[0], self.doc1.id)
         self.assertEqual(args[1], self.corpus1.id)
-        self.assertEqual(kwargs["framework"], AgentFramework.LLAMA_INDEX)
+        self.assertEqual(kwargs["framework"], AgentFramework.PYDANTIC_AI)
         self.assertEqual(kwargs["user_id"], self.user.id)
         self.assertEqual(kwargs["model"], "gpt-4-turbo")
         self.assertEqual(kwargs["system_prompt"], "You are helpful.")
@@ -181,7 +181,7 @@ class TestAgentAPIHypermodern(TestAPISetup):
         args, kwargs = mock_create_corpus_agent.call_args
         self.assertEqual(args[0], self.corpus1.id)
         self.assertEqual(kwargs["model"], "claude-opus")
-        self.assertEqual(kwargs["framework"], AgentFramework.LLAMA_INDEX)  # Default
+        self.assertEqual(kwargs["framework"], AgentFramework.PYDANTIC_AI)  # Default
         self.assertIsInstance(agent, CoreAgent)
 
     @patch(
@@ -231,8 +231,9 @@ class TestAgentAPIHypermodern(TestAPISetup):
 
     async def test_agent_creation_with_nonexistent_document(self):
         # This will call the actual factory, which should raise Document.DoesNotExist
+        # We need to specify pydantic_ai since llama_index has been removed
         with self.assertRaises(Document.DoesNotExist):
-            await agents.for_document(99999, self.corpus1.id)
+            await agents.for_document(99999, self.corpus1.id, framework="pydantic_ai")
 
 
 class TestToolAPIHypermodern(TestAPISetup):
@@ -285,7 +286,7 @@ class TestVectorStoreAPIHypermodern(TestAPISetup):
 
         mock_create_vs.assert_called_once()
         call_kwargs = mock_create_vs.call_args.kwargs
-        self.assertEqual(call_kwargs["framework"], AgentFramework.LLAMA_INDEX)
+        self.assertEqual(call_kwargs["framework"], AgentFramework.PYDANTIC_AI)
         self.assertEqual(call_kwargs["corpus_id"], self.corpus1.id)
         self.assertIs(store, mock_vs_instance)
 
@@ -312,7 +313,7 @@ class TestVectorStoreAPIHypermodern(TestAPISetup):
         mock_create_vs.return_value = mock_vs_instance
 
         store = vector_stores.create(
-            framework="llama_index",
+            framework="pydantic_ai",
             user_id=self.user.id,
             corpus_id=self.corpus1.id,
             document_id=self.doc1.id,
@@ -324,7 +325,7 @@ class TestVectorStoreAPIHypermodern(TestAPISetup):
 
         mock_create_vs.assert_called_once()
         call_kwargs = mock_create_vs.call_args.kwargs
-        self.assertEqual(call_kwargs["framework"], AgentFramework.LLAMA_INDEX)
+        self.assertEqual(call_kwargs["framework"], AgentFramework.PYDANTIC_AI)
         self.assertEqual(call_kwargs["user_id"], self.user.id)
         self.assertEqual(call_kwargs["corpus_id"], self.corpus1.id)
         self.assertEqual(call_kwargs["document_id"], self.doc1.id)

@@ -158,6 +158,7 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
                 self.corpus1, framework="invalid_framework_name"
             )
 
+
 #     @patch("opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIDocumentAgent")
 #     async def test_public_context_filters_approval_tools(
 #         self, mock_pydantic_agent_class: MagicMock

@@ -3,8 +3,7 @@ from __future__ import annotations
 """
 Integration-level websocket test for the refactored CorpusQueryConsumer.
 
-The pattern mirrors `test_document_conversation_lllama_index_ws.py`: we open a
-real Channels WebSocket (no mocks for the consumer itself), rely on VCR.py to
+We open a real Channels WebSocket (no mocks for the consumer itself), rely on VCR.py to
 replay any outbound HTTP requests from the LLM layer, and assert that the
 consumer still produces the four message-types (`ASYNC_START`,
 `ASYNC_CONTENT`, `ASYNC_FINISH`, `SYNC_CONTENT`) the UI depends on.
@@ -31,10 +30,7 @@ class CorpusConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
     """
     End-to-end websocket test for the refactored ``CorpusQueryConsumer``.
 
-    The same assertions are executed twice – once with
-    ``LLMS_*_AGENT_FRAMEWORK = "llama_index"`` and again with
-    ``"pydantic_ai"`` – ensuring our new *settings-based* default selection
-    logic works for both frameworks.
+    Tests are executed with ``LLMS_*_AGENT_FRAMEWORK = "pydantic_ai"``.
     """
 
     # ------------------------------------------------------------------
@@ -193,8 +189,7 @@ class CorpusConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
         await communicator.wait()
 
     # ------------------------------------------------------------------
-    # Public test method – loops over the two default frameworks and
-    # re-executes the helper under a fresh ``override_settings`` context.
+    # Public test method – executes the helper with pydantic_ai framework.
     # ------------------------------------------------------------------
     @vcr.use_cassette(
         "fixtures/vcr_cassettes/test_corpus_conversation_ws.yaml",
@@ -202,11 +197,10 @@ class CorpusConversationWebsocketTestCase(WebsocketFixtureBaseTestCase):
     )
     async def test_streaming_flow__all_default_frameworks(self) -> None:
         """
-        Execute the streaming-flow test twice – once for each framework
-        that can be selected globally through the LLMS settings.
+        Execute the streaming-flow test with pydantic_ai framework.
         """
 
-        for framework in ("llama_index", "pydantic_ai"):
+        for framework in ("pydantic_ai",):
             with self.subTest(default_framework=framework):
                 # Dynamically override the global defaults for this sub-test
                 with override_settings(

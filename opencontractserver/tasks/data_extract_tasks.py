@@ -332,7 +332,7 @@ def llama_index_react_agent_query(cell_id):
         Settings.llm = llm
 
         vector_store = UnifiedVectorStoreFactory.create_vector_store(
-            framework=AgentFramework.LLAMA_INDEX,
+            framework=AgentFramework.PYDANTIC_AI,
             user_id=document.creator.id,
             document_id=document.id,
             must_have_text=datacell.column.must_contain_text,

@@ -759,29 +759,6 @@ class TestStructuredResponseAPI(BaseFixtureTestCase):
 
         assert isinstance(result, str) or result is None
 
-    @vcr.use_cassette(
-        "fixtures/vcr_cassettes/structured_data_tests/test_llama_index_structured_response_returns_none.yaml",
-        filter_headers=["authorization"],
-    )
-    async def test_llama_index_structured_response_returns_none(self):
-        """Test that LlamaIndex returns None (not implemented)."""
-        agent = await agents.for_document(
-            document=self.doc.id,
-            corpus=self.corpus.id,
-            framework=AgentFramework.LLAMA_INDEX,
-            user_id=self.user.id,
-        )
-
-        result = await agent.structured_response("What type of document is this?", str)
-
-        # Log the structured result for inspection
-        log_structured_result(
-            "test_llama_index_structured_response_returns_none", result
-        )
-
-        # LlamaIndex implementation should return None
-        assert result is None
-
     # Ephemeral nature tests
 
     @vcr.use_cassette(

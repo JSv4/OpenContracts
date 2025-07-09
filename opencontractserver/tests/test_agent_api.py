@@ -40,7 +40,7 @@ class TestAgentAPI(TestCase):
                 self.assertEqual(args[0], 123)  # document is the first positional arg
                 self.assertEqual(args[1], 456)  # corpus is the second positional arg
                 self.assertEqual(
-                    kwargs["framework"], AgentFramework.LLAMA_INDEX
+                    kwargs["framework"], AgentFramework.PYDANTIC_AI
                 )  # default
                 self.assertIsInstance(agent, CoreAgent)
 
@@ -95,20 +95,19 @@ class TestAgentAPI(TestCase):
 
             async def test_async():
                 await agents.for_corpus(
-                    101, framework="llama_index", model="claude-3-sonnet"
+                    101, framework="pydantic_ai", model="claude-3-sonnet"
                 )
 
                 mock_create.assert_called_once()
                 args, kwargs = mock_create.call_args
                 self.assertEqual(args[0], 101)  # corpus is the first positional arg
-                self.assertEqual(kwargs["framework"], AgentFramework.LLAMA_INDEX)
+                self.assertEqual(kwargs["framework"], AgentFramework.PYDANTIC_AI)
                 self.assertEqual(kwargs["model"], "claude-3-sonnet")
 
             asyncio.run(test_async())
 
     def test_framework_string_conversion(self):
         """Test that framework strings are converted to enums."""
-        self.assertEqual(AgentFramework("llama_index"), AgentFramework.LLAMA_INDEX)
         self.assertEqual(AgentFramework("pydantic_ai"), AgentFramework.PYDANTIC_AI)
 
     def test_tool_resolution(self):
@@ -238,7 +237,7 @@ class TestVectorStoreAPI(TestCase):
             result = vector_stores.create(corpus_id=123)
 
             mock_create.assert_called_once_with(
-                framework=AgentFramework.LLAMA_INDEX,
+                framework=AgentFramework.PYDANTIC_AI,
                 user_id=None,
                 corpus_id=123,
                 document_id=None,
@@ -420,7 +419,7 @@ class TestAPIIntegration(TestCase):
 
             async def test_async():
                 # Create vector store
-                vector_stores.create(framework="llama_index", document_id=123)
+                vector_stores.create(framework="pydantic_ai", document_id=123)
 
                 # Create agent
                 await agents.for_document(123, 456)

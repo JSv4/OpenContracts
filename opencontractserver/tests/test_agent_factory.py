@@ -45,18 +45,6 @@ class TestAgentFactorySetup(TestCase):
 
 class TestUnifiedAgentFactory(TestAgentFactorySetup):
 
-    async def test_create_document_agent_llama_index(self):
-        """Test that LlamaIndex framework raises ValueError since it's not supported."""
-        with self.assertRaises(ValueError) as cm:
-            await UnifiedAgentFactory.create_document_agent(
-                self.doc1,
-                self.corpus1,
-                framework=AgentFramework.LLAMA_INDEX,
-                user_id=self.user.id,
-                model="test_model",
-            )
-        self.assertIn("Unsupported framework:", str(cm.exception))
-
     @patch("opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIDocumentAgent")
     @patch(f"{UnifiedAgentFactory.__module__}.get_default_config")
     @patch(f"{UnifiedAgentFactory.__module__}._convert_tools_for_framework")
@@ -102,14 +90,6 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
         )
         mock_pydantic_agent_class.create.assert_called_once()
         self.assertIs(agent, mock_agent_instance)
-
-    async def test_create_corpus_agent_llama_index(self):
-        """Test that LlamaIndex framework raises ValueError since it's not supported."""
-        with self.assertRaises(ValueError) as cm:
-            await UnifiedAgentFactory.create_corpus_agent(
-                self.corpus1, framework=AgentFramework.LLAMA_INDEX
-            )
-        self.assertIn("Unsupported framework:", str(cm.exception))
 
     @patch("opencontractserver.llms.agents.pydantic_ai_agents.PydanticAICorpusAgent")
     @patch(f"{UnifiedAgentFactory.__module__}.get_default_config")

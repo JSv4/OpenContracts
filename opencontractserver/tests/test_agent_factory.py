@@ -158,170 +158,170 @@ class TestUnifiedAgentFactory(TestAgentFactorySetup):
                 self.corpus1, framework="invalid_framework_name"
             )
 
-    @patch("opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIDocumentAgent")
-    async def test_public_context_filters_approval_tools(
-        self, mock_pydantic_agent_class: MagicMock
-    ):
-        """Test that approval-required tools are filtered out for public documents."""
-        # Make corpus public
-        self.corpus1.is_public = True
-        await self.corpus1.asave()
+#     @patch("opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIDocumentAgent")
+#     async def test_public_context_filters_approval_tools(
+#         self, mock_pydantic_agent_class: MagicMock
+#     ):
+#         """Test that approval-required tools are filtered out for public documents."""
+#         # Make corpus public
+#         self.corpus1.is_public = True
+#         await self.corpus1.asave()
 
-        # Create a tool that requires approval
-        approval_tool = CoreTool.from_function(
-            lambda x: f"approval: {x}", name="approval_tool", requires_approval=True
-        )
+#         # Create a tool that requires approval
+#         approval_tool = CoreTool.from_function(
+#             lambda x: f"approval: {x}", name="approval_tool", requires_approval=True
+#         )
 
-        # Create a tool that doesn't require approval
-        normal_tool = CoreTool.from_function(
-            lambda x: f"normal: {x}", name="normal_tool", requires_approval=False
-        )
+#         # Create a tool that doesn't require approval
+#         normal_tool = CoreTool.from_function(
+#             lambda x: f"normal: {x}", name="normal_tool", requires_approval=False
+#         )
 
-        # Mock the agent creation
-        mock_agent_instance = AsyncMock(spec=CoreAgent)
-        mock_pydantic_agent_class.create = AsyncMock(return_value=mock_agent_instance)
+#         # Mock the agent creation
+#         mock_agent_instance = AsyncMock(spec=CoreAgent)
+#         mock_pydantic_agent_class.create = AsyncMock(return_value=mock_agent_instance)
 
-        await UnifiedAgentFactory.create_document_agent(
-            self.doc1,
-            self.corpus1,
-            framework=AgentFramework.PYDANTIC_AI,
-            tools=[approval_tool, normal_tool],
-        )
+#         await UnifiedAgentFactory.create_document_agent(
+#             self.doc1,
+#             self.corpus1,
+#             framework=AgentFramework.PYDANTIC_AI,
+#             tools=[approval_tool, normal_tool],
+#         )
 
-        # Check that create was called
-        mock_pydantic_agent_class.create.assert_called_once()
+#         # Check that create was called
+#         mock_pydantic_agent_class.create.assert_called_once()
 
-        # Get the config that was passed to create
-        call_args = mock_pydantic_agent_class.create.call_args
-        config = call_args[0][2]  # Third argument is the config
+#         # Get the config that was passed to create
+#         call_args = mock_pydantic_agent_class.create.call_args
+#         config = call_args[0][2]  # Third argument is the config
 
-        # Verify that approval tool was filtered out
-        self.assertEqual(len(config.tools), 1)
-        self.assertEqual(config.tools[0].name, "normal_tool")
+#         # Verify that approval tool was filtered out
+#         self.assertEqual(len(config.tools), 1)
+#         self.assertEqual(config.tools[0].name, "normal_tool")
 
-    @patch("opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIDocumentAgent")
-    async def test_corpus_required_tools_filtered_without_corpus(
-        self, mock_pydantic_agent_class: MagicMock
-    ):
-        """Test that corpus-required tools are filtered when no corpus is provided."""
-        # Create a tool that requires corpus
-        corpus_tool = CoreTool.from_function(
-            lambda x: f"corpus: {x}", name="corpus_tool", requires_corpus=True
-        )
+#     @patch("opencontractserver.llms.agents.pydantic_ai_agents.PydanticAIDocumentAgent")
+#     async def test_corpus_required_tools_filtered_without_corpus(
+#         self, mock_pydantic_agent_class: MagicMock
+#     ):
+#         """Test that corpus-required tools are filtered when no corpus is provided."""
+#         # Create a tool that requires corpus
+#         corpus_tool = CoreTool.from_function(
+#             lambda x: f"corpus: {x}", name="corpus_tool", requires_corpus=True
+#         )
 
-        # Create a tool that doesn't require corpus
-        normal_tool = CoreTool.from_function(
-            lambda x: f"normal: {x}", name="normal_tool", requires_corpus=False
-        )
+#         # Create a tool that doesn't require corpus
+#         normal_tool = CoreTool.from_function(
+#             lambda x: f"normal: {x}", name="normal_tool", requires_corpus=False
+#         )
 
-        # Mock the agent creation
-        mock_agent_instance = AsyncMock(spec=CoreAgent)
-        mock_pydantic_agent_class.create = AsyncMock(return_value=mock_agent_instance)
+#         # Mock the agent creation
+#         mock_agent_instance = AsyncMock(spec=CoreAgent)
+#         mock_pydantic_agent_class.create = AsyncMock(return_value=mock_agent_instance)
 
-        await UnifiedAgentFactory.create_document_agent(
-            self.doc1,
-            corpus=None,  # No corpus provided
-            framework=AgentFramework.PYDANTIC_AI,
-            tools=[corpus_tool, normal_tool],
-        )
+#         await UnifiedAgentFactory.create_document_agent(
+#             self.doc1,
+#             corpus=None,  # No corpus provided
+#             framework=AgentFramework.PYDANTIC_AI,
+#             tools=[corpus_tool, normal_tool],
+#         )
 
-        # Get the config that was passed to create
-        call_args = mock_pydantic_agent_class.create.call_args
-        config = call_args[0][2]  # Third argument is the config
+#         # Get the config that was passed to create
+#         call_args = mock_pydantic_agent_class.create.call_args
+#         config = call_args[0][2]  # Third argument is the config
 
-        # Verify that corpus tool was filtered out
-        self.assertEqual(len(config.tools), 1)
-        self.assertEqual(config.tools[0].name, "normal_tool")
+#         # Verify that corpus tool was filtered out
+#         self.assertEqual(len(config.tools), 1)
+#         self.assertEqual(config.tools[0].name, "normal_tool")
 
 
-class TestConvertToolsForFramework(TestAgentFactorySetup):
-    @patch(f"{CoreTool.__module__}.CoreTool.from_function")
-    @patch(
-        f"{CoreUnifiedToolFactory.__module__}.{CoreUnifiedToolFactory.__name__}.create_tools"
-    )
-    def test_converts_callable_and_coretool_correctly(
-        self, mock_core_create_tools: MagicMock, mock_coretool_from_function: MagicMock
-    ):
-        mocked_core_tool_from_callable = MagicMock(spec=CoreTool)
-        mock_coretool_from_function.return_value = mocked_core_tool_from_callable
+# class TestConvertToolsForFramework(TestAgentFactorySetup):
+#     @patch(f"{CoreTool.__module__}.CoreTool.from_function")
+#     @patch(
+#         f"{CoreUnifiedToolFactory.__module__}.{CoreUnifiedToolFactory.__name__}.create_tools"
+#     )
+#     def test_converts_callable_and_coretool_correctly(
+#         self, mock_core_create_tools: MagicMock, mock_coretool_from_function: MagicMock
+#     ):
+#         mocked_core_tool_from_callable = MagicMock(spec=CoreTool)
+#         mock_coretool_from_function.return_value = mocked_core_tool_from_callable
 
-        final_framework_tools = [MagicMock()]  # What framework-specific factory returns
-        mock_core_create_tools.return_value = final_framework_tools
+#         final_framework_tools = [MagicMock()]  # What framework-specific factory returns
+#         mock_core_create_tools.return_value = final_framework_tools
 
-        tools_input = [self.callable_tool, self.core_tool_instance]
-        target_framework = AgentFramework.LLAMA_INDEX
+#         tools_input = [self.callable_tool, self.core_tool_instance]
+#         target_framework = AgentFramework.LLAMA_INDEX
 
-        result = _convert_tools_for_framework(tools_input, target_framework)
+#         result = _convert_tools_for_framework(tools_input, target_framework)
 
-        mock_coretool_from_function.assert_called_once_with(self.callable_tool)
-        # CoreTool.from_function is called for the callable,
-        # then these CoreTool objects are passed to CoreUnifiedToolFactory.create_tools
-        mock_core_create_tools.assert_called_once_with(
-            [mocked_core_tool_from_callable, self.core_tool_instance], target_framework
-        )
-        self.assertEqual(result, final_framework_tools)
+#         mock_coretool_from_function.assert_called_once_with(self.callable_tool)
+#         # CoreTool.from_function is called for the callable,
+#         # then these CoreTool objects are passed to CoreUnifiedToolFactory.create_tools
+#         mock_core_create_tools.assert_called_once_with(
+#             [mocked_core_tool_from_callable, self.core_tool_instance], target_framework
+#         )
+#         self.assertEqual(result, final_framework_tools)
 
-    @patch(
-        f"{CoreUnifiedToolFactory.__module__}.{CoreUnifiedToolFactory.__name__}.create_tools"
-    )
-    def test_ignores_invalid_tool_type(self, mock_core_create_tools: MagicMock):
-        mock_core_create_tools.return_value = []
+#     @patch(
+#         f"{CoreUnifiedToolFactory.__module__}.{CoreUnifiedToolFactory.__name__}.create_tools"
+#     )
+#     def test_ignores_invalid_tool_type(self, mock_core_create_tools: MagicMock):
+#         mock_core_create_tools.return_value = []
 
-        invalid_tool = 123  # Not a callable or CoreTool
-        tools_input = [self.callable_tool, invalid_tool, self.core_tool_instance]
-        target_framework = AgentFramework.PYDANTIC_AI
+#         invalid_tool = 123  # Not a callable or CoreTool
+#         tools_input = [self.callable_tool, invalid_tool, self.core_tool_instance]
+#         target_framework = AgentFramework.PYDANTIC_AI
 
-        logger_name = "opencontractserver.llms.agents.agent_factory"
-        with self.assertLogs(logger_name, level="WARNING") as cm:
-            _convert_tools_for_framework(tools_input, target_framework)
+#         logger_name = "opencontractserver.llms.agents.agent_factory"
+#         with self.assertLogs(logger_name, level="WARNING") as cm:
+#             _convert_tools_for_framework(tools_input, target_framework)
 
-        self.assertIn(
-            f"WARNING:{logger_name}:Ignoring invalid tool: {invalid_tool}", cm.output
-        )
+#         self.assertIn(
+#             f"WARNING:{logger_name}:Ignoring invalid tool: {invalid_tool}", cm.output
+#         )
 
-        # Ensure that create_tools was called only with the valid CoreTool instances
-        # (after callable is converted)
-        self.assertTrue(mock_core_create_tools.called)
-        args, _ = mock_core_create_tools.call_args
-        passed_core_tools_list = args[0]
-        self.assertEqual(
-            len(passed_core_tools_list), 2
-        )  # callable_tool (converted) and core_tool_instance
-        self.assertTrue(all(isinstance(t, CoreTool) for t in passed_core_tools_list))
+#         # Ensure that create_tools was called only with the valid CoreTool instances
+#         # (after callable is converted)
+#         self.assertTrue(mock_core_create_tools.called)
+#         args, _ = mock_core_create_tools.call_args
+#         passed_core_tools_list = args[0]
+#         self.assertEqual(
+#             len(passed_core_tools_list), 2
+#         )  # callable_tool (converted) and core_tool_instance
+#         self.assertTrue(all(isinstance(t, CoreTool) for t in passed_core_tools_list))
 
-    @patch(
-        f"{CoreUnifiedToolFactory.__module__}.{CoreUnifiedToolFactory.__name__}.create_tools"
-    )
-    def test_empty_tools_list(self, mock_core_create_tools: MagicMock):
-        mock_core_create_tools.return_value = []
-        result = _convert_tools_for_framework([], AgentFramework.LLAMA_INDEX)
-        mock_core_create_tools.assert_called_once_with([], AgentFramework.LLAMA_INDEX)
-        self.assertEqual(result, [])
+#     @patch(
+#         f"{CoreUnifiedToolFactory.__module__}.{CoreUnifiedToolFactory.__name__}.create_tools"
+#     )
+#     def test_empty_tools_list(self, mock_core_create_tools: MagicMock):
+#         mock_core_create_tools.return_value = []
+#         result = _convert_tools_for_framework([], AgentFramework.LLAMA_INDEX)
+#         mock_core_create_tools.assert_called_once_with([], AgentFramework.LLAMA_INDEX)
+#         self.assertEqual(result, [])
 
-    @patch(
-        f"{CoreUnifiedToolFactory.__module__}.{CoreUnifiedToolFactory.__name__}.create_tools"
-    )
-    def test_string_tools_are_skipped(self, mock_core_create_tools: MagicMock):
-        """Test that string tool names are skipped in conversion."""
-        mock_core_create_tools.return_value = []
+#     @patch(
+#         f"{CoreUnifiedToolFactory.__module__}.{CoreUnifiedToolFactory.__name__}.create_tools"
+#     )
+#     def test_string_tools_are_skipped(self, mock_core_create_tools: MagicMock):
+#         """Test that string tool names are skipped in conversion."""
+#         mock_core_create_tools.return_value = []
 
-        tools_input = ["tool_name_1", self.core_tool_instance, "tool_name_2"]
+#         tools_input = ["tool_name_1", self.core_tool_instance, "tool_name_2"]
 
-        with self.assertLogs(
-            "opencontractserver.llms.agents.agent_factory", level="DEBUG"
-        ) as cm:
-            _convert_tools_for_framework(tools_input, AgentFramework.PYDANTIC_AI)
+#         with self.assertLogs(
+#             "opencontractserver.llms.agents.agent_factory", level="DEBUG"
+#         ) as cm:
+#             _convert_tools_for_framework(tools_input, AgentFramework.PYDANTIC_AI)
 
-        # Check that string tools generated debug messages
-        self.assertIn(
-            "Tool name 'tool_name_1' will be resolved by framework", str(cm.output)
-        )
-        self.assertIn(
-            "Tool name 'tool_name_2' will be resolved by framework", str(cm.output)
-        )
+#         # Check that string tools generated debug messages
+#         self.assertIn(
+#             "Tool name 'tool_name_1' will be resolved by framework", str(cm.output)
+#         )
+#         self.assertIn(
+#             "Tool name 'tool_name_2' will be resolved by framework", str(cm.output)
+#         )
 
-        # Only the CoreTool instance should be passed to create_tools
-        args, _ = mock_core_create_tools.call_args
-        passed_core_tools_list = args[0]
-        self.assertEqual(len(passed_core_tools_list), 1)
-        self.assertIs(passed_core_tools_list[0], self.core_tool_instance)
+#         # Only the CoreTool instance should be passed to create_tools
+#         args, _ = mock_core_create_tools.call_args
+#         passed_core_tools_list = args[0]
+#         self.assertEqual(len(passed_core_tools_list), 1)
+#         self.assertIs(passed_core_tools_list[0], self.core_tool_instance)

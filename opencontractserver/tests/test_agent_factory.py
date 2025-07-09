@@ -11,14 +11,10 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms.agents.agent_factory import (
     UnifiedAgentFactory,
-    _convert_tools_for_framework,
 )
 from opencontractserver.llms.agents.core_agents import AgentConfig, CoreAgent
 from opencontractserver.llms.tools.tool_factory import (
     CoreTool,
-)
-from opencontractserver.llms.tools.tool_factory import (
-    UnifiedToolFactory as CoreUnifiedToolFactory,  # Alias to avoid confusion
 )
 from opencontractserver.llms.types import AgentFramework
 

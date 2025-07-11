@@ -38,7 +38,7 @@ Twisted[tls,http2]
 # Django REST Framework
 # ------------------------------------------------------------------------------
 djangorestframework==3.15.2  # https://github.com/encode/django-rest-framework
-django-cors-headers==3.13.0  # https://github.com/adamchainz/django-cors-headers
+django-cors-headers==4.7.0  # https://github.com/adamchainz/django-cors-headers
 drf-extra-fields==3.7.0  # https://github.com/Hipo/drf-extra-fields
 
 # Doc Analysis (NLP dependencies, placeholder) - WARNING, these are all in same environment... not ideal.

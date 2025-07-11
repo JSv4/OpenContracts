@@ -23,6 +23,7 @@ import uuid
 from typing import Any
 
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.conf import settings
 from graphql_relay import from_global_id
 
 from config.websocket.utils.extract_ids import extract_websocket_path_id
@@ -176,54 +177,145 @@ class CorpusQueryConsumer(AsyncWebsocketConsumer):
                 agent_kwargs["conversation_id"] = conversation_id
 
             if getattr(self.corpus, "preferred_embedder", None):
-                agent_kwargs["embedder_path"] = self.corpus.preferred_embedder
+                agent_kwargs["embedder"] = self.corpus.preferred_embedder
 
-            self.agent = await agents.for_corpus(**agent_kwargs)
+            self.agent = await agents.for_corpus(
+                **agent_kwargs, framework=settings.LLMS_DEFAULT_AGENT_FRAMEWORK
+            )
             logger.debug("[Session %s] Agent ready.", self.session_id)
 
         # -------------------------------------------------------------- #
         #  Stream the LLM response                                       #
         # -------------------------------------------------------------- #
         try:
-            async for chunk in self.agent.stream(user_query):
-                # First chunk: announce the LLM message_id
-                if chunk.user_message_id and not hasattr(self, "_sent_start"):
+            # Import event classes locally to avoid heavy imports at top
+            from opencontractserver.llms.agents.core_agents import (
+                ApprovalNeededEvent,
+                ContentEvent,
+                ErrorEvent,
+                FinalEvent,
+                SourceEvent,
+                ThoughtEvent,
+            )
+
+            async for event in self.agent.stream(user_query):
+                # Ensure START message once we have IDs
+                if getattr(event, "user_message_id", None) is not None and not hasattr(
+                    self, "_sent_start"
+                ):
                     await self.send_standard_message(
                         msg_type="ASYNC_START",
-                        data={"message_id": chunk.llm_message_id},
+                        data={"message_id": event.llm_message_id},
                     )
                     self._sent_start = True
 
-                # Intermediate delta
-                if chunk.content:
+                if isinstance(event, ThoughtEvent):
                     await self.send_standard_message(
-                        msg_type="ASYNC_CONTENT",
-                        content=chunk.content,
-                        data={"message_id": chunk.llm_message_id},
+                        msg_type="ASYNC_THOUGHT",
+                        content=event.thought,
+                        data={"message_id": event.llm_message_id, **event.metadata},
                     )
 
-                # Final chunk
-                if chunk.is_complete:
-                    sources: list[dict[str, Any]] = []
-                    for src in chunk.sources or []:
-                        sources.append(
-                            {
-                                "annotation_id": src.annotation_id,
-                                "rawText": src.content,
-                                "similarity_score": src.similarity_score,
-                                **src.metadata,
-                            }
+                elif isinstance(event, ContentEvent):
+                    if event.content:
+                        await self.send_standard_message(
+                            msg_type="ASYNC_CONTENT",
+                            content=event.content,
+                            data={"message_id": event.llm_message_id},
                         )
 
+                elif isinstance(event, SourceEvent):
+                    if event.sources:
+                        await self.send_standard_message(
+                            msg_type="ASYNC_SOURCES",
+                            content="",
+                            data={
+                                "message_id": event.llm_message_id,
+                                "sources": [s.to_dict() for s in event.sources],
+                            },
+                        )
+
+                elif isinstance(event, ApprovalNeededEvent):
                     await self.send_standard_message(
-                        msg_type="ASYNC_FINISH",
+                        msg_type="ASYNC_APPROVAL_NEEDED",
+                        content="",
                         data={
-                            "sources": sources,
-                            "message_id": chunk.llm_message_id,
+                            "message_id": event.llm_message_id,
+                            "pending_tool_call": event.pending_tool_call,
                         },
                     )
+
+                elif isinstance(event, ErrorEvent):
+                    await self.send_standard_message(
+                        msg_type="ASYNC_ERROR",
+                        content="",
+                        data={
+                            "error": event.error or "Unknown error",
+                            "message_id": event.llm_message_id,
+                            "metadata": event.metadata,
+                        },
+                    )
+                    # Reset flag
                     if hasattr(self, "_sent_start"):
                         delattr(self, "_sent_start")
+
+                elif isinstance(event, FinalEvent):
+                    await self.send_standard_message(
+                        msg_type="ASYNC_FINISH",
+                        content=event.accumulated_content or event.content,
+                        data={
+                            "sources": [s.to_dict() for s in event.sources],
+                            "message_id": event.llm_message_id,
+                            "timeline": (
+                                event.metadata.get("timeline", [])
+                                if isinstance(event.metadata, dict)
+                                else []
+                            ),
+                        },
+                    )
+
+                    if hasattr(self, "_sent_start"):
+                        delattr(self, "_sent_start")
+
+                else:
+                    # ------------------------------------------------------------------
+                    # Legacy path: some adapters (e.g. llama-index) still yield the
+                    # unified *response objects* directly instead of the granular
+                    # ThoughtEvent / ContentEvent / FinalEvent hierarchy.  To maintain
+                    # backward-compatibility we treat those objects similarly to the
+                    # document consumer: every delta with ``content`` becomes an
+                    # ASYNC_CONTENT frame and when ``is_complete`` flips to ``True`` we
+                    # dispatch the mandatory ASYNC_FINISH so the front-end can close
+                    # the stream gracefully. NOTE - removed LlamaIndex adapters but leaving this.
+                    # ------------------------------------------------------------------
+                    if hasattr(event, "content") and event.content:
+                        await self.send_standard_message(
+                            msg_type="ASYNC_CONTENT",
+                            content=str(event.content),
+                            data={"message_id": event.llm_message_id},
+                        )
+
+                    if getattr(event, "is_complete", False):
+                        sources_payload: list[dict[str, Any]] = []
+                        if hasattr(event, "sources") and event.sources:
+                            sources_payload = [s.to_dict() for s in event.sources]
+
+                        await self.send_standard_message(
+                            msg_type="ASYNC_FINISH",
+                            content=getattr(event, "accumulated_content", ""),
+                            data={
+                                "sources": sources_payload,
+                                "message_id": event.llm_message_id,
+                                "timeline": (
+                                    event.metadata.get("timeline", [])
+                                    if isinstance(event.metadata, dict)
+                                    else []
+                                ),
+                            },
+                        )
+
+                        if hasattr(self, "_sent_start"):
+                            delattr(self, "_sent_start")
 
             logger.debug("[Session %s] Streaming complete.", self.session_id)
 

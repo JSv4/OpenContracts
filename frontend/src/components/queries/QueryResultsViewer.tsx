@@ -16,12 +16,12 @@ import { CorpusQueryType, ServerAnnotationType } from "../../types/graphql-api";
 import {
   displayAnnotationOnAnnotatorLoad,
   onlyDisplayTheseAnnotations,
-  openedDocument,
   selectedAnnotation,
 } from "../../graphql/cache";
 import wait_icon from "../../assets/icons/waiting for robo.webp";
 import SyntaxHighlighter from "react-syntax-highlighter/dist/esm/prism-light";
 import { vs } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useNavigate } from "react-router-dom";
 
 interface QueryResultsViewerProps {
   query_obj: CorpusQueryType;
@@ -35,16 +35,24 @@ const QueryResultsViewer: React.FC<QueryResultsViewerProps> = ({
   const [viewSourceAnnotation, setViewSourceAnnotation] =
     useState<ServerAnnotationType | null>(null);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (viewSourceAnnotation) {
       console.log("viewSourceAnnotation", viewSourceAnnotation);
       displayAnnotationOnAnnotatorLoad(viewSourceAnnotation);
       selectedAnnotation(viewSourceAnnotation);
-      openedDocument(viewSourceAnnotation.document);
+      if (viewSourceAnnotation.corpus && viewSourceAnnotation.document) {
+        const corpusId = viewSourceAnnotation.corpus.id;
+        const docId = viewSourceAnnotation.document!.id;
+        navigate(
+          `/corpus/${corpusId}/document/${docId}?ann=${viewSourceAnnotation.id}`
+        );
+      }
       onlyDisplayTheseAnnotations([viewSourceAnnotation]);
       setViewSourceAnnotation(null);
     }
-  }, [viewSourceAnnotation]);
+  }, [viewSourceAnnotation, navigate]);
 
   if (!query_obj.started) {
     return (

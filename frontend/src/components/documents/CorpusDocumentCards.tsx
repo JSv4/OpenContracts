@@ -2,7 +2,7 @@ import { useEffect, useCallback } from "react";
 import _ from "lodash";
 import { toast } from "react-toastify";
 import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { DocumentCards } from "../../components/documents/DocumentCards";
 
@@ -12,10 +12,8 @@ import {
   authToken,
   filterToLabelId,
   selectedMetaAnnotationId,
-  openedDocument,
   showUploadNewDocumentsModal,
   uploadModalPreloadedFiles,
-  showKnowledgeBaseModal,
 } from "../../graphql/cache";
 import {
   REMOVE_DOCUMENTS_FROM_CORPUS,
@@ -52,6 +50,7 @@ export const CorpusDocumentCards = ({
   const filter_to_label_id = useReactiveVar(filterToLabelId);
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Setup document resolvers and mutations
@@ -172,12 +171,9 @@ export const CorpusDocumentCards = ({
   };
 
   const onOpen = (document: DocumentType) => {
-    // openedDocument(document);
-    showKnowledgeBaseModal({
-      isOpen: true,
-      documentId: document.id,
-      corpusId: opened_corpus_id,
-    });
+    if (opened_corpus_id) {
+      navigate(`/corpus/${opened_corpus_id}/document/${document.id}`);
+    }
   };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {

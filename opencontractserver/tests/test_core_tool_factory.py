@@ -48,27 +48,6 @@ except ModuleNotFoundError:  # pragma: no cover
     sys.modules["pydantic_ai"] = _pydantic_ai_stub
 
 
-# Stub minimal llama_index.core.tools for tests (avoids heavy dependency).
-_llama_index_stub = types.ModuleType("llama_index")
-_llama_index_core_stub = types.ModuleType("llama_index.core")
-_llama_index_tools_stub = types.ModuleType("llama_index.core.tools")
-
-
-class _DummyFunctionTool:  # Minimal placeholder for LlamaIndex FunctionTool
-    @staticmethod
-    def from_defaults(*args, **kwargs):  # noqa: D401
-        return "dummy_function_tool"
-
-
-_llama_index_tools_stub.FunctionTool = _DummyFunctionTool  # type: ignore
-_llama_index_core_stub.tools = _llama_index_tools_stub  # type: ignore
-_llama_index_stub.core = _llama_index_core_stub  # type: ignore
-
-sys.modules.setdefault("llama_index", _llama_index_stub)
-sys.modules.setdefault("llama_index.core", _llama_index_core_stub)
-sys.modules.setdefault("llama_index.core.tools", _llama_index_tools_stub)
-
-
 # ---------------------------------------------------------------------------
 # Helper functions for building CoreTools used in the tests
 # ---------------------------------------------------------------------------
@@ -131,18 +110,6 @@ class TestUnifiedToolFactory(SimpleTestCase):
         self.core_tool = CoreTool.from_function(sample_function)
 
     @patch(
-        "opencontractserver.llms.tools.llama_index_tools.LlamaIndexToolFactory.create_tool"
-    )
-    def test_create_tool_llama_index(self, mock_create_tool):
-        """``create_tool`` should delegate to the LlamaIndex factory when framework == LLAMA_INDEX."""
-        mock_create_tool.return_value = "llama_proxy"
-        result = UnifiedToolFactory.create_tool(
-            self.core_tool, AgentFramework.LLAMA_INDEX
-        )
-        self.assertEqual(result, "llama_proxy")
-        mock_create_tool.assert_called_once_with(self.core_tool)
-
-    @patch(
         "opencontractserver.llms.tools.pydantic_ai_tools.PydanticAIToolFactory.create_tool"
     )
     def test_create_tool_pydantic_ai(self, mock_create_tool):
@@ -160,27 +127,27 @@ class TestUnifiedToolFactory(SimpleTestCase):
             UnifiedToolFactory.create_tool(self.core_tool, "invalid")  # type: ignore[arg-type]
 
     @patch(
-        "opencontractserver.llms.tools.llama_index_tools.LlamaIndexToolFactory.create_tools"
+        "opencontractserver.llms.tools.pydantic_ai_tools.PydanticAIToolFactory.create_tools"
     )
     def test_create_tools_batch(self, mock_create_tools):
         """Batch ``create_tools`` should forward list of CoreTools to underlying factory."""
         mock_create_tools.return_value = ["tool1", "tool2"]
         result = UnifiedToolFactory.create_tools(
-            [self.core_tool], AgentFramework.LLAMA_INDEX
+            [self.core_tool], AgentFramework.PYDANTIC_AI
         )
         self.assertEqual(result, ["tool1", "tool2"])
         mock_create_tools.assert_called_once_with([self.core_tool])
 
     @patch(
-        "opencontractserver.llms.tools.llama_index_tools.LlamaIndexToolFactory.from_function"
+        "opencontractserver.llms.tools.pydantic_ai_tools.PydanticAIToolFactory.from_function"
     )
     def test_from_function_shortcut(self, mock_from_function):
         """``from_function`` helper should call through to the framework-specific shortcut."""
-        mock_from_function.return_value = "llama_tool_from_func"
+        mock_from_function.return_value = "pydantic_tool_from_func"
         res = UnifiedToolFactory.from_function(
-            sample_function, AgentFramework.LLAMA_INDEX
+            sample_function, AgentFramework.PYDANTIC_AI
         )
-        self.assertEqual(res, "llama_tool_from_func")
+        self.assertEqual(res, "pydantic_tool_from_func")
         mock_from_function.assert_called_once()
 
 

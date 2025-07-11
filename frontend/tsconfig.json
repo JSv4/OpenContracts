@@ -16,5 +16,5 @@
     "noFallthroughCasesInSwitch": true,
     "jsx": "react-jsx"
   },
-  "include": ["src", "./jest-setup.ts"]
+  "include": ["src", "./jest-setup.ts", "src/__tests__/routeStateSync.test.tsx"]
 }

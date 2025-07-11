@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "@apollo/client": "^3.13.8",
-    "@auth0/auth0-react": "^1.8.0",
+    "@auth0/auth0-react": "^2.3.0",
     "@hello-pangea/dnd": "^18.0.1",
     "@rjsf/core": "^3.2.1",
     "@rjsf/semantic-ui": "^3.2.1",

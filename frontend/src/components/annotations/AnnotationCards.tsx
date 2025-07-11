@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useReactiveVar } from "@apollo/client";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import _ from "lodash";
 import styled from "styled-components";
 import { Card, Dimmer, Loader, Label, Header, Popup } from "semantic-ui-react";
@@ -17,8 +17,6 @@ import {
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import {
   selectedAnnotation,
-  openedDocument,
-  openedCorpus,
   selectedAnalysesIds,
   displayAnnotationOnAnnotatorLoad,
 } from "../../graphql/cache";
@@ -170,7 +168,6 @@ export const AnnotationCards: React.FC<AnnotationCardProps> = ({
   const selected_annotation = useReactiveVar(selectedAnnotation);
   const [targetAnnotation, setTargetAnnotation] =
     useState<AnnotationToNavigateTo>();
-  const location = useLocation();
   const navigate = useNavigate();
 
   const handleUpdate = () => {
@@ -189,15 +186,13 @@ export const AnnotationCards: React.FC<AnnotationCardProps> = ({
     if (targetAnnotation) {
       displayAnnotationOnAnnotatorLoad(targetAnnotation.selected_annotation);
       selectedAnnotation(targetAnnotation.selected_annotation);
-      openedDocument(targetAnnotation.selected_document);
-      openedCorpus(targetAnnotation.selected_corpus);
       if (targetAnnotation.selected_annotation.analysis?.id) {
         selectedAnalysesIds([targetAnnotation.selected_annotation.analysis.id]);
       }
+      navigate(
+        `/corpus/${targetAnnotation.selected_corpus.id}/document/${targetAnnotation.selected_document.id}?ann=${targetAnnotation.selected_annotation.id}`
+      );
       setTargetAnnotation(undefined);
-      if (location.pathname !== "/") {
-        navigate("/");
-      }
     }
   }, [targetAnnotation]);
 

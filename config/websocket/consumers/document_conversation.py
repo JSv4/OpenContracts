@@ -26,6 +26,16 @@ from opencontractserver.conversations.models import MessageType
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.llms import agents
+from opencontractserver.llms.agents.core_agents import (
+    ApprovalNeededEvent,
+    ApprovalResultEvent,
+    ContentEvent,
+    ErrorEvent,
+    FinalEvent,
+    ResumeEvent,
+    SourceEvent,
+    ThoughtEvent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -237,6 +247,15 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
 
         try:
             text_data_json: dict[str, Any] = json.loads(text_data)
+
+            # ------------------------------------------------------------------
+            # 0. Approval workflow messages (no 'query' field expected)
+            # ------------------------------------------------------------------
+
+            if "approval_decision" in text_data_json:
+                await self._handle_approval_decision(text_data_json)
+                return
+
             user_query: str = text_data_json.get("query", "").strip()
 
             if not user_query:
@@ -250,6 +269,14 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
             logger.debug(
                 f"[Session {self.session_id}] Received user query: '{user_query}'"
             )
+
+            # ------------------------------------------------------------------
+            # 0. Approval workflow messages (no 'query' field expected)
+            # ------------------------------------------------------------------
+
+            if "approval_decision" in text_data_json:
+                await self._handle_approval_decision(text_data_json)
+                return
 
             # If we haven't yet created an agent, do it now
             if self.agent is None:
@@ -316,7 +343,9 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                         "during agent initialization. This is unexpected."
                     )
 
-                self.agent = await agents.for_document(**agent_kwargs)
+                self.agent = await agents.for_document(
+                    **agent_kwargs, framework=settings.LLMS_DEFAULT_AGENT_FRAMEWORK
+                )
 
                 # Enhanced Logging after agent initialization
                 if self.agent and self.agent.get_conversation_id():
@@ -351,59 +380,144 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
 
             try:
                 # Stream the response
-                async for chunk in self.agent.stream(user_query):
-                    if chunk.user_message_id and not hasattr(self, "_sent_start"):
-                        # Send ASYNC_START when we get the first chunk with message IDs
+                async for event in self.agent.stream(user_query):
+                    # Ensure start message once we have IDs (present on all event types now)
+                    if getattr(
+                        event, "user_message_id", None
+                    ) is not None and not hasattr(self, "_sent_start"):
                         await self.send_standard_message(
                             msg_type="ASYNC_START",
                             content="",
-                            data={"message_id": chunk.llm_message_id},
+                            data={"message_id": event.llm_message_id},
                         )
                         self._sent_start = True
-                        logger.debug(
-                            f"[Session {self.session_id}] Sent ASYNC_START with "
-                            f"message_id: {chunk.llm_message_id}"
-                        )
 
-                    # Send each content chunk
-                    if chunk.content:
+                    if isinstance(event, ThoughtEvent):
                         await self.send_standard_message(
-                            msg_type="ASYNC_CONTENT",
-                            content=chunk.content,
-                            data={"message_id": chunk.llm_message_id},
+                            msg_type="ASYNC_THOUGHT",
+                            content=event.thought,
+                            data={"message_id": event.llm_message_id, **event.metadata},
                         )
 
-                    # Send final message when streaming is complete
-                    if chunk.is_complete:
-                        # Prepare sources data
-                        sources = []
-                        if chunk.sources:
-                            for source in chunk.sources:
-                                source_data = {
-                                    "annotation_id": source.annotation_id,
-                                    "rawText": source.content,
-                                    "similarity_score": source.similarity_score,
-                                    **source.metadata,  # Flatten metadata to top level
-                                }
-                                sources.append(source_data)
+                    elif isinstance(event, ContentEvent):
+                        if event.content:
+                            await self.send_standard_message(
+                                msg_type="ASYNC_CONTENT",
+                                content=event.content,
+                                data={"message_id": event.llm_message_id},
+                            )
 
-                        data = {
-                            "sources": sources,
-                            "message_id": chunk.llm_message_id,
-                        }
+                    elif isinstance(event, SourceEvent):
+                        if event.sources:
+                            await self.send_standard_message(
+                                msg_type="ASYNC_SOURCES",
+                                content="",  # no textual content
+                                data={
+                                    "message_id": event.llm_message_id,
+                                    "sources": [s.to_dict() for s in event.sources],
+                                },
+                            )
 
-                        logger.debug(
-                            f"[Session {self.session_id}] Sending ASYNC_FINISH message"
-                        )
+                    elif isinstance(event, ApprovalNeededEvent):
+                        # Tell front-end we are paused waiting for approval
                         await self.send_standard_message(
-                            msg_type="ASYNC_FINISH",
-                            content=chunk.accumulated_content,
-                            data=data,
+                            msg_type="ASYNC_APPROVAL_NEEDED",
+                            content="",
+                            data={
+                                "message_id": event.llm_message_id,
+                                "pending_tool_call": event.pending_tool_call,
+                            },
                         )
 
-                        # Reset the start flag for next message
+                    elif isinstance(event, ApprovalResultEvent):
+                        await self.send_standard_message(
+                            msg_type="ASYNC_APPROVAL_RESULT",
+                            content="",
+                            data={
+                                "message_id": event.llm_message_id,
+                                "decision": event.decision,
+                                "pending_tool_call": event.pending_tool_call,
+                            },
+                        )
+
+                    elif isinstance(event, ResumeEvent):
+                        await self.send_standard_message(
+                            msg_type="ASYNC_RESUME",
+                            content="",
+                            data={
+                                "message_id": event.llm_message_id,
+                            },
+                        )
+
+                    elif isinstance(event, ErrorEvent):
+                        # Handle error events
+                        await self.send_standard_message(
+                            msg_type="ASYNC_ERROR",
+                            content="",
+                            data={
+                                "error": event.error or "Unknown error",
+                                "message_id": event.llm_message_id,
+                                "metadata": event.metadata,
+                            },
+                        )
+                        # Reset flag
                         if hasattr(self, "_sent_start"):
                             delattr(self, "_sent_start")
+
+                    elif isinstance(event, FinalEvent):
+                        # Prepare sources data (if not already sent)
+                        sources_payload = [s.to_dict() for s in event.sources]
+                        await self.send_standard_message(
+                            msg_type="ASYNC_FINISH",
+                            content=event.accumulated_content or event.content,
+                            data={
+                                "sources": sources_payload,
+                                "message_id": event.llm_message_id,
+                                "timeline": (
+                                    event.metadata.get("timeline", [])
+                                    if isinstance(event.metadata, dict)
+                                    else []
+                                ),
+                            },
+                        )
+
+                        # Reset flag
+                        if hasattr(self, "_sent_start"):
+                            delattr(self, "_sent_start")
+
+                    else:
+                        # ------------------------------------------------------------------
+                        # Legacy path: llama-index still yields UnifiedStreamResponse.
+                        # Treat it as a content event / final event analogue.
+                        # ------------------------------------------------------------------
+                        if hasattr(event, "content") and event.content:
+                            await self.send_standard_message(
+                                msg_type="ASYNC_CONTENT",
+                                content=str(event.content),
+                                data={"message_id": event.llm_message_id},
+                            )
+
+                        if getattr(event, "is_complete", False):
+                            sources_payload = []
+                            if hasattr(event, "sources") and event.sources:
+                                sources_payload = [s.to_dict() for s in event.sources]
+
+                            await self.send_standard_message(
+                                msg_type="ASYNC_FINISH",
+                                content=getattr(event, "accumulated_content", ""),
+                                data={
+                                    "sources": sources_payload,
+                                    "message_id": event.llm_message_id,
+                                    "timeline": (
+                                        event.metadata.get("timeline", [])
+                                        if isinstance(event.metadata, dict)
+                                        else []
+                                    ),
+                                },
+                            )
+
+                            if hasattr(self, "_sent_start"):
+                                delattr(self, "_sent_start")
 
                 logger.debug(
                     f"[Session {self.session_id}] Completed streaming response"
@@ -414,8 +528,7 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                     f"[Session {self.session_id}] Error during API call: {str(api_error)}",
                     exc_info=True,
                 )
-                # Re-raise to be caught by outer exception handler
-                raise
+                # Don't re-raise - the error has already been handled via ErrorEvent
 
         except Exception as e:
             logger.error(
@@ -426,4 +539,84 @@ class DocumentQueryConsumer(AsyncWebsocketConsumer):
                 msg_type="SYNC_CONTENT",
                 content="",
                 data={"error": f"Error during message processing: {e}"},
+            )
+
+    # ------------------------------------------------------------------
+    # Approval gate helper
+    # ------------------------------------------------------------------
+
+    async def _handle_approval_decision(self, payload: dict[str, Any]) -> None:
+        """Process an approval / rejection coming from the front-end.
+
+        Expected JSON payload:
+        {
+            "approval_decision": true | false,
+            "llm_message_id": 123
+        }
+        """
+
+        approved: bool = bool(payload.get("approval_decision"))
+        llm_msg_id = payload.get("llm_message_id")
+
+        if llm_msg_id is None:
+            await self.send_standard_message(
+                msg_type="SYNC_CONTENT",
+                content="",
+                data={"error": "llm_message_id missing in approval payload"},
+            )
+            return
+
+        if self.agent is None:
+            await self.send_standard_message(
+                msg_type="SYNC_CONTENT",
+                content="",
+                data={"error": "Agent not initialised for approval"},
+            )
+            return
+
+        try:
+            # Stream the resumed answer so UX stays consistent
+            async for event in self.agent.resume_with_approval(
+                llm_msg_id, approved, stream=True
+            ):
+                # Re-use the same event → websocket mapping logic
+                if isinstance(event, ThoughtEvent):
+                    await self.send_standard_message(
+                        msg_type="ASYNC_THOUGHT",
+                        content=event.thought,
+                        data={"message_id": event.llm_message_id, **event.metadata},
+                    )
+                elif isinstance(event, ContentEvent):
+                    if event.content:
+                        await self.send_standard_message(
+                            msg_type="ASYNC_CONTENT",
+                            content=event.content,
+                            data={"message_id": event.llm_message_id},
+                        )
+                elif isinstance(event, SourceEvent):
+                    await self.send_standard_message(
+                        msg_type="ASYNC_SOURCES",
+                        content="",
+                        data={
+                            "message_id": event.llm_message_id,
+                            "sources": [s.to_dict() for s in event.sources],
+                        },
+                    )
+                elif isinstance(event, FinalEvent):
+                    await self.send_standard_message(
+                        msg_type="ASYNC_FINISH",
+                        content=event.accumulated_content or event.content,
+                        data={
+                            "sources": [s.to_dict() for s in event.sources],
+                            "message_id": event.llm_message_id,
+                            "timeline": event.metadata.get("timeline", []),
+                        },
+                    )
+
+        except Exception as e:
+            logger.error("Approval resume error: %s", e, exc_info=True)
+            await self.send_standard_message(
+                msg_type="SYNC_CONTENT",
+                content="",
+                data={"error": f"Failed to resume after approval: {e}"},
             )

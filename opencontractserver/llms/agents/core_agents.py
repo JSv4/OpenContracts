@@ -2,22 +2,39 @@
 
 import logging
 from abc import ABC
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable
 from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol, Union, runtime_checkable
+from typing import (
+    Any,
+    Callable,
+    Literal,
+    Optional,
+    Protocol,
+    TypeVar,
+    Union,
+    runtime_checkable,
+)
 
 from django.conf import settings
 from django.utils import timezone
 
-from opencontractserver.conversations.models import ChatMessage, Conversation
+from opencontractserver.conversations.models import (
+    ChatMessage,
+    Conversation,
+    MessageStateChoices,
+)
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.llms.tools.tool_factory import CoreTool
 from opencontractserver.llms.vector_stores.core_vector_stores import (
     CoreAnnotationVectorStore,
 )
 from opencontractserver.utils.embeddings import aget_embedder
 
 logger = logging.getLogger(__name__)
+
+# Generic type variable for structured responses
+T = TypeVar("T")
 
 
 class MessageState:
@@ -27,6 +44,7 @@ class MessageState:
     COMPLETED = "completed"
     ERROR = "error"
     CANCELLED = "cancelled"
+    AWAITING_APPROVAL = "awaiting_approval"
 
 
 @dataclass
@@ -82,6 +100,119 @@ class UnifiedChatResponse:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+# --------------------------------------------------------------------------- #
+# DRY helper – shared fields for every streamed event                         #
+# --------------------------------------------------------------------------- #
+
+
+@dataclass
+class _BaseStreamEvt:
+    """Common fields shared by *all* stream-event dataclasses (old & new)."""
+
+    # Legacy / convenience fields so consumers can treat every event the same
+    content: str = ""
+    accumulated_content: str = ""
+    sources: list[SourceNode] = field(default_factory=list)
+    user_message_id: Optional[int] = None
+    llm_message_id: Optional[int] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    is_complete: bool = False
+
+
+# ------------------------------------------------------------------
+# Concrete event types
+# ------------------------------------------------------------------
+
+
+@dataclass
+class ThoughtEvent(_BaseStreamEvt):
+    """An intermediate reasoning step emitted while the agent is running."""
+
+    type: Literal["thought"] = "thought"
+    thought: str = ""
+
+
+@dataclass
+class ContentEvent(_BaseStreamEvt):
+    """A delta (token or chunk) of the assistant's final textual answer."""
+
+    type: Literal["content"] = "content"
+
+
+@dataclass
+class SourceEvent(_BaseStreamEvt):
+    """One or more sources discovered during the agent run."""
+
+    type: Literal["sources"] = "sources"
+
+
+@dataclass
+class FinalEvent(_BaseStreamEvt):
+    """The final, complete event – always the last one."""
+
+    type: Literal["final"] = "final"
+    is_complete: bool = True
+
+
+@dataclass
+class ErrorEvent(_BaseStreamEvt):
+    """Emitted when the run terminates with an unrecoverable error."""
+
+    type: Literal["error"] = "error"
+    is_complete: bool = True
+    error: str = ""
+
+
+# ------------------------------------------------------------------
+# Approval gating – emitted when execution pauses for human approval.
+# ------------------------------------------------------------------
+
+
+@dataclass
+class ApprovalNeededEvent(_BaseStreamEvt):
+    """Stream event indicating the agent is waiting for tool approval."""
+
+    type: Literal["approval_needed"] = "approval_needed"
+    pending_tool_call: dict[str, Any] = field(default_factory=dict)
+
+
+# ------------------------------------------------------------------
+# New events for post-approval workflow
+# ------------------------------------------------------------------
+
+
+@dataclass
+class ApprovalResultEvent(_BaseStreamEvt):
+    """Emitted as soon as the user decision (approve/reject) is recorded."""
+
+    type: Literal["approval_result"] = "approval_result"
+    decision: Literal["approved", "rejected"] = "approved"
+    pending_tool_call: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ResumeEvent(_BaseStreamEvt):
+    """Marks the actual resumption of execution after approval."""
+
+    type: Literal["resume"] = "resume"
+
+
+# A discriminated union over all event types. The Literal strings defined in each
+# dataclass act as simple runtime markers that make it easy for downstream code
+# (e.g. WebSocket serializers) to switch on the `.type` attribute without costly
+# ``isinstance`` checks.
+UnifiedStreamEvent = Union[
+    ThoughtEvent,
+    ContentEvent,
+    SourceEvent,
+    ApprovalNeededEvent,
+    ApprovalResultEvent,
+    ResumeEvent,
+    FinalEvent,
+    ErrorEvent,
+]
+
+
 @dataclass
 class UnifiedStreamResponse:
     """Framework-agnostic streaming response chunk."""
@@ -110,6 +241,13 @@ class AgentConfig:
     system_prompt: Optional[str] = None
     temperature: float = 0.7
     max_tokens: Optional[int] = None
+    # NEW ➜ frequency (in tokens) for interim DB updates during streaming
+    stream_update_freq: int = 50
+
+    # Optional callback – every emitted UnifiedStreamEvent will also be
+    # forwarded here.  Useful for bubbling nested streams up to the
+    # WebSocket layer while a tool call blocks the parent LLM.
+    stream_observer: Optional[Callable[[Any], Awaitable[None]]] = None
 
     # Enhanced conversation management
     conversation: Optional[Conversation] = None
@@ -167,8 +305,8 @@ class CoreAgent(Protocol):
 
     async def stream(
         self, message: str, **kwargs
-    ) -> AsyncGenerator[UnifiedStreamResponse, None]:
-        """Send a message and get a streaming response with sources."""
+    ) -> AsyncGenerator[UnifiedStreamEvent, None]:
+        """Send a message and receive a typed stream of events (thoughts, content, sources, final)."""
         ...
 
     # Message management methods
@@ -226,9 +364,75 @@ class CoreAgent(Protocol):
         """Get all messages in the current conversation."""
         ...
 
+    # ------------------------------------------------------------------
+    # Structured response extraction
+    # ------------------------------------------------------------------
+
+    async def structured_response(
+        self,
+        prompt: str,
+        target_type: type[T],
+        *,
+        system_prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        extra_context: Optional[str] = None,
+        **kwargs,
+    ) -> Optional[T]:
+        """Performs a one-shot query to extract structured data matching the target_type.
+
+        This method is non-conversational and does not store messages.
+
+        Args:
+            prompt: The natural language prompt for data extraction.
+            target_type: The Python type for the desired output (e.g., int, str, list[str], MyPydanticModel).
+            system_prompt: An optional, single-use system prompt to guide the LLM.
+            model: An optional, single-use LLM model override.
+            tools: An optional, single-use list of tools for this call.
+            temperature: An optional, single-use temperature setting.
+            max_tokens: An optional, single-use max_tokens setting.
+            extra_context: An optional, single-use extra_context setting.
+            **kwargs: Additional framework-specific options.
+
+        Returns:
+            An instance of target_type if successful, otherwise None.
+        """
+        ...
+
+    # ------------------------------------------------------------------
+    # Human-in-the-loop: approve / resume
+    # ------------------------------------------------------------------
+
+    async def resume_with_approval(
+        self,
+        llm_message_id: int,
+        approved: bool,
+        **kwargs,
+    ) -> Union[UnifiedChatResponse, AsyncGenerator[UnifiedStreamEvent, None]]:
+        """Resume a paused conversation after an approval decision.
+
+        Args:
+            llm_message_id: The message that is currently *awaiting* approval.
+            approved: ``True`` if the user approved execution; ``False`` if
+                rejected.
+            **kwargs: Forwarded to the underlying ``chat`` / ``stream``.
+        """
+        ...
+
 
 class CoreAgentBase(ABC):
-    """Base implementation of CoreAgent with common functionality."""
+    """Base implementation of CoreAgent with common functionality.
+
+    Sub-classes **must** implement the framework-specific low-level hooks
+
+        async def _chat_raw(self, message: str, **kw) -> tuple[str, list[SourceNode], dict]:
+        async def _stream_raw(self, message: str, **kw) -> AsyncGenerator[UnifiedStreamEvent, None]:
+
+    All DB-persistence, approval gating and incremental message updates are
+    handled by the concrete ``chat`` / ``stream`` wrappers defined here.
+    """
 
     def __init__(
         self, config: AgentConfig, conversation_manager: "CoreConversationManager"
@@ -238,7 +442,26 @@ class CoreAgentBase(ABC):
 
     async def create_placeholder_message(self, msg_type: str = "LLM") -> int:
         """Create a placeholder message and return its ID."""
-        return await self.conversation_manager.create_placeholder_message(msg_type)
+        # For anonymous conversations, don't store messages
+        if not self.conversation_manager.conversation:
+            return 0  # Return a placeholder ID for anonymous conversations
+
+        from opencontractserver.conversations.models import (
+            ChatMessage,
+        )
+
+        message = await ChatMessage.objects.acreate(
+            conversation=self.conversation_manager.conversation,
+            content="",
+            msg_type=msg_type,
+            creator_id=self.conversation_manager.user_id,
+            data={
+                "state": MessageState.IN_PROGRESS,
+                "created_at": timezone.now().isoformat(),
+            },
+            state=MessageState.IN_PROGRESS,
+        )
+        return message.id
 
     async def update_message(
         self,
@@ -248,6 +471,8 @@ class CoreAgentBase(ABC):
         metadata: dict[str, Any] = None,
     ) -> None:
         """Update a stored message with content, sources, and metadata."""
+        if metadata and "timeline" not in metadata:
+            metadata["timeline"] = []
         await self.conversation_manager.update_message(
             message_id, content, sources, metadata
         )
@@ -312,8 +537,8 @@ class CoreAgentBase(ABC):
     # Legacy compatibility methods
     async def stream_chat(
         self, message: str, **kwargs
-    ) -> AsyncGenerator[UnifiedStreamResponse, None]:
-        """Legacy method - delegates to stream()."""
+    ) -> AsyncGenerator[UnifiedStreamEvent, None]:
+        """Legacy compatibility wrapper that simply forwards to ``stream`` and yields its events."""
         async for chunk in self.stream(message, **kwargs):
             yield chunk
 
@@ -324,6 +549,382 @@ class CoreAgentBase(ABC):
         else:
             return await self.store_llm_message(content)
 
+    # ------------------------------------------------------------------
+    # Structured response extraction
+    # ------------------------------------------------------------------
+
+    async def structured_response(
+        self,
+        prompt: str,
+        target_type: type[T],
+        *,
+        system_prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        extra_context: Optional[str] = None,
+        **kwargs,
+    ) -> Optional[T]:
+        """Framework-agnostic wrapper for structured response extraction.
+
+        This method provides ephemeral, one-shot data extraction without
+        persisting any messages to the conversation history.
+
+        Args:
+            prompt: The natural language prompt for data extraction.
+            target_type: The Python type for the desired output.
+            system_prompt: Optional system prompt override.
+            model: Optional model override.
+            tools: Optional tools override.
+            temperature: Optional temperature override.
+            max_tokens: Optional max_tokens override.
+            extra_context: Optional extra_context override.
+            **kwargs: Additional framework-specific options.
+
+        Returns:
+            An instance of target_type if successful, otherwise None.
+        """
+        try:
+            # Call the framework-specific implementation
+            result = await self._structured_response_raw(
+                prompt=prompt,
+                target_type=target_type,
+                system_prompt=system_prompt,
+                model=model,
+                tools=tools,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                extra_context=extra_context,
+                **kwargs,
+            )
+            return result
+        except Exception as e:
+            # Log the error but don't raise - return None per spec
+            print(f"Error in structured_response: {e}")
+            return None
+
+    # ------------------------------------------------------------------
+    # Framework-specific hooks – **must** be implemented by adapters.
+    # ------------------------------------------------------------------
+
+    async def _chat_raw(
+        self, message: str, **kwargs
+    ) -> tuple[str, list[SourceNode], dict]:  # pragma: no cover – abstract
+        """Return *(content, sources, metadata)*.
+
+        Default implementation raises ``NotImplementedError`` so sub-classes
+        are forced to provide their own version.
+        """
+        raise NotImplementedError
+
+    async def _stream_raw(
+        self, message: str, **kwargs
+    ) -> AsyncGenerator[UnifiedStreamEvent, None]:  # pragma: no cover – abstract
+        """Yield framework-native events (ThoughtEvent / ContentEvent / …).
+
+        The base wrapper will take care of DB side-effects.
+        """
+        raise NotImplementedError
+
+    async def _structured_response_raw(
+        self,
+        prompt: str,
+        target_type: type[T],
+        *,
+        system_prompt: Optional[str] = None,
+        model: Optional[str] = None,
+        tools: Optional[list[Union["CoreTool", Callable, str]]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        extra_context: Optional[str] = None,
+        **kwargs,
+    ) -> Optional[T]:  # pragma: no cover – abstract
+        """Framework-specific structured response extraction.
+
+        This method must be implemented by framework adapters to perform
+        the actual structured extraction using their native capabilities.
+
+        Args:
+            prompt: The natural language prompt for data extraction.
+            target_type: The Python type for the desired output.
+            system_prompt: Optional system prompt override.
+            model: Optional model override.
+            tools: Optional tools override.
+            temperature: Optional temperature override.
+            max_tokens: Optional max_tokens override.
+            extra_context: Optional extra_context override.
+            **kwargs: Additional framework-specific options.
+
+        Returns:
+            An instance of target_type if successful, otherwise None.
+        """
+        raise NotImplementedError
+
+    # ------------------------------------------------------------------
+    # Public chat / stream wrappers – universal across frameworks.
+    # ------------------------------------------------------------------
+
+    async def chat(self, message: str, **kwargs) -> UnifiedChatResponse:  # type: ignore[override]
+        """Framework-agnostic chat wrapper that transparently persists state."""
+
+        from opencontractserver.llms.exceptions import ToolConfirmationRequired
+
+        # Honour per-call override for message persistence
+        store_messages: bool = kwargs.pop("store_messages", True)
+
+        # 1️⃣  Persist user prompt (if configured)
+        user_msg_id: int | None = None
+        llm_msg_id: int | None = None
+
+        if store_messages and self.conversation_manager.config.store_user_messages:
+            user_msg_id = await self.store_user_message(message)
+
+        if store_messages and self.conversation_manager.config.store_llm_messages:
+            llm_msg_id = await self.create_placeholder_message("LLM")
+
+        try:
+            # 2️⃣  Delegate to framework
+            content, sources, meta = await self._chat_raw(message, **kwargs)
+
+            # 3️⃣  Finalise message
+            if llm_msg_id:
+                await self.complete_message(llm_msg_id, content, sources, meta)
+
+            return UnifiedChatResponse(
+                content=content,
+                sources=sources,
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                metadata=meta or {},
+            )
+
+        except ToolConfirmationRequired as e:
+            # Mark message as awaiting approval and bubble up light response
+            if llm_msg_id is None:
+                # We may reach here if placeholder wasn't created (anonymous?), create one now
+                llm_msg_id = await self.create_placeholder_message("LLM")
+
+            await self.pause_for_approval(
+                llm_msg_id,
+                tool_name=e.tool_name,
+                tool_args=e.tool_args,
+                tool_call_id=e.tool_call_id,
+            )
+
+            return UnifiedChatResponse(
+                content="Action required: approval needed to run tool.",
+                sources=[],
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                metadata={
+                    "state": MessageState.AWAITING_APPROVAL,
+                    "pending_tool_call": {
+                        "name": e.tool_name,
+                        "arguments": e.tool_args,
+                        "tool_call_id": e.tool_call_id,
+                    },
+                },
+            )
+
+        except Exception as exc:
+            if llm_msg_id:
+                await self.conversation_manager.mark_message_error(llm_msg_id, str(exc))
+            # Return an error response so callers can surface the failure gracefully
+            return UnifiedChatResponse(
+                content="Error: " + str(exc),
+                sources=[],
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                metadata={"error": str(exc)},
+            )
+
+    # NOTE: Streaming wrapper is more involved but follows same pattern
+    async def stream(self, message: str, **kwargs):  # type: ignore[override]
+        """Framework-agnostic streaming wrapper with persistence."""
+
+        from opencontractserver.llms.exceptions import ToolConfirmationRequired
+
+        store_messages: bool = kwargs.pop("store_messages", True)
+
+        user_msg_id: int | None = None
+        llm_msg_id: int | None = None
+
+        if store_messages and self.conversation_manager.config.store_user_messages:
+            user_msg_id = await self.store_user_message(message)
+
+        if store_messages and self.conversation_manager.config.store_llm_messages:
+            llm_msg_id = await self.create_placeholder_message("LLM")
+
+        accumulated_content: str = ""
+        accumulated_sources: list[SourceNode] = []
+        token_counter = 0
+
+        try:
+            async for evt in self._stream_raw(message, **kwargs):
+
+                # ➊ Ensure every event carries the DB message identifiers so the
+                #    websocket consumer can reliably emit the mandatory
+                #    `ASYNC_START` envelope *before* any granular event.
+                if isinstance(evt, dict):
+                    # Events coming from legacy adapters might still be plain dicts –
+                    # skip automatic augmentation to avoid type errors.
+                    pass
+                else:
+                    # Set identifiers only if the adapter has not already done so.
+                    if getattr(evt, "user_message_id", None) is None:
+                        evt.user_message_id = user_msg_id
+                    if getattr(evt, "llm_message_id", None) is None:
+                        evt.llm_message_id = llm_msg_id
+
+                # Merge sources for later finalisation
+                if hasattr(evt, "sources") and evt.sources:
+                    accumulated_sources.extend(evt.sources)
+
+                # Track accumulating content for incremental updates
+                if hasattr(evt, "content") and evt.content:
+                    accumulated_content += evt.content
+                    token_counter += 1
+
+                # Periodic DB update
+                if (
+                    llm_msg_id
+                    and token_counter % self.config.stream_update_freq == 0
+                    and accumulated_content
+                ):
+                    await self.conversation_manager.update_message_content(
+                        llm_msg_id, accumulated_content
+                    )
+
+                # Side-channel: forward to observer if configured.
+                await self._emit_observer_event(evt)
+
+                yield evt  # Pass through
+
+            # After generator exhausted – finalise message
+            if llm_msg_id:
+                await self.complete_message(
+                    llm_msg_id,
+                    accumulated_content,
+                    accumulated_sources,
+                    {},
+                )
+
+        except ToolConfirmationRequired as e:
+            # Finalise as awaiting approval and emit ApprovalNeededEvent
+            await self.pause_for_approval(
+                llm_msg_id,
+                tool_name=e.tool_name,
+                tool_args=e.tool_args,
+                tool_call_id=e.tool_call_id,
+            )
+
+            yield ApprovalNeededEvent(
+                pending_tool_call={
+                    "name": e.tool_name,
+                    "arguments": e.tool_args,
+                    "tool_call_id": e.tool_call_id,
+                },
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+            )
+
+        except Exception as exc:
+            if llm_msg_id:
+                await self.conversation_manager.mark_message_error(llm_msg_id, str(exc))
+
+            # Emit error event so front-end can conclude the stream cleanly
+            yield ErrorEvent(
+                error=str(exc),
+                content="",  # no delta
+                is_complete=True,
+                user_message_id=user_msg_id,
+                llm_message_id=llm_msg_id,
+                metadata={"error": str(exc)},
+            )
+            return
+
+    # ------------------------------------------------------------------
+    # Helper for lightweight source normalisation (framework-agnostic)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _normalise_source(raw: Any) -> SourceNode:
+        """Best-effort conversion of *raw* into a SourceNode instance."""
+        if isinstance(raw, SourceNode):
+            return raw
+
+        # Attempt to treat *raw* like a mapping
+        if hasattr(raw, "model_dump"):
+            raw = raw.model_dump()
+        if isinstance(raw, dict):
+            return SourceNode(
+                annotation_id=int(raw.get("annotation_id", 0)),
+                content=raw.get("content", raw.get("text", "")),
+                metadata=raw,
+                similarity_score=float(raw.get("similarity_score", 1.0)),
+            )
+
+        # Fallback: string or unknown – wrap in dummy SourceNode
+        return SourceNode(
+            annotation_id=0, content=str(raw), metadata={}, similarity_score=1.0
+        )
+
+    # ------------------------------------------------------------------
+    # Human-in-the-loop helpers
+    # ------------------------------------------------------------------
+
+    async def pause_for_approval(
+        self,
+        llm_message_id: int,
+        *,
+        tool_name: str,
+        tool_args: dict[str, Any],
+        tool_call_id: str | None = None,
+        framework: str = "pydantic_ai",
+    ) -> None:
+        """Mark an LLM message as *awaiting approval*.
+
+        Adapters that implement dangerous or privileged tools can call this
+        one-liner instead of re-implementing the same bookkeeping.
+        """
+        await self.complete_message(
+            llm_message_id,
+            content="Awaiting user approval for tool execution.",
+            metadata={
+                "state": MessageState.AWAITING_APPROVAL,
+                "pending_tool_call": {
+                    "name": tool_name,
+                    "arguments": tool_args,
+                    "tool_call_id": tool_call_id,
+                },
+                "framework": framework,
+            },
+        )
+
+    async def mark_message_error(self, message_id: int, error: str) -> None:
+        """Delegate to the conversation manager's implementation.
+
+        The original inlined code used the undefined attribute
+        ``self.conversation`` which raises ``AttributeError``.  To avoid
+        duplication and keep a single source-of-truth, this wrapper now
+        forwards the call to :pymeth:`CoreConversationManager.mark_message_error`.
+        """
+
+        await self.conversation_manager.mark_message_error(message_id, error)
+
+    # ------------------------------------------------------------------
+    # Observer helper
+    # ------------------------------------------------------------------
+
+    async def _emit_observer_event(self, evt: Any) -> None:
+        """Forward *evt* to the ``stream_observer`` if one is configured."""
+        cb = getattr(self.config, "stream_observer", None)
+        if cb and callable(cb):
+            try:
+                await cb(evt)
+            except Exception:  # pragma: no cover – observer must not kill run
+                logger.exception("Stream observer raised an exception")
+
 
 class CoreDocumentAgentFactory:
     """Factory for creating document agents with framework-agnostic configuration."""
@@ -333,14 +934,29 @@ class CoreDocumentAgentFactory:
         """Generate default system prompt for document agent."""
         return (
             f"You are an expert assistant for document analysis and interpretation. "
-            f"Your primary goal is to answer questions accurately based on the provided document: '{document.title}' (ID: {document.id}).\n\n"  # noqa: E501
+            f"Your primary goal is to answer questions accurately based on document '{document.title}' (ID: {document.id}).\n\n"  # noqa: E501
             f"This document is described as:\n`{document.description}`\n\n"
-            f"While a summary may be available, it's crucial to leverage all your tools for a comprehensive understanding. "  # noqa: E501
-            f"You have access to a sophisticated vector search engine capable of finding semantically similar text to answer queries, alongside other specialized tools.\n\n"  # noqa: E501
-            f"Always prioritize information retrieved directly from the document using these tools. "
-            f"Do not rely solely on the summary or your general knowledge. "
-            f"Strive to provide answers grounded in the document's content, presented in clear and helpful markdown. "
-            f"Avoid repeating instructions or disclaimers."
+            f"**Available Tools:**\n"
+            f"You have access to a comprehensive set of tools for document analysis:\n\n"
+            f"1. **Vector Search**: A sophisticated semantic search engine that finds text passages similar to your queries.\n"  # noqa: E501
+            f"2. **Document Summary Access**: Tools to load and analyze the document's markdown summary, including:\n"
+            f"   - Loading full or truncated summary content\n"
+            f"   - Calculating token lengths for context management\n"
+            f"3. **Notes Analysis**: Tools to retrieve and examine notes attached to this document:\n"
+            f"   - Listing all notes with metadata\n"
+            f"   - Accessing specific note content\n"
+            f"   - Calculating note token lengths\n\n"
+            f"**Important**: Always check what tools are available to you, as additional specialized tools may be provided dynamically "  # noqa: E501
+            f"beyond the core set described above. Use the appropriate tools to gather information before answering.\n\n"  # noqa: E501
+            f"**Guidelines:**\n"
+            f"- Prioritize information retrieved directly from the document using these tools\n"
+            f"- We intentionally did not give you the entire document initially. \n"
+            "  Try doing some vector search to get more information initially and then iteratively \n"
+            "  identifying which parts of the document to review.  \n"
+            f"- Do not rely solely on the summary or your general knowledge\n"
+            f"- Use multiple tools when necessary for comprehensive answers\n"
+            f"- Present your findings in clear, helpful markdown format\n"
+            f"- Avoid repeating instructions or disclaimers in your responses"
         )
 
     @staticmethod
@@ -355,6 +971,12 @@ class CoreDocumentAgentFactory:
 
         if not isinstance(corpus, Corpus):
             corpus = await Corpus.objects.aget(id=corpus)
+
+        # ------------------------------------------------------------------
+        # Basic permission check – anonymous sessions cannot access private docs
+        # ------------------------------------------------------------------
+        _assert_access(corpus, config.user_id)
+        _assert_access(document, config.user_id)
 
         # ------------------------------------------------------------------
         # Ensure an embedder is configured (async!).
@@ -379,10 +1001,32 @@ class CoreCorpusAgentFactory:
     def get_default_system_prompt(corpus: Corpus) -> str:
         """Generate default system prompt for corpus agent."""
         return (
-            f"You are an agent designed to answer queries about documents in a collection of documents "
-            f"called a corpus. This corpus is called '{corpus.title}'. "
-            "Please always use the provided tools (each corresponding to a document) to answer questions. "
-            "Do not rely on prior knowledge."
+            f"You are an expert assistant designed to analyze and answer queries about a collection of documents "
+            f"called '{corpus.title}'.\n\n"
+            f"**Available Tools:**\n"
+            f"You have access to comprehensive tools for analyzing documents in this corpus:\n\n"
+            f"1. **Document-Specific Tools** – available *per* document via the `ask_document` helper:\n"
+            f"   - Vector search inside that document\n"
+            f"   - Summary & note access\n"
+            f"   - Annotation manipulation (subject to approval)\n"
+            f"   - Token length calculations for context management\n"
+            f"2. **Corpus-Level Coordination Tools** – orchestrate multi-document reasoning:\n"
+            f"   - `list_documents()` → returns `[{{document_id, title, description}}]` for discovery\n"
+            f"   - `ask_document(document_id, question)` → runs a **document agent** and yields a rich object:\n"
+            f"       • `answer` str – the assistant's final answer\n"
+            f"       • `sources` list – flattened citation objects (annotation_id, page, rawText …)\n"
+            f"       • `timeline` list – detailed reasoning & tool calls from the sub-agent run\n"
+            f"   Use these keys to compile thorough, well-cited corpus-level answers.\n"
+            f"3. **Cross-Document Vector Search** – semantic search across the entire corpus for broad context\n\n"
+            f"**Important**: Always check what tools are available to you, as additional specialized tools may be provided dynamically "  # noqa: E501
+            f"beyond the core set. The exact tools available will depend on the documents in this corpus.\n\n"
+            f"**Guidelines:**\n"
+            f"- Always use the provided tools to gather information before answering\n"
+            f"- Do not rely on prior knowledge about the documents\n"
+            f"- When appropriate, search across multiple documents for comprehensive answers\n"
+            f"- Cite specific documents and sources when presenting information\n"
+            f"- Prefer using `sources` returned by `ask_document` or vector search to justify claims\n"
+            f"- Present your findings in clear, well-structured markdown format, using footnote-style citations"
         )
 
     @staticmethod
@@ -393,6 +1037,9 @@ class CoreCorpusAgentFactory:
         """Create corpus agent context with all necessary components."""
         if not isinstance(corpus, Corpus):
             corpus = await Corpus.objects.aget(id=corpus)
+
+        # Permission check – anonymous sessions cannot access private corpuses
+        _assert_access(corpus, config.user_id)
 
         documents = [doc async for doc in corpus.documents.all()]
 
@@ -438,10 +1085,12 @@ class CoreConversationManager:
         """Create conversation manager for document agent with enhanced options."""
         conversation = None
 
-        # For anonymous users (user_id is None), do NOT create or store conversations
-        if user_id is None:
+        # For anonymous users, public corpuses, or when caller disabled storage, avoid DB persistence.
+        if user_id is None or (
+            not config.store_user_messages and not config.store_llm_messages
+        ):
             logger.debug(
-                f"Creating ephemeral (non-stored) conversation for anonymous user on document {document.id}"
+                f"Creating ephemeral (non-stored) conversation for public/anonymous user on document {document.id}"
             )
             # Override config to ensure no message storage for anonymous conversations
             config.store_user_messages = False
@@ -497,10 +1146,12 @@ class CoreConversationManager:
         """Create conversation manager for corpus agent with enhanced options."""
         conversation = None
 
-        # For anonymous users (user_id is None), do NOT create or store conversations
-        if user_id is None:
+        # For anonymous users, public corpuses, or when caller disabled storage, avoid DB persistence.
+        if user_id is None or (
+            not config.store_user_messages and not config.store_llm_messages
+        ):
             logger.debug(
-                f"Creating ephemeral (non-stored) conversation for anonymous user on corpus {corpus.id}"
+                f"Creating ephemeral (non-stored) conversation for public/anonymous user on corpus {corpus.id}"
             )
             # Override config to ensure no message storage for anonymous conversations
             config.store_user_messages = False
@@ -562,6 +1213,10 @@ class CoreConversationManager:
         if not self.conversation:
             return 0  # Return a placeholder ID for anonymous conversations
 
+        from opencontractserver.conversations.models import (
+            ChatMessage,
+        )
+
         message = await ChatMessage.objects.acreate(
             conversation=self.conversation,
             content="",
@@ -571,6 +1226,7 @@ class CoreConversationManager:
                 "state": MessageState.IN_PROGRESS,
                 "created_at": timezone.now().isoformat(),
             },
+            state=MessageState.IN_PROGRESS,
         )
         return message.id
 
@@ -582,7 +1238,8 @@ class CoreConversationManager:
 
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = content
-        await message.asave(update_fields=["content"])
+        message.state = MessageState.COMPLETED
+        await message.asave(update_fields=["content", "state"])
 
     async def complete_message(
         self,
@@ -598,15 +1255,20 @@ class CoreConversationManager:
 
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = content
+        message.state = MessageState.COMPLETED
 
         data = message.data or {}
-        data["state"] = MessageState.COMPLETED
         data["completed_at"] = timezone.now().isoformat()
 
         if sources:
             data["sources"] = [source.to_dict() for source in sources]
+        # Ensure a timeline key exists even if adapter didn't supply one
         if metadata:
+            if "timeline" not in metadata:
+                metadata["timeline"] = []
             data.update(metadata)
+        else:
+            data.setdefault("timeline", [])
 
         message.data = data
         await message.asave()
@@ -619,8 +1281,8 @@ class CoreConversationManager:
 
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = reason
+        message.state = MessageState.CANCELLED
         data = message.data or {}
-        data["state"] = MessageState.CANCELLED
         data["cancelled_at"] = timezone.now().isoformat()
         message.data = data
         await message.asave()
@@ -640,6 +1302,7 @@ class CoreConversationManager:
                 "state": MessageState.COMPLETED,
                 "created_at": timezone.now().isoformat(),
             },
+            state=MessageStateChoices.COMPLETED,
         )
         return message.id
 
@@ -670,6 +1333,7 @@ class CoreConversationManager:
             msg_type="LLM",
             creator_id=self.user_id,
             data=data,
+            state=MessageStateChoices.COMPLETED,
         )
         return message.id
 
@@ -687,6 +1351,7 @@ class CoreConversationManager:
 
         message = await ChatMessage.objects.aget(id=message_id)
         message.content = content
+        message.state = MessageState.COMPLETED
 
         data = message.data or {}
         data["updated_at"] = timezone.now().isoformat()
@@ -697,6 +1362,32 @@ class CoreConversationManager:
             data.update(metadata)
 
         message.data = data
+        await message.asave()
+
+    async def mark_message_error(self, message_id: int, error: str) -> None:
+        """Mark an existing message as errored along with the error text.
+
+        This mirrors the helper available on ``CoreAgentBase`` so that agent
+        wrappers can consistently delegate the persistence step to the
+        conversation manager.  Front-end code relies on the ``state`` and
+        ``error`` fields to detect failed runs and render a proper error
+        bubble instead of crashing the stream.
+        """
+        # Anonymous (non-persistent) conversations – nothing to store.
+        if not self.conversation or message_id == 0:
+            return
+
+        from opencontractserver.conversations.models import ChatMessage
+
+        message = await ChatMessage.objects.aget(id=message_id)
+        message.content = error
+        message.state = MessageState.ERROR
+
+        data = message.data or {}
+        data["error"] = error
+        data["errored_at"] = timezone.now().isoformat()
+        message.data = data
+
         await message.asave()
 
 
@@ -712,3 +1403,56 @@ def get_default_config(**overrides) -> AgentConfig:
     }
     defaults.update(overrides)
     return AgentConfig(**defaults)
+
+
+# ------------------------------------------------------------------
+# Visibility & permission helpers (public/private corpuses & documents)
+# ------------------------------------------------------------------
+
+
+def _is_public(obj: Any) -> bool:  # noqa: ANN401 – generic helper
+    """Return ``True`` if a *Document* or *Corpus* is publicly visible.
+
+    The helper is intentionally lenient – we merely look for the most
+    common attributes that encode visibility so the core framework does
+    *not* depend on a particular field name.  If no recognisable public
+    flag is found we conservatively assume the object is *private*.
+    """
+
+    if obj is None:
+        return False
+
+    # 1. Explicit boolean ``is_public`` field – preferred convention.
+    if hasattr(obj, "is_public"):
+        try:
+            return bool(getattr(obj, "is_public"))
+        except Exception:  # pragma: no cover – defensive
+            return False
+
+    # 2. String/enum ``visibility`` field.
+    if hasattr(obj, "visibility"):
+        try:
+            visibility = getattr(obj, "visibility")
+            # Accept both enum or plain string representations.
+            if isinstance(visibility, str):
+                return visibility.lower() == "public"
+            # Enum – rely on ``name`` attr.
+            return getattr(visibility, "name", "").lower() == "public"
+        except Exception:  # pragma: no cover – defensive
+            return False
+
+    return False  # default: not public
+
+
+def _assert_access(obj: Any, user_id: int | None) -> None:  # noqa: ANN401
+    """Raise *PermissionError* if *user_id* may not access *obj*.
+
+    Current policy: anonymous users (``user_id is None``) may only access
+    *public* corpuses/documents.  Authenticated access control beyond
+    that is expected to be enforced at the application layer.
+    """
+
+    if not _is_public(obj) and user_id is None:
+        raise PermissionError(
+            "Access denied – private resource requires authentication."
+        )

@@ -657,3 +657,5 @@ PIPELINE_SETTINGS = {
         "DOCLING_PARSER_TIMEOUT": None,
     },
 }
+
+LLMS_DEFAULT_AGENT_FRAMEWORK = "pydantic_ai"

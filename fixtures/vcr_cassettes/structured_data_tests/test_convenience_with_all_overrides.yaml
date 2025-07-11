@@ -1,0 +1,233 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a document analyst"},{"role":"user","content":"Using
+      all overrides, act as a child and explain what the ''Born-Alive Infants Protection
+      Act of 2002'' does."}],"model":"gpt-4","max_completion_tokens":100,"stream":false,"temperature":0.5,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      final response which ends this conversation","parameters":{"properties":{"answer":{"type":"string"},"confidence":{"maximum":1,"minimum":0,"type":"number"}},"required":["answer","confidence"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '600'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4_gmVURDuZKY2geW67mrcJmHfSge7MQ6SQYwvcO3Rcw-1751760736-1.0.1.1-OHBOavi5r3Bj3TshtVcWhIDYemLMOc.LZZ.Zh8OP7xw7dvNPNBJfUURLqOsW68hVAMUCQMTAsp1NZRACyCHj7Ptlaw9kkWMvvPLkqb7MCRg;
+        _cfuvid=nJAMzKDSO8HRLgzCw8QUEzEHfaRUzTBvizMw8371j24-1751760736988-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFTfT9swEH7vX3HyCy8pavnRbn0DpiGmbSCNjWkrilzn0hicu8y+wDLE
+        /z45oU0LTFoeIsvfffd9Pt/5YQCgbKZmoEyhxZSVGx7/mp5/vrq4vMBPpx8akq/7x4fvDi9N9X5c
+        XqkkMnhxg0ZWrF3DZeVQLFMHG49aMGYdTw/H08l4PB23QMkZukhbVjI8GI4m4/0nRsHWYFAz+DkA
+        AHho/9EbZfhbzWCUrHZKDEEvUc3WQQDKs4s7Sodgg2gSlfSgYRKkaJdq5zYAYXap0c71wt33sLHu
+        C6SdS79/Ozmf7ukff67o5KA+0B8nfsRnp5MNvS51U7WG8prMujAb+Hp/9kwMQJEuO64l7VKPoXby
+        jA+gtF/WJZJE7+phTgBzpSnco5+rGczVZYGwc8yehkfO3iGcUa5JAlx4Fmy14cgIcA57o9HeDtgA
+        zt4iaPC1Q5BCCwTdBLA5aFjoRRNDFuwpAWIotQh6KPgeUHvXJIB3SDHYCtzrAKGuKg6YgTAEsc7B
+        AsESWAlQclk2OwGkLssmiYxQcO2yGCJd8zyZoQZYCvRQoQ9Mu/CFkygiBXaeCDELUKCrIPdcQsZG
+        2AdgD1T7gCGJsc1KYBlLYSWBmzpIp9HC9y2as38pOVdJV13DlNsMyWCs8Gj37ZzU1q08Dl5bX290
+        nMe8Dtq9bEVNxKLjrbS9eP2EPK7b3vGy8rwIz6ixSWwoUo86tN2kHNJSis5YNNHKq3prZlTluawk
+        Fb7FVvDNpEuo+lHuwfHoafqUsGi3AaxpW/nSDEXbdqjWc2y0KTDrqf086zqzvAEMNs790s5rubuz
+        W1r+T/oeMAYrwSytPGbWbB+5D/MYn7p/ha2r3BpWAf2dNZiKRR/vIsNcr4ZXhSYIlmluaYm+8nb9
+        Ig0eB38BAAD//wMAhDz8G4gFAAA=
+    headers:
+      CF-RAY:
+      - 95aaee575f6d475c-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 06 Jul 2025 00:19:33 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '2338'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '2345'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '80000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '79964'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 27ms
+      x-request-id:
+      - req_cefa582ac8b0892ebd613860716253ad
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a document analyst"},{"role":"user","content":"Using
+      all overrides, act as a child and explain what the ''Born-Alive Infants Protection
+      Act of 2002'' does."},{"role":"assistant","tool_calls":[{"id":"call_XVCO72aZzWnC4u4aL6r0oIG6","type":"function","function":{"name":"final_result","arguments":"{\n  \"answer\":
+      \"The ''Born-Alive Infants Protection Act of 2002'' is like a rule that says
+      if a baby is born, no matter how early, even if it was supposed to still be
+      in its mommy''s tummy, it should be treated like any other person. So, if the
+      baby needs help from doctors or nurses, they should give it, just like they
+      would for any other person.\",\n  \"confidence\": 0.9\n"}}]},{"role":"tool","tool_call_id":"call_XVCO72aZzWnC4u4aL6r0oIG6","content":"1
+      validation errors: [\n  {\n    \"type\": \"json_invalid\",\n    \"loc\": [],\n    \"msg\":
+      \"Invalid JSON: EOF while parsing an object at line 4 column 0\",\n    \"input\":
+      \"{\\n  \\\"answer\\\": \\\"The ''Born-Alive Infants Protection Act of 2002''
+      is like a rule that says if a baby is born, no matter how early, even if it
+      was supposed to still be in its mommy''s tummy, it should be treated like any
+      other person. So, if the baby needs help from doctors or nurses, they should
+      give it, just like they would for any other person.\\\",\\n  \\\"confidence\\\":
+      0.9\\n\"\n  }\n]\n\nFix the errors and try again."}],"model":"gpt-4","max_completion_tokens":100,"stream":false,"temperature":0.5,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      final response which ends this conversation","parameters":{"properties":{"answer":{"type":"string"},"confidence":{"maximum":1,"minimum":0,"type":"number"}},"required":["answer","confidence"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1806'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4_gmVURDuZKY2geW67mrcJmHfSge7MQ6SQYwvcO3Rcw-1751760736-1.0.1.1-OHBOavi5r3Bj3TshtVcWhIDYemLMOc.LZZ.Zh8OP7xw7dvNPNBJfUURLqOsW68hVAMUCQMTAsp1NZRACyCHj7Ptlaw9kkWMvvPLkqb7MCRg;
+        _cfuvid=nJAMzKDSO8HRLgzCw8QUEzEHfaRUzTBvizMw8371j24-1751760736988-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xUTU/cMBC9768Y+cIloCxfq+6Nqq2EWqmIglDbrSKvM0kM9kxqT6Ap4r9XTmCz
+        QCs1h8jymzfveTzj+xmAsqVagjKNFuNbt/v25+LzWZdfIZ6f0rH5LfmHq+sPi8uP39brA5UlBq+v
+        0cgTa8+wbx2KZRphE1ALpqzzxdF8cTyfLw4GwHOJLtHqVnYPd/Pj+WNC07A1GNUSvs8AAO6Hf/JG
+        Jf5SS8izpx2PMeoa1XITBKACu7SjdIw2iiZR2QQaJkFKdqlzbgsQZlcY7dwkPH73W+upQNq54sL4
+        T19P3p/kNe3X5+Gsa/27ML+53NIbU/ftYKjqyGwKs4Vv9pcvxAAUaT9yLWlXBIydkxd8AKVD3Xkk
+        Sd7V/YoAVkpTvMOwUktYqYsGYectB9o9cfYW4ZQqTRLhLLDgoA0nRoAr2M/z/R2wEZy9QdAQOocg
+        jRaIuo9gK9Cw1us+haw5UAbE4LUIBmj4DlAH12eAt0gp2Arc6Qixa1uOWIIwRLHOwRrBEliJ4Nn7
+        fieCdN73WWLEhjtXphAZm+fRDPXA0mCAFkNk2oMvnCURaXD0RIhlhAZdC1VgDyUb4RCBA1AXIsYs
+        xfZPAnUqhZUMrrsoo8YA3w1oxeG15EplY3UNU2VLJIOpwvnemxWpZ7fyMPvb+sdWxwWsuqjd61bU
+        RCw63crQiz8ekYdN2zuu28Dr+IKamsTGpgio49BNyiHV0ozGkolBXnXPZka1gX0rhfANDoIHRwdj
+        RjXN8oTO88fxU8Ki3QQcbmjPEhYlirbDVG0G2WjTYDlRp4HWXWl5C5htHfy1nb/lHg9vqf6f9BNg
+        DLaCZdEGLK15fuQpLGB66/4VtinzYFhFDLfWYCEWQ7qMEiv9NL0q9lHQF5WlGkMb7OZJmj3M/gAA
+        AP//AwCSn/dqiQUAAA==
+    headers:
+      CF-RAY:
+      - 95aaee66aba66ba7-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 06 Jul 2025 00:19:37 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '3469'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '3474'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '80000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '79818'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 136ms
+      x-request-id:
+      - req_528870205baef1b96db183c72b3df212
+    status:
+      code: 200
+      message: OK
+version: 1

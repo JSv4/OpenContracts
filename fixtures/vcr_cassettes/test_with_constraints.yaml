@@ -1,0 +1,108 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a precise data extraction
+      agent.\nExtract ONLY the requested information from the document.\nIf the information
+      is not present, return None rather than guessing.\n\nIMPORTANT: Only extract
+      data from sections that contain the text: ''payment''\n\nIMPORTANT: Only extract
+      data from annotations labeled as: ''contract_clause''"},{"role":"user","content":"What
+      are the payment terms?"}],"model":"gpt-4o-mini","stream":false,"temperature":0.3}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '483'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=yGOHHyTNovSnjic4T.odxoLvtcYWN8w1NLVChJAA0sc-1751776251-1.0.1.1-SXf6l3IdjVBCkqdim6LifBCrevSJCMbE0xoh8dkjKS0j8zI4nSBnUW4_MoVNBp0HLlp0KaQJbacA0h86QaUHZaTk7rk4Bm8Cl6.T_rSClSI;
+        _cfuvid=IOnu866nrD_8UlVbS_AUOo3ItQm1Cim_rj5sOgsTcw4-1751776251552-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '1'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJBT+MwEIXv+RXWnBvUBLaB3rYCCQkEgusKRcaepAbHY+zJCoT631dO
+        ShNYVtqLD/7mjd8bz3smBBgNawFqK1l13uabl83V9cXVZnl9eXu+wuN7F+5KS6/Ptx3+hEVS0OMT
+        Kv5QHSnqvEU25EasAkrG1LWofhRVtSrPqgF0pNEmWes5P6G8M87k5bI8yZdVXpzu1VsyCiOsxa9M
+        CCHehzP5dBpfYS2Wi4+bDmOULcL6UCQEBLLpBmSMJrJ0DIsJKnKMbrB+Qw7nKGDTR5nsud7aGZDO
+        EcsUbzD1sCe7gw1LrQ/0GL9IoTHOxG0dUEZy6cnI5GGgu0yIhyFu/ykB+ECd55rpGYfnqtXYDqYh
+        T7DYMyaWdqapFt80qzWyNDbOpgVKqi3qSTmNVvba0Axks8h/e/mu9xjbuPZ/2k9AKfSMuvYBtVGf
+        805lAdMG/qvsMOLBMEQMv43Cmg2G9A0aG9nbcS8gvkXGrm6MazH4YMblaHy9KmV5LE8LbCDbZX8A
+        AAD//wMAx7mADSoDAAA=
+    headers:
+      CF-RAY:
+      - 95ac5fa15bb769dc-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 06 Jul 2025 04:31:37 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '658'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '662'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999910'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_ff096ee9243c7394e01d2b6530ef3161
+    status:
+      code: 200
+      message: OK
+version: 1

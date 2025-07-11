@@ -1,7 +1,7 @@
 import { App } from "./App";
 import { BrowserRouter } from "react-router-dom";
 import { createRoot } from "react-dom/client";
-import { Auth0Provider } from "@auth0/auth0-react";
+import { Auth0ProviderWithHistory } from "./utils/Auth0ProviderWithHistory";
 import {
   ApolloClient,
   ApolloProvider,
@@ -13,15 +13,6 @@ import { LooseObject } from "./components/types";
 
 import "./index.css";
 import reportWebVitals from "./reportWebVitals";
-import history from "./utils/history";
-
-// Please see https://auth0.github.io/auth0-react/interfaces/auth0_provider.auth0provideroptions.html
-// for a full list of the available properties on the provider
-const onRedirectCallback = (appState: any) => {
-  history.push(
-    appState && appState.returnTo ? appState.returnTo : window.location.pathname
-  );
-};
 
 // Can't use useEnv hook here...
 console.log("Window env", window._env_);
@@ -32,7 +23,7 @@ const REACT_APP_APPLICATION_CLIENT_ID = window._env_
   ? window._env_.REACT_APP_APPLICATION_CLIENT_ID || ""
   : "";
 const REACT_APP_AUDIENCE = window._env_
-  ? window._env_.REACT_APP_AUDIENCE || "http://localhost:5173"
+  ? window._env_.REACT_APP_AUDIENCE || ""
   : "";
 const REACT_APP_API_ROOT_URL = window._env_
   ? window._env_.REACT_APP_API_ROOT_URL || "http://localhost:8000"
@@ -78,20 +69,24 @@ if (REACT_APP_USE_AUTH0) {
   const providerConfig = {
     domain: REACT_APP_APPLICATION_DOMAIN,
     clientId: REACT_APP_APPLICATION_CLIENT_ID,
-    audience: REACT_APP_AUDIENCE,
-    redirectUri: window.location.origin,
-    scope: "application:login",
-    onRedirectCallback,
+    authorizationParams: {
+      audience: REACT_APP_AUDIENCE || undefined,
+      scope: "openid profile email",
+      redirect_uri: window.location.origin,
+    },
   };
 
+  console.log("[index.tsx] Auth0 providerConfig:", providerConfig);
+  console.log("[index.tsx] window.location.origin:", window.location.origin);
+
   root.render(
-    <Auth0Provider {...providerConfig}>
-      <ApolloProvider client={client}>
-        <BrowserRouter>
+    <BrowserRouter>
+      <Auth0ProviderWithHistory {...providerConfig}>
+        <ApolloProvider client={client}>
           <App />
-        </BrowserRouter>
-      </ApolloProvider>
-    </Auth0Provider>
+        </ApolloProvider>
+      </Auth0ProviderWithHistory>
+    </BrowserRouter>
   );
 } else {
   console.log("Rendering with NO AUTH0");

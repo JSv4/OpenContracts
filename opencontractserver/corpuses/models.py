@@ -1,3 +1,5 @@
+import difflib
+import hashlib
 import logging
 import uuid
 from typing import Optional
@@ -5,6 +7,8 @@ from typing import Optional
 import django
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
+from django.db import transaction
 from django.utils import timezone
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 from tree_queries.models import TreeNode
@@ -34,6 +38,15 @@ def calculate_temporary_filepath(instance, filename):
     )
 
 
+def calculate_description_filepath(instance, filename):
+    """Generate a unique path for corpus markdown descriptions."""
+    return calc_oc_file_path(
+        instance,
+        filename,
+        f"user_{instance.creator.id}/{instance.__class__.__name__}/md_descriptions/{uuid.uuid4()}",
+    )
+
+
 class TemporaryFileHandle(django.db.models.Model):
     """
     This may seem useless, but lets us leverage django's infrastructure to support multiple
@@ -56,6 +69,12 @@ class Corpus(TreeNode):
     # Model variables
     title = django.db.models.CharField(max_length=1024, db_index=True)
     description = django.db.models.TextField(default="", blank=True)
+    md_description = django.db.models.FileField(
+        blank=True,
+        null=True,
+        upload_to=calculate_description_filepath,
+        help_text="Markdown description file for this corpus.",
+    )
     icon = django.db.models.FileField(
         blank=True, null=True, upload_to=calculate_icon_filepath
     )
@@ -113,6 +132,97 @@ class Corpus(TreeNode):
     # Timing variables
     created = django.db.models.DateTimeField(default=timezone.now)
     modified = django.db.models.DateTimeField(default=timezone.now, blank=True)
+
+    # ------ Revision mechanics ------ #
+    REVISION_SNAPSHOT_INTERVAL = 10
+
+    def _read_md_description_content(self) -> str:
+        """Return the current markdown description as text.
+
+        Handles both text-mode and binary-mode reads so it works regardless of
+        how the file was saved.
+        """
+        if not (self.md_description and self.md_description.name):
+            return ""
+
+        # First try text-mode which yields `str` directly.
+        try:
+            self.md_description.open("r")  # type: ignore[arg-type]
+            try:
+                return self.md_description.read()
+            finally:
+                self.md_description.close()
+        except Exception:
+            # Fall back to binary mode and decode manually.
+            try:
+                self.md_description.open("rb")  # type: ignore[arg-type]
+                return self.md_description.read().decode("utf-8", errors="ignore")
+            finally:
+                self.md_description.close()
+
+    def update_description(self, *, new_content: str, author):
+        """Create a new revision and update md_description.
+
+        Args:
+            new_content (str): Markdown content.
+            author (User | int): Responsible user.
+        Returns:
+            CorpusDescriptionRevision | None: the stored revision or None if no content change.
+        """
+
+        if isinstance(author, int):
+            author_obj = get_user_model().objects.get(pk=author)
+        else:
+            author_obj = author
+
+        original_content = self._read_md_description_content()
+
+        if original_content == (new_content or ""):
+            return None  # No change
+
+        with transaction.atomic():
+            # Save new markdown file
+            filename = f"{uuid.uuid4()}.md"
+            self.md_description.save(filename, ContentFile(new_content), save=False)
+            self.modified = timezone.now()
+            self.save()
+
+            # Compute next version
+            from opencontractserver.corpuses.models import (  # avoid circular
+                CorpusDescriptionRevision,
+            )
+
+            latest_rev = (
+                CorpusDescriptionRevision.objects.filter(corpus_id=self.pk)
+                .order_by("-version")
+                .first()
+            )
+            next_version = 1 if latest_rev is None else latest_rev.version + 1
+
+            diff_text = "\n".join(
+                difflib.unified_diff(
+                    original_content.splitlines(),
+                    new_content.splitlines(),
+                    lineterm="",
+                )
+            )
+
+            should_snapshot = next_version % self.REVISION_SNAPSHOT_INTERVAL == 0
+            snapshot_text = (
+                new_content if should_snapshot or next_version == 1 else None
+            )
+
+            revision = CorpusDescriptionRevision.objects.create(
+                corpus=self,
+                author=author_obj,
+                version=next_version,
+                diff=diff_text,
+                snapshot=snapshot_text,
+                checksum_base=hashlib.sha256(original_content.encode()).hexdigest(),
+                checksum_full=hashlib.sha256(new_content.encode()).hexdigest(),
+            )
+
+        return revision
 
     objects = PermissionedTreeQuerySet.as_manager(with_tree_fields=True)
 
@@ -175,6 +285,64 @@ class Corpus(TreeNode):
             A tuple of (embedder path, embeddings list), or (None, None) on failure.
         """
         return generate_embeddings_from_text(text, corpus_id=self.pk)
+
+    # --------------------------------------------------------------------- #
+    # Label helper                                                         #
+    # --------------------------------------------------------------------- #
+
+    def ensure_label_and_labelset(
+        self,
+        *,
+        label_text: str,
+        creator_id: int,
+        label_type: str | None = None,
+        color: str = "#05313d",
+        description: str = "",
+        icon: str = "tags",
+    ):
+        """Return an AnnotationLabel for *label_text*, creating prerequisites.
+
+        Ensures the corpus has a label-set and that a label with the given text
+        & type exists within it. Returns that label instance.
+        """
+
+        from django.db import transaction
+
+        from opencontractserver.annotations.models import (
+            TOKEN_LABEL,
+            AnnotationLabel,
+            LabelSet,
+        )
+
+        if label_type is None:
+            label_type = TOKEN_LABEL
+
+        with transaction.atomic():
+            # Create label-set lazily.
+            if self.label_set is None:
+                self.label_set = LabelSet.objects.create(
+                    title=f"Corpus {self.pk} Set",
+                    description="Auto-created label set",
+                    creator_id=creator_id,
+                )
+                self.save(update_fields=["label_set", "modified"])
+
+            # Fetch/create label inside that set.
+            label = self.label_set.annotation_labels.filter(
+                text=label_text, label_type=label_type
+            ).first()
+            if label is None:
+                label = AnnotationLabel.objects.create(
+                    text=label_text,
+                    label_type=label_type,
+                    color=color,
+                    description=description,
+                    icon=icon,
+                    creator_id=creator_id,
+                )
+                self.label_set.annotation_labels.add(label)
+
+        return label
 
 
 # Model for Django Guardian permissions... trying to improve performance...
@@ -327,3 +495,44 @@ class CorpusActionGroupObjectPermission(GroupObjectPermissionBase):
         "CorpusAction", on_delete=django.db.models.CASCADE
     )
     # enabled = False
+
+
+# -------------------- CorpusDescriptionRevision -------------------- #
+
+
+class CorpusDescriptionRevision(django.db.models.Model):
+    """Append-only history for Corpus markdown description."""
+
+    corpus = django.db.models.ForeignKey(
+        "corpuses.Corpus",
+        on_delete=django.db.models.CASCADE,
+        related_name="revisions",
+    )
+
+    author = django.db.models.ForeignKey(
+        get_user_model(),
+        on_delete=django.db.models.SET_NULL,
+        null=True,
+        related_name="corpus_revisions",
+    )
+
+    version = django.db.models.PositiveIntegerField()
+    diff = django.db.models.TextField(blank=True)
+    snapshot = django.db.models.TextField(null=True, blank=True)
+    checksum_base = django.db.models.CharField(max_length=64, blank=True)
+    checksum_full = django.db.models.CharField(max_length=64, blank=True)
+    created = django.db.models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        unique_together = ("corpus", "version")
+        ordering = ("corpus_id", "version")
+        indexes = [
+            django.db.models.Index(fields=["corpus"]),
+            django.db.models.Index(fields=["author"]),
+            django.db.models.Index(fields=["created"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"CorpusDescriptionRevision(corpus_id={self.corpus_id}, v={self.version})"
+        )

@@ -5,7 +5,7 @@ This module provides a simple interface for creating document or corpus agents.
 """
 
 import logging
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Optional, TypeVar, Union
 
 from django.conf import settings
 
@@ -29,6 +29,9 @@ DocumentType = Union[str, int, Document]
 CorpusType = Union[str, int, Corpus]
 ToolType = Union[str, CoreTool, callable]
 
+# Type variable for structured responses
+T = TypeVar("T")
+
 
 class AgentAPI:
     """Simple API for creating document and corpus agents."""
@@ -36,7 +39,7 @@ class AgentAPI:
     @staticmethod
     async def for_document(
         document: DocumentType,
-        corpus: CorpusType,
+        corpus: Optional[CorpusType] = None,
         *,
         framework: Optional[FrameworkType] = None,
         user_id: Optional[int] = None,
@@ -51,6 +54,7 @@ class AgentAPI:
         tools: Optional[list[ToolType]] = None,
         embedder: Optional[str] = None,
         verbose: bool = False,
+        persist: Optional[bool] = None,
         **kwargs,
     ) -> CoreAgent:
         """
@@ -71,6 +75,7 @@ class AgentAPI:
             tools: List of tool names, CoreTool instances, or functions
             embedder: Custom embedder path
             verbose: Enable verbose logging
+            persist: Optional persistence flag
             **kwargs: Additional framework-specific options
 
         Returns:
@@ -108,13 +113,21 @@ class AgentAPI:
         # Resolve default framework if caller did not specify one
         if framework is None:
             framework = getattr(
-                settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+                settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.PYDANTIC_AI
             )
         if isinstance(framework, str):
             framework = AgentFramework(framework)
 
         # Convert tool names to CoreTool instances
         resolved_tools = _resolve_tools(tools) if tools else None
+
+        # If caller explicitly disabled persistence we propagate the flags via **kwargs
+        persistence_overrides: dict[str, Any] = {}
+        if persist is False:
+            persistence_overrides = {
+                "store_user_messages": False,
+                "store_llm_messages": False,
+            }
 
         return await UnifiedAgentFactory.create_document_agent(
             document,
@@ -132,6 +145,7 @@ class AgentAPI:
             embedder_path=embedder,
             tools=resolved_tools,
             verbose=verbose,
+            **persistence_overrides,
             **kwargs,
         )
 
@@ -152,6 +166,7 @@ class AgentAPI:
         tools: Optional[list[ToolType]] = None,
         embedder: Optional[str] = None,
         verbose: bool = False,
+        persist: Optional[bool] = None,
         **kwargs,
     ) -> CoreAgent:
         """
@@ -172,6 +187,7 @@ class AgentAPI:
             tools: List of tool names, CoreTool instances, or functions
             embedder: Custom embedder path (uses corpus default if None)
             verbose: Enable verbose logging
+            persist: Optional persistence flag
             **kwargs: Additional framework-specific options
 
         Returns:
@@ -209,13 +225,21 @@ class AgentAPI:
         # Resolve default framework if caller did not specify one
         if framework is None:
             framework = getattr(
-                settings, "LLMS_CORPUS_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+                settings, "LLMS_CORPUS_AGENT_FRAMEWORK", AgentFramework.PYDANTIC_AI
             )
         if isinstance(framework, str):
             framework = AgentFramework(framework)
 
         # Convert tool names to CoreTool instances
         resolved_tools = _resolve_tools(tools) if tools else None
+
+        # If caller explicitly disabled persistence we propagate the flags via **kwargs
+        persistence_overrides: dict[str, Any] = {}
+        if persist is False:
+            persistence_overrides = {
+                "store_user_messages": False,
+                "store_llm_messages": False,
+            }
 
         return await UnifiedAgentFactory.create_corpus_agent(
             corpus,
@@ -232,7 +256,217 @@ class AgentAPI:
             embedder_path=embedder,
             tools=resolved_tools,
             verbose=verbose,
+            **persistence_overrides,
             **kwargs,
+        )
+
+    @staticmethod
+    async def get_structured_response_from_document(
+        document: DocumentType,
+        corpus: Optional[CorpusType],
+        prompt: str,
+        target_type: type[T],
+        *,
+        framework: Optional[FrameworkType] = None,
+        user_id: Optional[int] = None,
+        model: str = "gpt-4o-mini",
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+        tools: Optional[list[ToolType]] = None,
+        embedder: Optional[str] = None,
+        extra_context: Optional[str] = None,
+        **kwargs,
+    ) -> Optional[T]:
+        """
+        Extract structured data from a document in a one-shot, ephemeral manner.
+
+        This method creates a temporary agent, performs the extraction, and returns
+        the result without storing any conversation history.
+
+        Args:
+            document: Document ID, instance, or path
+            corpus: Corpus ID, instance, or path (optional - None for documents not in a corpus)
+            prompt: Natural language prompt for data extraction
+            target_type: Python type for the desired output (e.g., int, str, list[str], MyPydanticModel)
+            framework: "llama_index" or "pydantic_ai" (defaults to pydantic_ai for structured extraction)
+            user_id: User ID (not used for persistence in this method)
+            model: LLM model name (e.g., "gpt-4", "claude-3-sonnet")
+            system_prompt: Custom system prompt for extraction
+            temperature: Temperature for response generation (0.0-2.0)
+            max_tokens: Maximum tokens in response
+            tools: List of tools to use during extraction
+            embedder: Custom embedder path
+            extra_context: Additional context for extraction
+            **kwargs: Additional framework-specific options
+
+        Returns:
+            Instance of target_type if successful, None if extraction failed
+
+        Examples:
+            # Extract a simple type
+            page_count = await agents.get_structured_response_from_document(
+                document=123,
+                corpus=456,
+                prompt="How many pages are in this document?",
+                target_type=int
+            )
+
+            # Extract a list
+            parties = await agents.get_structured_response_from_document(
+                document=doc,
+                corpus=corpus,
+                prompt="List all parties mentioned in this contract",
+                target_type=list[str]
+            )
+
+            # Extract structured data using Pydantic
+            from pydantic import BaseModel
+
+            class ContractTerms(BaseModel):
+                start_date: str
+                end_date: str
+                total_value: float
+                parties: list[str]
+
+            terms = await agents.get_structured_response_from_document(
+                document=doc,
+                corpus=corpus,
+                prompt="Extract the key contract terms",
+                target_type=ContractTerms,
+                model="gpt-4",
+                temperature=0.3
+            )
+        """
+        # Default to pydantic_ai for structured extraction
+        if framework is None:
+            framework = AgentFramework.PYDANTIC_AI
+
+        # Create ephemeral agent with persistence disabled
+        agent = await AgentAPI.for_document(
+            document=document,
+            corpus=corpus,
+            framework=framework,
+            user_id=user_id,
+            model=model,
+            system_prompt=system_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            streaming=False,  # No streaming for structured responses
+            tools=tools,
+            embedder=embedder,
+            persist=False,  # Ensure no persistence
+            **kwargs,
+        )
+
+        # Use the structured_response method
+        return await agent.structured_response(
+            prompt=prompt,
+            target_type=target_type,
+            system_prompt=system_prompt,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            extra_context=extra_context,
+            **kwargs,  # Pass through any additional kwargs like extra_context
+        )
+
+    @staticmethod
+    async def get_structured_response_from_corpus(
+        corpus: CorpusType,
+        prompt: str,
+        target_type: type[T],
+        *,
+        framework: Optional[FrameworkType] = None,
+        user_id: Optional[int] = None,
+        model: str = "gpt-4o-mini",
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+        tools: Optional[list[ToolType]] = None,
+        embedder: Optional[str] = None,
+        extra_context: Optional[str] = None,
+        **kwargs,
+    ) -> Optional[T]:
+        """
+        Extract structured data from a corpus in a one-shot, ephemeral manner.
+
+        This method creates a temporary agent, performs the extraction, and returns
+        the result without storing any conversation history.
+
+        Args:
+            corpus: Corpus ID, instance, or path
+            prompt: Natural language prompt for data extraction
+            target_type: Python type for the desired output (e.g., int, str, list[str], MyPydanticModel)
+            framework: "llama_index" or "pydantic_ai" (defaults to pydantic_ai for structured extraction)
+            user_id: User ID (not used for persistence in this method)
+            model: LLM model name (e.g., "gpt-4", "claude-3-sonnet")
+            system_prompt: Custom system prompt for extraction
+            temperature: Temperature for response generation (0.0-2.0)
+            max_tokens: Maximum tokens in response
+            tools: List of tools to use during extraction
+            embedder: Custom embedder path
+            extra_context: Additional context for extraction
+            **kwargs: Additional framework-specific options
+
+        Returns:
+            Instance of target_type if successful, None if extraction failed
+
+        Examples:
+            # Extract a count across documents
+            doc_count = await agents.get_structured_response_from_corpus(
+                corpus=456,
+                prompt="How many documents contain confidentiality clauses?",
+                target_type=int
+            )
+
+            # Extract a summary structure
+            from pydantic import BaseModel
+
+            class CorpusSummary(BaseModel):
+                main_themes: list[str]
+                document_count: int
+                key_entities: list[str]
+                date_range: dict[str, str]
+
+            summary = await agents.get_structured_response_from_corpus(
+                corpus=corpus,
+                prompt="Provide a comprehensive summary of this corpus",
+                target_type=CorpusSummary,
+                model="gpt-4",
+                temperature=0.5
+            )
+        """
+        # Default to pydantic_ai for structured extraction
+        if framework is None:
+            framework = AgentFramework.PYDANTIC_AI
+
+        # Create ephemeral agent with persistence disabled
+        agent = await AgentAPI.for_corpus(
+            corpus=corpus,
+            framework=framework,
+            user_id=user_id,
+            model=model,
+            system_prompt=system_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            streaming=False,  # No streaming for structured responses
+            tools=tools,
+            embedder=embedder,
+            persist=False,  # Ensure no persistence
+            **kwargs,
+        )
+
+        # Use the structured_response method
+        return await agent.structured_response(
+            prompt=prompt,
+            target_type=target_type,
+            system_prompt=system_prompt,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            extra_context=extra_context,
+            **kwargs,  # Pass through any additional kwargs like extra_context
         )
 
 
@@ -359,7 +593,7 @@ class VectorStoreAPI:
         # Resolve default framework if caller did not specify one
         if framework is None:
             framework = getattr(
-                settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.LLAMA_INDEX
+                settings, "LLMS_DOCUMENT_AGENT_FRAMEWORK", AgentFramework.PYDANTIC_AI
             )
 
         # Normalize framework

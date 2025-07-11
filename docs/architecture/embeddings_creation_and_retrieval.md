@@ -131,37 +131,27 @@ annotations = Annotation.objects.search_by_embedding(
 
 Framework adapters are thin wrappers that translate between the core API and specific agent frameworks:
 
-1. **LlamaIndex Adapter** - `LlamaIndexAnnotationVectorStore`
-   - Located in `opencontractserver/llms/vector_stores/llama_index_vector_stores.py`
+1. **LlamaIndex Adapter** - *Removed*
+   - The LlamaIndex vector store adapter has been removed from the codebase
+   - To use LlamaIndex, implement your own adapter following the CoreAnnotationVectorStore interface
    - Implements LlamaIndex's `BasePydanticVectorStore` interface
    - Converts between LlamaIndex types and our core types:
      ```python
-     # LlamaIndex usage
-     from opencontractserver.llms.vector_stores.llama_index_vector_stores import (
-         LlamaIndexAnnotationVectorStore
-     )
+     # LlamaIndex integration example (adapter removed)
+     # To use LlamaIndex with OpenContracts vector stores:
+     # 1. Create your own adapter class that inherits from BasePydanticVectorStore
+     # 2. Wrap CoreAnnotationVectorStore functionality
+     # 3. Convert between LlamaIndex and OpenContracts types
 
-     vector_store = LlamaIndexAnnotationVectorStore(
-         corpus_id=my_corpus_id,
-         user_id=my_user_id,
-         embed_dim=384,
-     )
-
-     # Used with LlamaIndex query engines
-     query_engine = index.as_query_engine(vector_store=vector_store)
-     response = query_engine.query("What is the main topic?")
+     # Example structure (not implemented):
+     # class MyLlamaIndexVectorStore(BasePydanticVectorStore):
+     #     def __init__(self, core_store: CoreAnnotationVectorStore):
+     #         self.core_store = core_store
      ```
 
-2. **Factory Method**
-   - Use `LlamaIndexAnnotationVectorStore.from_params()` for convenient initialization:
-     ```python
-     vector_store = LlamaIndexAnnotationVectorStore.from_params(
-         user_id=user_id,
-         corpus_id=corpus_id,
-         document_id=document_id,  # Optional
-         embedder_path="custom/embedder",  # Optional override
-     )
-     ```
+2. **Removed Adapter**
+   - The LlamaIndex vector store adapter (`LlamaIndexAnnotationVectorStore`) has been removed
+   - To use LlamaIndex, create your own adapter following the `BasePydanticVectorStore` interface
 
 3. **PydanticAI Adapter** - `PydanticAIAnnotationVectorStore`
    - Located in `opencontractserver/llms/vector_stores/pydantic_ai_vector_stores.py`

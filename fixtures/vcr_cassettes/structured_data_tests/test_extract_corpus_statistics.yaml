@@ -1,0 +1,394 @@
+interactions:
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"<BACKGROUND_CONTEXT>\\nYou
+      are an expert assistant designed to analyze and answer queries about a collection
+      of documents called 'Test Corpus'.\\n\\n**Available Tools:**\\nYou have access
+      to comprehensive tools for analyzing documents in this corpus:\\n\\n1. **Document-Specific
+      Tools** \u2013 available *per* document via the `ask_document` helper:\\n   -
+      Vector search inside that document\\n   - Summary & note access\\n   - Annotation
+      manipulation (subject to approval)\\n   - Token length calculations for context
+      management\\n2. **Corpus-Level Coordination Tools** \u2013 orchestrate multi-document
+      reasoning:\\n   - `list_documents()`\u2003\u2192 returns `[{document_id, title,
+      description}]` for discovery\\n   - `ask_document(document_id, question)`\u2003\u2192
+      runs a **document agent** and yields a rich object:\\n       \u2022 `answer`\u2003str
+      \u2013 the assistant's final answer\\n       \u2022 `sources`\u2003list \u2013
+      flattened citation objects (annotation_id, page, rawText \u2026)\\n       \u2022
+      `timeline`\u2003list \u2013 detailed reasoning & tool calls from the sub-agent
+      run\\n   Use these keys to compile thorough, well-cited corpus-level answers.\\n3.
+      **Cross-Document Vector Search** \u2013 semantic search across the entire corpus
+      for broad context\\n\\n**Important**: Always check what tools are available
+      to you, as additional specialized tools may be provided dynamically beyond the
+      core set. The exact tools available will depend on the documents in this corpus.\\n\\n**Guidelines:**\\n-
+      Always use the provided tools to gather information before answering\\n- Do
+      not rely on prior knowledge about the documents\\n- When appropriate, search
+      across multiple documents for comprehensive answers\\n- Cite specific documents
+      and sources when presenting information\\n- Prefer using `sources` returned
+      by `ask_document` or vector search to justify claims\\n- Present your findings
+      in clear, well-structured markdown format, using footnote-style citations\\n</BACKGROUND_CONTEXT>\\n\\nYou
+      are a highly-intelligent data extraction system with NO PRIOR KNOWLEDGE about
+      any documents. You must ONLY use information obtained through the provided tools.\\n\\nAVAILABLE
+      TOOLS FOR DOCUMENT ANALYSIS:\\n- similarity_search: Semantic vector search to
+      find relevant passages based on meaning\\n- load_document_md_summary: Access
+      markdown summary of the document (if available)\\n- load_document_txt_extract:
+      Load plain text extract of document (full or partial)\\n- get_document_notes:
+      Retrieve human-created notes attached to this document\\n- search_document_notes:
+      Search through notes for specific keywords\\n- get_document_summary: Get the
+      latest human-prepared summary content\\n- add_exact_string_annotations: Find
+      exact string matches in the document\\n- Other document-specific tools may be
+      available\\n\\nCRITICAL OPERATING PRINCIPLES:\\n1. You have ZERO knowledge about
+      this document except what you discover through tools\\n2. NEVER assume, infer,
+      or use any information not explicitly found via tool calls\\n3. If you cannot
+      find requested information after thorough search, return null\\n4. Your answers
+      must be 100% traceable to specific tool results\\n\\nEXTRACTION METHODOLOGY:\\n\\nPHASE
+      1 - COMPREHENSIVE SEARCH:\\n1. Analyze the extraction request: \\\"Extract basic
+      statistics about a corpus of legal documents including Title 1.\\\"\\n2. Plan
+      multiple search strategies using different tools and query variations\\n3. Execute
+      searches systematically:\\n   - Try semantic search with various phrasings\\n
+      \  - Load document summary if relevant\\n   - Search notes if they might contain
+      the information\\n   - Access document text for detailed inspection\\n4. Collect
+      ALL potentially relevant information\\n\\nPHASE 2 - INITIAL EXTRACTION:\\n1.
+      Review all gathered information\\n2. Extract ONLY data that directly answers
+      the request\\n3. For each piece of extracted data, note its source (which tool,
+      what result)\\n4. If information is ambiguous or conflicting, prefer the most
+      authoritative source\\n5. If required information is not found, prepare to return
+      null for those fields\\n\\nPHASE 3 - BACKWARD VERIFICATION (CRITICAL):\\n1.
+      Take your proposed answer and work backwards\\n2. For EACH data point in your
+      answer:\\n   - Can you cite the EXACT tool call and result that provided this
+      information?\\n   - Does the source material actually say what you claim it
+      says?\\n   - Is this a direct quote/fact or are you interpreting/inferring?\\n3.
+      If ANY data point fails verification:\\n   - Remove unverifiable data\\n   -
+      Search again with more targeted queries\\n   - If still not found, that field
+      should be null\\n\\nPHASE 4 - ITERATION IF NEEDED:\\nIf backward verification
+      revealed gaps or errors:\\n1. Identify what specific information is missing
+      or wrong\\n2. Formulate new, more targeted search queries\\n3. Return to PHASE
+      1 with these specific queries\\n4. Repeat until either:\\n   - All data is verified
+      with clear sources, OR\\n   - You've exhausted search options and must return
+      null\\n\\nVERIFICATION RULES:\\n- Dates must be explicitly stated in the source
+      material (not inferred from context)\\n- Numbers must be exact matches from
+      the document (not calculated or estimated)\\n- Names/entities must appear verbatim
+      (not paraphrased or corrected)\\n- Boolean values require explicit supporting
+      statements\\n- Lists must be complete based on the source (not \\\"including
+      but not limited to\\\")\\n- For relationships, both entities and the relationship
+      must be explicitly stated\\n\\nOUTPUT RULES:\\n- Return ONLY the extracted data
+      in this exact format: \\n\\na JSON object matching the 'CorpusStats' model with
+      this schema:\\n{\\n  \\\"properties\\\": {\\n    \\\"document_count\\\": {\\n
+      \     \\\"title\\\": \\\"Document Count\\\",\\n      \\\"type\\\": \\\"integer\\\"\\n
+      \   },\\n    \\\"total_pages\\\": {\\n      \\\"title\\\": \\\"Total Pages\\\",\\n
+      \     \\\"type\\\": \\\"integer\\\"\\n    },\\n    \\\"average_document_length\\\":
+      {\\n      \\\"title\\\": \\\"Average Document Length\\\",\\n      \\\"type\\\":
+      \\\"number\\\"\\n    },\\n    \\\"most_common_document_type\\\": {\\n      \\\"title\\\":
+      \\\"Most Common Document Type\\\",\\n      \\\"type\\\": \\\"string\\\"\\n    }\\n
+      \ },\\n  \\\"required\\\": [\\n    \\\"document_count\\\",\\n    \\\"total_pages\\\",\\n
+      \   \\\"average_document_length\\\",\\n    \\\"most_common_document_type\\\"\\n
+      \ ],\\n  \\\"title\\\": \\\"CorpusStats\\\",\\n  \\\"type\\\": \\\"object\\\"\\n}\\n\\n-
+      No explanations, confidence scores, or meta-commentary\\n- Use null/empty for
+      missing data rather than placeholders\\n- The entire response must be valid
+      string representation of desired answer convertible to the target type\\n\\nUser
+      has provided the following additional context (if blank, nothing provided):\\n\\n\"},{\"role\":\"user\",\"content\":\"Extract
+      basic statistics about a corpus of legal documents including Title 1.\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"temperature\":0.7,\"tool_choice\":\"required\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"final_result\",\"description\":\"The
+      final response which ends this conversation\",\"parameters\":{\"properties\":{\"document_count\":{\"type\":\"integer\"},\"total_pages\":{\"type\":\"integer\"},\"average_document_length\":{\"type\":\"number\"},\"most_common_document_type\":{\"type\":\"string\"}},\"required\":[\"document_count\",\"total_pages\",\"average_document_length\",\"most_common_document_type\"],\"type\":\"object\"}}}]}"
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '7174'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4_gmVURDuZKY2geW67mrcJmHfSge7MQ6SQYwvcO3Rcw-1751760736-1.0.1.1-OHBOavi5r3Bj3TshtVcWhIDYemLMOc.LZZ.Zh8OP7xw7dvNPNBJfUURLqOsW68hVAMUCQMTAsp1NZRACyCHj7Ptlaw9kkWMvvPLkqb7MCRg;
+        _cfuvid=nJAMzKDSO8HRLgzCw8QUEzEHfaRUzTBvizMw8371j24-1751760736988-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '1'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNNb9pAEL37V6z2DBUGAoRbo6hVE7VKpeZQlWg1rMf2JvvF7jolRfz3
+        am2wDaFSfbDsefNm3r6Z3SWEUJHRJaG8hMCVlcObzfzu2+39T6tub9ab/OvkvrRhM3v8+DDin+kg
+        Msz6GXk4sj5wo6zEIIxuYO4QAsaq6fwqnc9Gi1laA8pkKCOtsGE4NUMltBiOR+PpcDQfposDuzSC
+        o6dL8ishhJBd/Y46dYZbuiSjwTGi0HsokC7bJEKoMzJGKHgvfAAd6KADudEBdZSuKyl7QDBGMg5S
+        do2bZ9f77swCKdkCX9Lw+/v2j/qy/fTjuXTpHT68PW56/ZrSb7YWlFeatyb18Da+PGtGCNWgGq7Q
+        IJlDX8lwxieEgisqhTpE7XS3opnh9T/jptJhdTwtWdFgAkhmoUDfD8MrOiiQtUSJughlP0UZH+sp
+        ZXSXFo92TNrTE1n75NL3U89yh3nlQb6fBWhtAkRL6mE8HZB9O3dpCuvM2p9Ro0vCl8wh+NrO/lST
+        o5BaAq1OFodaZ5QNLJgXrJumk+tZU5Z2293B0+sD2PjZ0abTq8GFiizDAKLerXadOfASs47brTVU
+        mTA9IOmd/r2cS7UbB4Qu/qd8B3CONmDGrMNM8NMjd2kO4+3/V1rrcy2YenSvgiMLAl2cSIY5HHeY
+        +jcfULFc6AKddaK+mDS3bDaG8QQWKeY02Sd/AQAA//8DANbiUVmmBAAA
+    headers:
+      CF-RAY:
+      - 95aae6c79a8d6b17-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 06 Jul 2025 00:14:22 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '768'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '776'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3998399'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 24ms
+      x-request-id:
+      - req_3a52f4b9ddfe3e93af640d46f5286629
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"<BACKGROUND_CONTEXT>\\nYou
+      are an expert assistant designed to analyze and answer queries about a collection
+      of documents called 'Test Corpus'.\\n\\n**Available Tools:**\\nYou have access
+      to comprehensive tools for analyzing documents in this corpus:\\n\\n1. **Document-Specific
+      Tools** \u2013 available *per* document via the `ask_document` helper:\\n   -
+      Vector search inside that document\\n   - Summary & note access\\n   - Annotation
+      manipulation (subject to approval)\\n   - Token length calculations for context
+      management\\n2. **Corpus-Level Coordination Tools** \u2013 orchestrate multi-document
+      reasoning:\\n   - `list_documents()`\u2003\u2192 returns `[{document_id, title,
+      description}]` for discovery\\n   - `ask_document(document_id, question)`\u2003\u2192
+      runs a **document agent** and yields a rich object:\\n       \u2022 `answer`\u2003str
+      \u2013 the assistant's final answer\\n       \u2022 `sources`\u2003list \u2013
+      flattened citation objects (annotation_id, page, rawText \u2026)\\n       \u2022
+      `timeline`\u2003list \u2013 detailed reasoning & tool calls from the sub-agent
+      run\\n   Use these keys to compile thorough, well-cited corpus-level answers.\\n3.
+      **Cross-Document Vector Search** \u2013 semantic search across the entire corpus
+      for broad context\\n\\n**Important**: Always check what tools are available
+      to you, as additional specialized tools may be provided dynamically beyond the
+      core set. The exact tools available will depend on the documents in this corpus.\\n\\n**Guidelines:**\\n-
+      Always use the provided tools to gather information before answering\\n- Do
+      not rely on prior knowledge about the documents\\n- When appropriate, search
+      across multiple documents for comprehensive answers\\n- Cite specific documents
+      and sources when presenting information\\n- Prefer using `sources` returned
+      by `ask_document` or vector search to justify claims\\n- Present your findings
+      in clear, well-structured markdown format, using footnote-style citations\\n</BACKGROUND_CONTEXT>\\n\\nYou
+      are a highly-intelligent data extraction system with NO PRIOR KNOWLEDGE about
+      any documents. You must ONLY use information obtained through the provided tools.\\n\\nAVAILABLE
+      TOOLS FOR DOCUMENT ANALYSIS:\\n- similarity_search: Semantic vector search to
+      find relevant passages based on meaning\\n- load_document_md_summary: Access
+      markdown summary of the document (if available)\\n- load_document_txt_extract:
+      Load plain text extract of document (full or partial)\\n- get_document_notes:
+      Retrieve human-created notes attached to this document\\n- search_document_notes:
+      Search through notes for specific keywords\\n- get_document_summary: Get the
+      latest human-prepared summary content\\n- add_exact_string_annotations: Find
+      exact string matches in the document\\n- Other document-specific tools may be
+      available\\n\\nCRITICAL OPERATING PRINCIPLES:\\n1. You have ZERO knowledge about
+      this document except what you discover through tools\\n2. NEVER assume, infer,
+      or use any information not explicitly found via tool calls\\n3. If you cannot
+      find requested information after thorough search, return null\\n4. Your answers
+      must be 100% traceable to specific tool results\\n\\nEXTRACTION METHODOLOGY:\\n\\nPHASE
+      1 - COMPREHENSIVE SEARCH:\\n1. Analyze the extraction request: \\\"Extract basic
+      statistics about a corpus of legal documents including Title 1.\\\"\\n2. Plan
+      multiple search strategies using different tools and query variations\\n3. Execute
+      searches systematically:\\n   - Try semantic search with various phrasings\\n
+      \  - Load document summary if relevant\\n   - Search notes if they might contain
+      the information\\n   - Access document text for detailed inspection\\n4. Collect
+      ALL potentially relevant information\\n\\nPHASE 2 - INITIAL EXTRACTION:\\n1.
+      Review all gathered information\\n2. Extract ONLY data that directly answers
+      the request\\n3. For each piece of extracted data, note its source (which tool,
+      what result)\\n4. If information is ambiguous or conflicting, prefer the most
+      authoritative source\\n5. If required information is not found, prepare to return
+      null for those fields\\n\\nPHASE 3 - BACKWARD VERIFICATION (CRITICAL):\\n1.
+      Take your proposed answer and work backwards\\n2. For EACH data point in your
+      answer:\\n   - Can you cite the EXACT tool call and result that provided this
+      information?\\n   - Does the source material actually say what you claim it
+      says?\\n   - Is this a direct quote/fact or are you interpreting/inferring?\\n3.
+      If ANY data point fails verification:\\n   - Remove unverifiable data\\n   -
+      Search again with more targeted queries\\n   - If still not found, that field
+      should be null\\n\\nPHASE 4 - ITERATION IF NEEDED:\\nIf backward verification
+      revealed gaps or errors:\\n1. Identify what specific information is missing
+      or wrong\\n2. Formulate new, more targeted search queries\\n3. Return to PHASE
+      1 with these specific queries\\n4. Repeat until either:\\n   - All data is verified
+      with clear sources, OR\\n   - You've exhausted search options and must return
+      null\\n\\nVERIFICATION RULES:\\n- Dates must be explicitly stated in the source
+      material (not inferred from context)\\n- Numbers must be exact matches from
+      the document (not calculated or estimated)\\n- Names/entities must appear verbatim
+      (not paraphrased or corrected)\\n- Boolean values require explicit supporting
+      statements\\n- Lists must be complete based on the source (not \\\"including
+      but not limited to\\\")\\n- For relationships, both entities and the relationship
+      must be explicitly stated\\n\\nOUTPUT RULES:\\n- Return ONLY the extracted data
+      in this exact format: \\n\\na JSON object matching the 'CorpusStats' model with
+      this schema:\\n{\\n  \\\"properties\\\": {\\n    \\\"document_count\\\": {\\n
+      \     \\\"title\\\": \\\"Document Count\\\",\\n      \\\"type\\\": \\\"integer\\\"\\n
+      \   },\\n    \\\"total_pages\\\": {\\n      \\\"title\\\": \\\"Total Pages\\\",\\n
+      \     \\\"type\\\": \\\"integer\\\"\\n    },\\n    \\\"average_document_length\\\":
+      {\\n      \\\"title\\\": \\\"Average Document Length\\\",\\n      \\\"type\\\":
+      \\\"number\\\"\\n    },\\n    \\\"most_common_document_type\\\": {\\n      \\\"title\\\":
+      \\\"Most Common Document Type\\\",\\n      \\\"type\\\": \\\"string\\\"\\n    }\\n
+      \ },\\n  \\\"required\\\": [\\n    \\\"document_count\\\",\\n    \\\"total_pages\\\",\\n
+      \   \\\"average_document_length\\\",\\n    \\\"most_common_document_type\\\"\\n
+      \ ],\\n  \\\"title\\\": \\\"CorpusStats\\\",\\n  \\\"type\\\": \\\"object\\\"\\n}\\n\\n-
+      No explanations, confidence scores, or meta-commentary\\n- Use null/empty for
+      missing data rather than placeholders\\n- The entire response must be valid
+      string representation of desired answer convertible to the target type\\n\\nUser
+      has provided the following additional context (if blank, nothing provided):\\n\\n\"},{\"role\":\"user\",\"content\":\"Extract
+      basic statistics about a corpus of legal documents including Title 1.\"},{\"role\":\"assistant\",\"tool_calls\":[{\"id\":\"call_8ek1twQxzmIxFTjhr1JePyUq\",\"type\":\"function\",\"function\":{\"name\":\"final_result\",\"arguments\":\"{\\\"document_count\\\":
+      null, \\\"total_pages\\\": null, \\\"average_document_length\\\": null, \\\"most_common_document_type\\\":
+      null}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"call_8ek1twQxzmIxFTjhr1JePyUq\",\"content\":\"4
+      validation errors: [\\n  {\\n    \\\"type\\\": \\\"int_type\\\",\\n    \\\"loc\\\":
+      [\\n      \\\"document_count\\\"\\n    ],\\n    \\\"msg\\\": \\\"Input should
+      be a valid integer\\\",\\n    \\\"input\\\": null\\n  },\\n  {\\n    \\\"type\\\":
+      \\\"int_type\\\",\\n    \\\"loc\\\": [\\n      \\\"total_pages\\\"\\n    ],\\n
+      \   \\\"msg\\\": \\\"Input should be a valid integer\\\",\\n    \\\"input\\\":
+      null\\n  },\\n  {\\n    \\\"type\\\": \\\"float_type\\\",\\n    \\\"loc\\\":
+      [\\n      \\\"average_document_length\\\"\\n    ],\\n    \\\"msg\\\": \\\"Input
+      should be a valid number\\\",\\n    \\\"input\\\": null\\n  },\\n  {\\n    \\\"type\\\":
+      \\\"string_type\\\",\\n    \\\"loc\\\": [\\n      \\\"most_common_document_type\\\"\\n
+      \   ],\\n    \\\"msg\\\": \\\"Input should be a valid string\\\",\\n    \\\"input\\\":
+      null\\n  }\\n]\\n\\nFix the errors and try again.\"}],\"model\":\"gpt-4o-mini\",\"stream\":false,\"temperature\":0.7,\"tool_choice\":\"required\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"final_result\",\"description\":\"The
+      final response which ends this conversation\",\"parameters\":{\"properties\":{\"document_count\":{\"type\":\"integer\"},\"total_pages\":{\"type\":\"integer\"},\"average_document_length\":{\"type\":\"number\"},\"most_common_document_type\":{\"type\":\"string\"}},\"required\":[\"document_count\",\"total_pages\",\"average_document_length\",\"most_common_document_type\"],\"type\":\"object\"}}}]}"
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '8239'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4_gmVURDuZKY2geW67mrcJmHfSge7MQ6SQYwvcO3Rcw-1751760736-1.0.1.1-OHBOavi5r3Bj3TshtVcWhIDYemLMOc.LZZ.Zh8OP7xw7dvNPNBJfUURLqOsW68hVAMUCQMTAsp1NZRACyCHj7Ptlaw9kkWMvvPLkqb7MCRg;
+        _cfuvid=nJAMzKDSO8HRLgzCw8QUEzEHfaRUzTBvizMw8371j24-1751760736988-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA+xUXU/bMBR9z6+w7nOLksDSrG8gsQfExDTUSWxFkevcpF79EWyHwqr+98kOTUIB
+        aT9geYhsn3vuPT627y4iBHgJcwJsTR2TjZhePMyubm7F6ut2cdlm5z83dzqL6y9JvN3cPcHEM/Tq
+        NzJ3YJ0wLRuBjmvVwcwgdeizJrNPySyL8ywNgNQlCk+rGzc901PJFZ+mcXo2jWfTJH9hrzVnaGFO
+        fkWEELILf69TlfgEcxJPDisSraU1wrwPIgSMFn4FqLXcOqocTAaQaeVQeemqFWIEOK1FwagQQ+Hu
+        243Gg1lUiEK2N3LxA7+lt1We1sYkf1h6kYnFqF6X+rkJgqpWsd6kEd6vz4+KEQKKyo7LFRWFQdsK
+        d8QnBKipW4nKee2wW0KpWZgXTLfKLYNnZAlOOyqKhtZo+zX6iIbWWPQUgap264CfhAiprU8kpVZD
+        lN+Tj1nCEvbwSs9+NNtP/snJjb2+Pt8u3OfLfOuwrk6/X62eH88e/jv5zvh+dGsNVq2l4u11pkpp
+        R70X4T7fR0fnAULXjdEre0T19nC7LgxSG3wcP4zoICRIgPbV24PGaNm4wukNhqJJliZdWhgaxADn
+        2QvYeTnQZvFs8k7GokRHeXiefUdglK2xHHHTfGgOtC25HrA4GhnwVtF76TsTuKpHWT5MPwCMYeOw
+        LBqDJWevdz2EGfQ99KOw3uogGCyaR86wcByNP5QSK3q4v2CfrUNZVFzVaBrDQ3uDqimylKanNE+w
+        gmgf/QUAAP//AwC83+me7AUAAA==
+    headers:
+      CF-RAY:
+      - 95aae6ccea816b17-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 06 Jul 2025 00:14:23 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '1122'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '1125'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3998238'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 26ms
+      x-request-id:
+      - req_d432ec7c8fc38e6920fb1bd9cfa1bd40
+    status:
+      code: 200
+      message: OK
+version: 1

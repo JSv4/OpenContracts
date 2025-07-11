@@ -35,7 +35,6 @@ class ExtractsQueryTestCase(TestCase):
             fieldset=self.fieldset,
             query="TestQuery",
             output_type="str",
-            agentic=False,
         )
         self.corpus = Corpus.objects.create(title="TestCorpus", creator=self.user)
         self.extract = Extract.objects.create(
@@ -97,7 +96,6 @@ class ExtractsQueryTestCase(TestCase):
                     id
                     query
                     outputType
-                    agentic
                 }
             }
         """ % to_global_id(
@@ -111,7 +109,6 @@ class ExtractsQueryTestCase(TestCase):
         )
         self.assertEqual(result["data"]["column"]["query"], "TestQuery")
         self.assertEqual(result["data"]["column"]["outputType"], "str")
-        self.assertEqual(result["data"]["column"]["agentic"], False)
 
     def test_extract_query(self):
         query = """

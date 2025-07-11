@@ -16,6 +16,8 @@ import { OperationDefinitionNode } from "graphql";
 import "../src/assets/styles/semantic.css"; // ADDED: Global Semantic UI styles
 
 import DocumentKnowledgeBase from "../src/components/knowledge_base/document/DocumentKnowledgeBase";
+import { authStatusVar } from "../src/graphql/cache";
+import { MemoryRouter } from "react-router-dom";
 
 // --- Minimal Test Cache Definition (copied from previous step) ---
 // Create a minimal cache configuration for testing based on the real cache.
@@ -468,6 +470,238 @@ const chatMessagesMockData = {
                   {
                     pageIndex: 11,
                     tokenIndex: 268,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 269,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 270,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 271,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 272,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 273,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 274,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 275,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 276,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 277,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 278,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 279,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 280,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 281,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 282,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 283,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 284,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 285,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 286,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 287,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 288,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 289,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 290,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 291,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 292,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 293,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 294,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 295,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 296,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 297,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 298,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 299,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 300,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 301,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 302,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 303,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 304,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 305,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 306,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 307,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 308,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 309,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 310,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 311,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 312,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 313,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 314,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 315,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 316,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 317,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 318,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 319,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 320,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 321,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 322,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 323,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 324,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 325,
+                  },
+                  {
+                    pageIndex: 11,
+                    tokenIndex: 326,
                   },
                 ],
               },
@@ -3986,22 +4220,29 @@ export const DocumentKnowledgeBaseTestWrapper: React.FC<WrapperProps> = ({
 }) => {
   // Create a link that handles wildcard mutation and other mocks
   const link = createWildcardLink(mocks);
+  // Mark auth as ready (anonymous) for tests
+  useEffect(() => {
+    authStatusVar("ANONYMOUS");
+  }, []);
   return (
-    <Provider>
-      <CorpusStateDebugger />
-      <MockedProvider
-        // Use our custom link instead of relying on default mocks matching
-        link={link}
-        cache={createTestCache()}
-        addTypename={true}
-        defaultOptions={{
-          watchQuery: { errorPolicy: "all" },
-          query: { errorPolicy: "all" },
-          mutate: { errorPolicy: "all" },
-        }}
-      >
-        <DocumentKnowledgeBase documentId={documentId} corpusId={corpusId} />
-      </MockedProvider>
-    </Provider>
+    <MemoryRouter
+      initialEntries={[`/corpus/${corpusId}/document/${documentId}`]}
+    >
+      <Provider>
+        <CorpusStateDebugger />
+        <MockedProvider
+          link={link}
+          cache={createTestCache()}
+          addTypename
+          defaultOptions={{
+            watchQuery: { errorPolicy: "all" },
+            query: { errorPolicy: "all" },
+            mutate: { errorPolicy: "all" },
+          }}
+        >
+          <DocumentKnowledgeBase documentId={documentId} corpusId={corpusId} />
+        </MockedProvider>
+      </Provider>
+    </MemoryRouter>
   );
 };

@@ -1,0 +1,111 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a legal scholar. Provide
+      precise statutory interpretation without creative additions."},{"role":"user","content":"Using
+      your expertise, identify the primary purpose of this text and the legal principle
+      it establishes."}],"model":"gpt-4o-mini","stream":false,"temperature":0.7,"tool_choice":"required","tools":[{"type":"function","function":{"name":"final_result","description":"The
+      final response which ends this conversation","parameters":{"properties":{"document_type":{"type":"string"},"accuracy_statement":{"description":"A
+      statement about accuracy","type":"string"}},"required":["document_type","accuracy_statement"],"type":"object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '691'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4_gmVURDuZKY2geW67mrcJmHfSge7MQ6SQYwvcO3Rcw-1751760736-1.0.1.1-OHBOavi5r3Bj3TshtVcWhIDYemLMOc.LZZ.Zh8OP7xw7dvNPNBJfUURLqOsW68hVAMUCQMTAsp1NZRACyCHj7Ptlaw9kkWMvvPLkqb7MCRg;
+        _cfuvid=nJAMzKDSO8HRLgzCw8QUEzEHfaRUzTBvizMw8371j24-1751760736988-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - pydantic-ai/0.2.16
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.81.0
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '1'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.11
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xUS2/bMAy+51cQOidFkjaP5tZhh+2wFgM6rMBSGIxE22plSZPorGmQ/z7IbmL3
+        MWA+GDY/fh8pPrQfAAitxAqELJFl5c3o0+/FF1l8vyz52/YZr26u1fXPhzjViyXfKjFMDLd5IMlH
+        1pl0lTfE2tkWloGQKalOFrPJYj5ezKYNUDlFJtEKz6MLN6q01aPpeHoxGi9Gk+ULu3RaUhQr+DUA
+        ANg375SnVfQkVjAeHi0VxYgFidXJCUAEZ5JFYIw6MloWww6UzjLZlLqtjekB7JzJJBrTBW6ffe+7
+        KxYak81/mM14Vt7dPd+ou0e1HSs0u89fYy9eK73zTUJ5beWpSD38ZF+9CQYgLFYtV1s0WaBYG37D
+        BxAYiroiyyl3sV8L5WTzn6XQa7FaC0MFGmB64rUYrgVKWQeUuywyMiXXxuu2JPBBVxh24OvgXSRw
+        OXBJDRV0BHaAgbWsDTIBQvQkda4ltBF80FZqb2gIFBk3RsdS2wKKWisy2lIEFyDUhiIEMrRFy40m
+        +KNsAAyEKa7BP2drcRCvjnsYfPR932tloLyOaN73GK11jKnUTZPvX5DDaZ6MK3xwm/iGmqqvY5kF
+        wti0qT8tg2MiTQqifjWQwgdXec7YPVITdHnZiopuZzrwYv4CsmM0nX1yPht+IJcpYtTNwJ52RKIs
+        SXXUblewVtr1gEHv6O+z+Ui7Pb62xf/Id4CU5JlU5gMpLV+fuHMLlK6Uf7mditwkLCKFrZaUsaaQ
+        2qEox+NiiLiLTFWWa1tQSPPYXFS5z+ZTnJ7jckK5GBwGfwEAAP//AwCwoGR2+wQAAA==
+    headers:
+      CF-RAY:
+      - 95aae418e9456b82-DFW
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 06 Jul 2025 00:12:33 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-54labie7aicgek5urzpgydpm
+      openai-processing-ms:
+      - '779'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '783'
+      x-ratelimit-limit-requests:
+      - '5000'
+      x-ratelimit-limit-tokens:
+      - '4000000'
+      x-ratelimit-remaining-requests:
+      - '4999'
+      x-ratelimit-remaining-tokens:
+      - '3999947'
+      x-ratelimit-reset-requests:
+      - 12ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_38f553e0948760a063750f2bf3b6c18d
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -21,10 +21,21 @@ class ToolMetadata:
 
 @dataclass
 class CoreTool:
-    """Framework-agnostic tool representation."""
+    """Framework-agnostic tool representation.
+
+    ``requires_approval`` marks tools that must be explicitly approved by a
+    human before execution.  Framework adapters **must** honour this flag
+    and implement a veto-gate when set to ``True``.
+
+    ``requires_corpus`` marks tools that need a corpus_id to function.
+    These tools will be filtered out when creating agents for documents
+    that are not in any corpus.
+    """
 
     function: Callable
     metadata: ToolMetadata
+    requires_approval: bool = False
+    requires_corpus: bool = False
 
     @classmethod
     def from_function(
@@ -33,6 +44,9 @@ class CoreTool:
         name: Optional[str] = None,
         description: Optional[str] = None,
         parameter_descriptions: Optional[dict[str, str]] = None,
+        *,
+        requires_approval: bool = False,
+        requires_corpus: bool = False,
     ) -> "CoreTool":
         """Create a CoreTool from a Python function.
 
@@ -41,6 +55,8 @@ class CoreTool:
             name: Optional custom name (defaults to function name)
             description: Optional custom description (extracted from docstring if not provided)
             parameter_descriptions: Optional parameter descriptions
+            requires_approval: Whether the tool requires explicit approval
+            requires_corpus: Whether the tool requires a corpus_id to function
 
         Returns:
             CoreTool instance
@@ -59,7 +75,12 @@ class CoreTool:
             parameter_descriptions=parameter_descriptions,
         )
 
-        return cls(function=func, metadata=metadata)
+        return cls(
+            function=func,
+            metadata=metadata,
+            requires_approval=requires_approval,
+            requires_corpus=requires_corpus,
+        )
 
     @property
     def name(self) -> str:
@@ -120,13 +141,7 @@ class UnifiedToolFactory:
         Returns:
             Framework-specific tool instance
         """
-        if framework == AgentFramework.LLAMA_INDEX:
-            from opencontractserver.llms.tools.llama_index_tools import (
-                LlamaIndexToolFactory,
-            )
-
-            return LlamaIndexToolFactory.create_tool(tool)
-        elif framework == AgentFramework.PYDANTIC_AI:
+        if framework == AgentFramework.PYDANTIC_AI:
             from opencontractserver.llms.tools.pydantic_ai_tools import (
                 PydanticAIToolFactory,
             )
@@ -146,13 +161,7 @@ class UnifiedToolFactory:
         Returns:
             List of framework-specific tool instances
         """
-        if framework == AgentFramework.LLAMA_INDEX:
-            from opencontractserver.llms.tools.llama_index_tools import (
-                LlamaIndexToolFactory,
-            )
-
-            return LlamaIndexToolFactory.create_tools(tools)
-        elif framework == AgentFramework.PYDANTIC_AI:
+        if framework == AgentFramework.PYDANTIC_AI:
             from opencontractserver.llms.tools.pydantic_ai_tools import (
                 PydanticAIToolFactory,
             )
@@ -168,6 +177,9 @@ class UnifiedToolFactory:
         name: Optional[str] = None,
         description: Optional[str] = None,
         parameter_descriptions: Optional[dict[str, str]] = None,
+        *,
+        requires_approval: bool = False,
+        requires_corpus: bool = False,
     ) -> Any:
         """Create a framework-specific tool directly from a function.
 
@@ -177,22 +189,13 @@ class UnifiedToolFactory:
             name: Optional custom name
             description: Optional custom description
             parameter_descriptions: Optional parameter descriptions
+            requires_approval: Whether the tool requires explicit approval
+            requires_corpus: Whether the tool requires a corpus_id to function
 
         Returns:
             Framework-specific tool instance
         """
-        if framework == AgentFramework.LLAMA_INDEX:
-            from opencontractserver.llms.tools.llama_index_tools import (
-                LlamaIndexToolFactory,
-            )
-
-            return LlamaIndexToolFactory.from_function(
-                func=func,
-                name=name,
-                description=description,
-                parameter_descriptions=parameter_descriptions,
-            )
-        elif framework == AgentFramework.PYDANTIC_AI:
+        if framework == AgentFramework.PYDANTIC_AI:
             from opencontractserver.llms.tools.pydantic_ai_tools import (
                 PydanticAIToolFactory,
             )
@@ -202,6 +205,8 @@ class UnifiedToolFactory:
                 name=name,
                 description=description,
                 parameter_descriptions=parameter_descriptions,
+                requires_approval=requires_approval,
+                requires_corpus=requires_corpus,
             )
         else:
             raise ValueError(f"Unsupported framework: {framework}")

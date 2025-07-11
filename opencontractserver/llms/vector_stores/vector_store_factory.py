@@ -16,7 +16,7 @@ class UnifiedVectorStoreFactory:
 
     @staticmethod
     def create_vector_store(
-        framework: AgentFramework = AgentFramework.LLAMA_INDEX,
+        framework: AgentFramework = AgentFramework.PYDANTIC_AI,
         user_id: Optional[Union[str, int]] = None,
         corpus_id: Optional[Union[str, int]] = None,
         document_id: Optional[Union[str, int]] = None,
@@ -40,21 +40,7 @@ class UnifiedVectorStoreFactory:
         Returns:
             Framework-specific vector store instance
         """
-        if framework == AgentFramework.LLAMA_INDEX:
-            from opencontractserver.llms.vector_stores.llama_index_vector_stores import (
-                LlamaIndexAnnotationVectorStore,
-            )
-
-            return LlamaIndexAnnotationVectorStore(
-                user_id=user_id,
-                corpus_id=corpus_id,
-                document_id=document_id,
-                embedder_path=embedder_path,
-                must_have_text=must_have_text,
-                embed_dim=embed_dim,
-                **kwargs,
-            )
-        elif framework == AgentFramework.PYDANTIC_AI:
+        if framework == AgentFramework.PYDANTIC_AI:
             from opencontractserver.llms.vector_stores.pydantic_ai_vector_stores import (
                 PydanticAIAnnotationVectorStore,
             )
@@ -107,7 +93,7 @@ class UnifiedVectorStoreFactory:
 
 # Convenience functions for backward compatibility
 def create_vector_store(
-    framework: Union[AgentFramework, str] = AgentFramework.LLAMA_INDEX, **kwargs
+    framework: Union[AgentFramework, str] = AgentFramework.PYDANTIC_AI, **kwargs
 ) -> Any:
     """Create a vector store (backward compatibility wrapper)."""
     if isinstance(framework, str):

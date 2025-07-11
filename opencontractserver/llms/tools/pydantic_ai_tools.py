@@ -2,11 +2,13 @@
 
 import inspect
 import logging
+from collections.abc import Awaitable
 from typing import Any, Callable, Optional, get_type_hints
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai.tools import RunContext
 
+from opencontractserver.llms.exceptions import ToolConfirmationRequired
 from opencontractserver.llms.tools.tool_factory import CoreTool
 from opencontractserver.llms.vector_stores.core_vector_stores import (
     CoreAnnotationVectorStore,
@@ -39,6 +41,13 @@ class PydanticAIDependencies(BaseModel):
     corpus_id: Optional[int] = Field(default=None, description="Current corpus ID")
     vector_store: CoreAnnotationVectorStore = Field(
         default=None, description="Vector store instance"
+    )
+
+    # Optional hook so tools can surface nested stream events to the
+    # application layer (e.g. WebSocket) while a call is running.
+    stream_observer: Optional[Callable[[Any], Awaitable[None]]] = Field(
+        default=None,
+        description="Side-channel callback that receives UnifiedStreamEvent objects",
     )
 
 
@@ -101,15 +110,57 @@ class PydanticAIToolWrapper:
         # Create new signature
         new_sig = sig.replace(parameters=new_params)
 
+        # ------------------------------------------------------------------
+        # Helper that raises veto-gate exception when required.
+        # ------------------------------------------------------------------
+
+        def _maybe_raise(ctx: RunContext[PydanticAIDependencies], *a, **kw):
+            """Raise ToolConfirmationRequired if this CoreTool needs approval."""
+            if self.core_tool.requires_approval and not getattr(
+                ctx, "skip_approval_gate", False
+            ):
+                bound = inspect.signature(original_func).bind(*a, **kw)
+                bound.apply_defaults()
+
+                # Make arguments JSON-serialisable to avoid DB/JSONField errors.
+                def _serialise(obj):
+                    """Return JSON-friendly version of *obj* for metadata storage."""
+                    if isinstance(obj, (str, int, float, bool)) or obj is None:
+                        return obj
+                    if hasattr(obj, "model_dump"):
+                        return obj.model_dump()
+                    if isinstance(obj, list):
+                        return [_serialise(o) for o in obj]
+                    if isinstance(obj, tuple):
+                        return tuple(_serialise(o) for o in obj)
+                    if isinstance(obj, dict):
+                        return {k: _serialise(v) for k, v in obj.items()}
+                    # Fallback – string representation
+                    return str(obj)
+
+                serialised_args = {k: _serialise(v) for k, v in bound.arguments.items()}
+
+                # pydantic-ai attaches a unique tool_call_id to the context
+                tool_call_id = getattr(ctx, "tool_call_id", None)
+
+                raise ToolConfirmationRequired(
+                    tool_name=self.core_tool.name,
+                    tool_args=serialised_args,
+                    tool_call_id=tool_call_id,
+                )
+
+        # ------------------------------------------------------------------
+
         if inspect.iscoroutinefunction(original_func):
 
             async def async_wrapper(
                 ctx: RunContext[PydanticAIDependencies], *args, **kwargs
             ):
                 """Async wrapper for PydanticAI tools."""
+                # Trigger approval gate *before* attempting execution.
+                _maybe_raise(ctx, *args, **kwargs)
+
                 try:
-                    # Dependencies from ctx.deps can be accessed here if original_func needs them
-                    # For now, CoreTool functions are generic and don't use ctx.
                     return await original_func(*args, **kwargs)
                 except Exception as e:
                     logger.error(f"Error in tool {func_name}: {e}")
@@ -119,19 +170,25 @@ class PydanticAIToolWrapper:
             async_wrapper.__name__ = func_name
             async_wrapper.__doc__ = original_func.__doc__ or self._metadata.description
             async_wrapper.__signature__ = new_sig
-            async_wrapper.__annotations__ = getattr(
-                original_func, "__annotations__", {}
-            )
-
+            # Ensure the injected ``ctx`` parameter has a proper annotation so
+            # that Pydantic-AI's `_takes_ctx` helper can detect it.
+            _anns = dict(getattr(original_func, "__annotations__", {}))
+            _anns.setdefault("ctx", RunContext[PydanticAIDependencies])
+            async_wrapper.__annotations__ = _anns
+            # Attach reference to the wrapper for approval checking
+            async_wrapper._pydantic_ai_wrapper = self
+            async_wrapper.core_tool = self.core_tool
             return async_wrapper
         else:
             # Convert sync function to async
+
             async def sync_to_async_wrapper(
                 ctx: RunContext[PydanticAIDependencies], *args, **kwargs
             ):
                 """Sync to async wrapper for PydanticAI tools."""
+                _maybe_raise(ctx, *args, **kwargs)
+
                 try:
-                    # Dependencies from ctx.deps can be accessed here if original_func needs them
                     return original_func(*args, **kwargs)
                 except Exception as e:
                     logger.error(f"Error in tool {func_name}: {e}")
@@ -143,9 +200,12 @@ class PydanticAIToolWrapper:
                 original_func.__doc__ or self._metadata.description
             )
             sync_to_async_wrapper.__signature__ = new_sig
-            sync_to_async_wrapper.__annotations__ = getattr(
-                original_func, "__annotations__", {}
-            )
+            _anns_sync = dict(getattr(original_func, "__annotations__", {}))
+            _anns_sync.setdefault("ctx", RunContext[PydanticAIDependencies])
+            sync_to_async_wrapper.__annotations__ = _anns_sync
+            # Attach reference to the wrapper for approval checking
+            sync_to_async_wrapper._pydantic_ai_wrapper = self
+            sync_to_async_wrapper.core_tool = self.core_tool
 
             return sync_to_async_wrapper
 
@@ -218,6 +278,9 @@ class PydanticAIToolFactory:
         name: Optional[str] = None,
         description: Optional[str] = None,
         parameter_descriptions: Optional[dict[str, str]] = None,
+        *,
+        requires_approval: bool = False,
+        requires_corpus: bool = False,
     ) -> Callable:
         """Create a PydanticAI-compatible callable tool directly from a Python function.
 
@@ -226,6 +289,8 @@ class PydanticAIToolFactory:
             name: Optional custom name
             description: Optional custom description
             parameter_descriptions: Optional parameter descriptions
+            requires_approval: Whether the tool requires approval
+            requires_corpus: Whether the tool requires a corpus_id to function
 
         Returns:
             PydanticAI-compatible callable function
@@ -235,6 +300,8 @@ class PydanticAIToolFactory:
             name=name,
             description=description,
             parameter_descriptions=parameter_descriptions,
+            requires_approval=requires_approval,
+            requires_corpus=requires_corpus,
         )
         return PydanticAIToolWrapper(core_tool).callable_function
 
@@ -286,6 +353,7 @@ class PydanticAIToolFactory:
             name=name,
             description=description,
             parameter_descriptions=parameter_descriptions,
+            requires_corpus=False,
         )
 
 
@@ -319,6 +387,7 @@ def pydantic_ai_tool(
             name=name,
             description=description,
             parameter_descriptions=parameter_descriptions,
+            requires_corpus=False,
         )
 
     return decorator
@@ -346,6 +415,7 @@ def create_pydantic_ai_tool_from_func(
         name=name,
         description=description,
         parameter_descriptions=parameter_descriptions,
+        requires_corpus=False,
     )
 
 

@@ -113,7 +113,7 @@ class TestOpenContractsAnalyzers(TransactionTestCase):
         # Test that we can create an Analyzer with only task_name
         Analyzer(
             description="Valid Analyzer with Task",
-            task_name="opencontractserver.tasks.data_extract_tasks.oc_llama_index_doc_query",
+            task_name="opencontractserver.tasks.data_extract_tasks.doc_extract_query_task",
             creator=self.user,
             manifest={},
         )

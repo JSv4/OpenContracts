@@ -14,6 +14,9 @@ class TestContext:
     def __init__(self, user):
         self.user = user
 
+    def build_absolute_uri(self, location=None):
+        return "http://www.IAmNotARealURL.com"
+
 
 class CorpusQueryMutationTestCase(TestCase):
     def setUp(self):
@@ -29,6 +32,14 @@ class CorpusQueryMutationTestCase(TestCase):
             pdf_file="path/to/file.pdf",
             creator=self.user,
         )
+
+        # Add initial markdown description and a revision using update_description()
+        initial_md = "# Heading\n\nInitial description"
+        self.corpus.update_description(new_content=initial_md, author=self.user)
+
+        # Create a second revision
+        second_md = "# Heading\n\nUpdated description v2"
+        self.corpus.update_description(new_content=second_md, author=self.user)
 
     def test_corpus_query(self):
         corpus_query = CorpusQuery.objects.create(
@@ -95,3 +106,40 @@ class CorpusQueryMutationTestCase(TestCase):
         self.assertIn(
             "What is the population of Germany?", [q["node"]["query"] for q in queries]
         )
+
+    def test_corpus_description_and_revisions(self):
+        """Ensure mdDescription file link and descriptionRevisions list are returned."""
+
+        query = """
+            query($id: ID!) {
+                corpus(id: $id) {
+                    id
+                    mdDescription
+                    descriptionRevisions {
+                        version
+                        snapshot
+                    }
+                }
+            }
+        """
+
+        variables = {"id": to_global_id("CorpusType", self.corpus.id)}
+
+        result = self.client.execute(query, variables=variables)
+
+        self.assertIsNone(result.get("errors"))
+
+        corpus_data = result["data"]["corpus"]
+
+        # mdDescription should be a non-empty string (URL).
+        self.assertTrue(
+            corpus_data["mdDescription"].startswith("http")
+            or corpus_data["mdDescription"].startswith("/")
+        )
+
+        revisions = corpus_data["descriptionRevisions"]
+        # Expect 2 revisions (initial + second)
+        self.assertEqual(len(revisions), 2)
+
+        versions = [rev["version"] for rev in revisions]
+        self.assertListEqual(versions, [1, 2])

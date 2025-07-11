@@ -17,8 +17,6 @@ import {
 } from "../../context/UISettingsAtom";
 import { useDeleteAnnotation } from "../../hooks/AnnotationHooks";
 import { HighlightItem } from "../../sidebar/HighlightItem";
-import { ViewSettingsPopup } from "../../../widgets/popups/ViewSettingsPopup";
-import { LabelDisplayBehavior } from "../../../../types/graphql-api";
 import { FetchMoreOnVisible } from "../../../widgets/infinite_scroll/FetchMoreOnVisible";
 import { PlaceholderCard } from "../../../placeholders/PlaceholderCard";
 import { useVisibleAnnotations } from "../../hooks/useVisibleAnnotations";
@@ -173,14 +171,13 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
     const ref = useCallback(
       (el: HTMLLIElement | null) => {
         if (!el) return;
-
         const measured = Math.round(el.getBoundingClientRect().height);
 
-        /* Update height only if it changed by ≥1 px.                       *
-         * Use functional state to avoid stale closure problems.            */
+        // update ONLY if row had not been measured before
         setRowHeights((prev) => {
-          if (index >= prev.length) return prev; // safety
-          if (Math.abs(prev[index] - measured) < 1) return prev; // no change
+          if (index >= prev.length) return prev;
+          if (prev[index] !== DEFAULT_ROW_HEIGHT) return prev; // already stable
+          if (Math.abs(prev[index] - measured) < 1) return prev; // same
           const next = [...prev];
           next[index] = measured;
           return next;
@@ -207,27 +204,6 @@ export const AnnotationList: React.FC<AnnotationListProps> = ({
   /* ------------------------------------------------------------------ */
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* ①  View settings are now always visible */}
-      <ViewSettingsPopup
-        label_display_options={[
-          {
-            key: LabelDisplayBehavior.ALWAYS,
-            text: "Always",
-            value: LabelDisplayBehavior.ALWAYS,
-          },
-          {
-            key: LabelDisplayBehavior.ON_HOVER,
-            text: "On Hover",
-            value: LabelDisplayBehavior.ON_HOVER,
-          },
-          {
-            key: LabelDisplayBehavior.HIDE,
-            text: "Never",
-            value: LabelDisplayBehavior.HIDE,
-          },
-        ]}
-      />
-
       <ListViewport ref={viewportRef}>
         {/* ---------------- case: no matching annotations --------------- */}
         {visibleAnnotations.length === 0 ? (

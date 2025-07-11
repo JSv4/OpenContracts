@@ -47,6 +47,7 @@ jobs:
 
   pytest:
     runs-on: ubuntu-latest
+    timeout-minutes: 180
 
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -54,16 +55,32 @@ jobs:
         with:
           # this might remove tools that are actually needed,
           # if set to "true" but frees about 6 GB
-          tool-cache: false
+          tool-cache: true
 
           # all of these default to true, but feel free to set to
           # "false" if necessary for your workflow
-          android: false
-          dotnet: false
-          haskell: false
+          android: true
+          dotnet: true
+          haskell: true
           large-packages: true
           docker-images: true
           swap-storage: true
+
+      - name: Remove additional unnecessary tools
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/local/julia*
+          sudo rm -rf /usr/share/miniconda
+          sudo rm -rf /usr/local/share/chromium
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /opt/hostedtoolcache
+          df -h
 
       - name: Checkout Code Repository
         uses: actions/checkout@v4.2.2
@@ -74,18 +91,35 @@ jobs:
           ci_env=`bash <(curl -s https://codecov.io/env)`
           echo "$ci_env"
 
+      - name: Delete frontend files
+        run: |
+          rm -rf docs/
+          rm -rf frontend/
+          rm -rf site/
+
+      - name: Remove CodeQL bundle
+        run: sudo rm -rf /opt/hostedtoolcache/CodeQL
+
+      - name: Remove pip cache
+        run: |
+          pip cache dir
+          pip cache purge
+
       - name: Build the Stack
         run:  docker compose -f test.yml build
 
-      - name: Clean Docker build cache and networks
+      - name: Aggressive Docker cleanup after build
         run: |
-          docker builder prune -f
-          docker network prune -f
-          df -h
-
-      - name: Clean Docker volumes
-        run: |
-          docker volume prune -f
+          # Remove all build cache
+          docker builder prune -af
+          # Remove any dangling images
+          docker image prune -af
+          # List all images to see what we have
+          docker images
+          # Clean build cache
+          docker buildx prune -af
+          # Final system prune
+          docker system prune -af --volumes
           df -h
 
       - name: Run DB Migrations
@@ -94,37 +128,20 @@ jobs:
       - name: Collect Static Files
         run: docker compose -f test.yml run --rm django python manage.py collectstatic
 
-      # Configure PostgreSQL for better stability in CI
-      - name: Configure PostgreSQL for CI
-        run: |
-          # Create a custom postgresql.conf with optimized settings for CI
-          cat << EOF > pg_config.conf
-          max_connections = 300
-          shared_buffers = 256MB
-          work_mem = 16MB
-          maintenance_work_mem = 64MB
-          effective_cache_size = 512MB
-          idle_in_transaction_session_timeout = 120000  # 2 minutes
-          statement_timeout = 120000  # 2 minutes
-          tcp_keepalives_idle = 30
-          tcp_keepalives_interval = 10
-          tcp_keepalives_count = 10
-          synchronous_commit = off
-          fsync = off
-          full_page_writes = off
-          EOF
-
-          # Copy the config file into the container
-          docker cp pg_config.conf $(docker compose -f test.yml ps -q postgres):/tmp/pg_config.conf
-
-          # Apply the settings and restart PostgreSQL
-          docker compose -f test.yml exec -T postgres bash -c "cat /tmp/pg_config.conf >> /var/lib/postgresql/data/postgresql.conf"
-          docker compose -f test.yml restart postgres
-          sleep 15  # Give PostgreSQL time to restart
-
       - name: Verify Docker Containers
         run: |
           docker compose -f test.yml ps
+
+      - name: Final cleanup before tests
+        run: |
+          # Remove any stopped containers
+          docker container prune -f
+          # Remove unused networks
+          docker network prune -f
+          # Show current disk usage
+          df -h
+          # Show docker disk usage
+          docker system df
 
       - name: Inspect Docker Network
         run: |
@@ -142,9 +159,28 @@ jobs:
           name: docker-compose-logs
           path: docker-compose-logs.txt
 
-      - name: Build Pytest Coverage File
+      - name: Log Disk Space Before Pytest
+        run: df -h
+
+      - name: Check Container Health
         run: |
-          docker compose -f test.yml run django coverage run -m pytest --cov-report=xml --cov
+          echo "=== Docker containers status ==="
+          docker compose -f test.yml ps
+          echo "=== Container logs (last 20 lines each) ==="
+          for container in $(docker compose -f test.yml ps -q); do
+            name=$(docker inspect -f '{{.Name}}' $container | sed 's/^\///')
+            echo "--- Logs for $name ---"
+            docker logs --tail 20 $container 2>&1 || true
+          done
+          echo "=== Memory usage ==="
+          docker stats --no-stream
+          free -h
+
+      - name: Build Pytest Coverage File
+        timeout-minutes: 100
+        run: |
+          # Run the full test suite
+          docker compose -f test.yml run django coverage run -m pytest --cov-report=xml --cov -x -v
 
       - name: Upload Coverage Reports to Codecov
         env:

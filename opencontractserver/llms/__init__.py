@@ -16,7 +16,7 @@ Examples:
     # Advanced configuration
     agent = await agents.for_document(
         document=123,
-        framework="llama_index",
+        framework="pydantic_ai",
         user_id=789,
         model="gpt-4",
         system_prompt="You are a legal expert...",

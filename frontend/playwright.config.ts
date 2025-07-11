@@ -13,8 +13,8 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./tests",
-  /* Add testMatch to find both spec and component test files */
-  testMatch: ["**/*.spec.ts", "**/*.ct.tsx"],
+  /* Only match spec files for e2e tests, component tests should use playwright-ct.config.ts */
+  testMatch: ["**/*.spec.ts"],
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */

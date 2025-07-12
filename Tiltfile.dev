@@ -1,0 +1,164 @@
+# Tiltfile.dev for OpenContracts development workflow
+# Includes live reload for Django, frontend, and workers
+# Run with: tilt up -f Tiltfile.dev
+
+load('ext://restart_process', 'docker_build_with_restart')
+
+# Include base infrastructure
+include('./Tiltfile')
+
+REGISTRY_PORT = '5005'
+
+# Django application with live reload
+docker_build_with_restart(
+    'localhost:{}/opencontracts-django'.format(REGISTRY_PORT),
+    context='.',
+    dockerfile='./compose/local/django/Dockerfile',
+    entrypoint=['/entrypoint', '/start'],
+    only=[
+        './requirements',
+        './opencontractserver',
+        './config',
+        './manage.py',
+        './compose/local/django',
+        './compose/production/django/entrypoint',
+        './model_preloaders',
+        './setup_codecov.sh'
+    ],
+    live_update=[
+        sync('./opencontractserver', '/app/opencontractserver'),
+        sync('./config', '/app/config'),
+        sync('./manage.py', '/app/manage.py'),
+        run('python manage.py migrate', trigger=['./opencontractserver/*/migrations/'])
+    ]
+)
+
+# Django deployment
+k8s_yaml('./k8s/dev/django-deployment.yaml')
+
+k8s_resource('django', port_forwards='8000:8000')
+
+# Celery Worker with live reload
+docker_build_with_restart(
+    'localhost:{}/opencontracts-celeryworker'.format(REGISTRY_PORT),
+    context='.',
+    dockerfile='./compose/local/django/Dockerfile',
+    entrypoint=['/entrypoint', '/start-celeryworker'],
+    only=[
+        './requirements',
+        './opencontractserver',
+        './config',
+        './manage.py',
+        './compose/local/django',
+        './compose/production/django/entrypoint',
+        './model_preloaders',
+        './setup_codecov.sh'
+    ],
+    live_update=[
+        sync('./opencontractserver', '/app/opencontractserver'),
+        sync('./config', '/app/config')
+    ]
+)
+
+k8s_yaml('./k8s/dev/celeryworker-deployment.yaml')
+
+k8s_resource('celeryworker')
+
+# Celery Beat scheduler
+docker_build_with_restart(
+    'localhost:{}/opencontracts-celerybeat'.format(REGISTRY_PORT),
+    context='.',
+    dockerfile='./compose/local/django/Dockerfile',
+    entrypoint=['/entrypoint', '/start-celerybeat'],
+    only=[
+        './requirements',
+        './opencontractserver',
+        './config',
+        './manage.py',
+        './compose/local/django',
+        './compose/production/django/entrypoint',
+        './model_preloaders',
+        './setup_codecov.sh'
+    ],
+    live_update=[
+        sync('./opencontractserver', '/app/opencontractserver'),
+        sync('./config', '/app/config')
+    ]
+)
+
+k8s_yaml('./k8s/dev/celerybeat-deployment.yaml')
+
+k8s_resource('celerybeat')
+
+# Flower monitoring
+docker_build_with_restart(
+    'localhost:{}/opencontracts-flower'.format(REGISTRY_PORT),
+    context='.',
+    dockerfile='./compose/local/django/Dockerfile',
+    entrypoint=['/entrypoint', '/start-flower'],
+    only=[
+        './requirements',
+        './opencontractserver',
+        './config',
+        './manage.py',
+        './compose/local/django',
+        './compose/production/django/entrypoint',
+        './model_preloaders',
+        './setup_codecov.sh'
+    ],
+    live_update=[
+        sync('./opencontractserver', '/app/opencontractserver'),
+        sync('./config', '/app/config')
+    ]
+)
+
+k8s_yaml('./k8s/dev/flower-deployment.yaml')
+
+k8s_resource('flower', port_forwards='5555:5555')
+
+# Frontend with live reload
+docker_build_with_restart(
+    'localhost:{}/opencontracts-frontend'.format(REGISTRY_PORT),
+    context='./frontend',
+    dockerfile='./frontend/Dockerfile',
+    entrypoint=['/bin/sh', '/usr/share/nginx/html/entrypoint.sh'],
+    live_update=[
+        sync('./frontend/src', '/app/src'),
+        sync('./frontend/public', '/app/public'),
+        sync('./frontend/package.json', '/app/package.json'),
+        run('cd /app && yarn install', trigger=['./frontend/package.json']),
+        run('cd /app && yarn build', trigger=['./frontend/src', './frontend/public'])
+    ]
+)
+
+k8s_yaml('./k8s/dev/frontend-deployment.yaml')
+
+k8s_resource('frontend', port_forwards='3000:3000')
+
+# Resource grouping for better organization
+k8s_resource(
+    new_name='opencontracts-core',
+    objects=[
+        'django-config:configmap',
+        'postgres-config:configmap', 
+        'frontend-config:configmap',
+        'django-secrets:secret',
+        'postgres-secrets:secret',
+        'postgres-data-pvc:persistentvolumeclaim',
+        'postgres-backups-pvc:persistentvolumeclaim'
+    ]
+)
+
+print("🚀 OpenContracts development environment ready!")
+print("📊 Django API: http://localhost:8000")
+print("🎨 Frontend: http://localhost:3000")  
+print("🌸 Flower (Celery monitoring): http://localhost:5555")
+print("🔄 Live reload enabled for Django, Celery workers, and frontend")
+print("💾 PostgreSQL data persisted in Kind cluster")
+print("")
+print("🛠️  Development commands:")
+print("   - Django shell: kubectl exec -it deployment/django -- python manage.py shell")
+print("   - View logs: tilt logs <service-name>")
+print("   - Database access: kubectl port-forward service/postgres 5432:5432")
+print("")
+print("🧹 To cleanup: tilt down && ctlptl delete cluster kind-opencontracts-local")

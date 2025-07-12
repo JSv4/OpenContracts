@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nlm-ingestor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nlm-ingestor
+  template:
+    metadata:
+      labels:
+        app: nlm-ingestor
+    spec:
+      containers:
+      - name: nlm-ingestor
+        image: jscrudato/nlm-ingestor-opencontracts
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nlm-ingestor
+spec:
+  selector:
+    app: nlm-ingestor
+  ports:
+  - port: 8000
+    targetPort: 8000

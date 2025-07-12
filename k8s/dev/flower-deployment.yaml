@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flower
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flower
+  template:
+    metadata:
+      labels:
+        app: flower
+    spec:
+      containers:
+      - name: flower
+        image: localhost:5005/opencontracts-flower
+        ports:
+        - containerPort: 5555
+        envFrom:
+        - configMapRef:
+            name: django-config
+        - secretRef:
+            name: django-secrets
+        env:
+        - name: POSTGRES_HOST
+          value: "postgres"
+        - name: REDIS_URL
+          value: "redis://redis:6379/0"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flower
+spec:
+  selector:
+    app: flower
+  ports:
+  - port: 5555
+    targetPort: 5555

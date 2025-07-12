@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: django-config
+data:
+  USE_DOCKER: "yes"
+  IPYTHONDIR: "/app/.ipython"
+  DJANGO_DEBUG: "True"
+  DJANGO_ADMIN_URL: "admin/ItChL90Tnz71PZARMPtmZifuQczgho6l/"
+  DJANGO_ALLOWED_HOSTS: "django,127.0.0.1,localhost,0.0.0.0"
+  USE_ANALYZER: "True"
+  CALLBACK_ROOT_URL_FOR_ANALYZER: "http://localhost:8000"
+  USE_AWS: "True"
+  AWS_STORAGE_BUCKET_NAME: "gremlin123"
+  AWS_S3_REGION_NAME: "us-east-1"
+  REDIS_URL: "redis://redis:6379/0"
+  USE_AUTH0: "True"
+  AUTH0_CLIENT_ID: "318GitavTaWR7d17h4DKuoCme9VgjYDG"
+  AUTH0_API_AUDIENCE: "https://opensource.legal/contracts"
+  AUTH0_DOMAIN: "dev-7ranai11.auth0.com"
+  AUTH0_M2M_MANAGEMENT_API_ID: "gYmXqB6peEDVXtbsHyxuALF0Lq9Yu4vp"
+  AUTH0_M2M_MANAGEMENT_GRANT_TYPE: "client_credentials"
+  USE_API_KEY_AUTH: "False"
+  API_TOKEN_HEADER_NAME: "X-API-KEY"
+  API_TOKEN_PREFIX: "Key"
+  NLM_INGESTOR_ACTIVE: "True"
+  OPENAI_MODEL: "gpt-4o"
+  HF_EMBEDDINGS_ENDPOINT: "https://f4et00qvnwj1rnol.us-east-1.aws.endpoints.huggingface.cloud"
+  DOCLING_MODELS_PATH: "/models/docling"
+  SENTENCE_TRANSFORMER_MODELS_PATH: "/models/sentence-transformers"

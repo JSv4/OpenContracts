@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celeryworker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celeryworker
+  template:
+    metadata:
+      labels:
+        app: celeryworker
+    spec:
+      containers:
+      - name: celeryworker
+        image: localhost:5005/opencontracts-celeryworker
+        envFrom:
+        - configMapRef:
+            name: django-config
+        - secretRef:
+            name: django-secrets
+        - configMapRef:
+            name: postgres-config
+        - secretRef:
+            name: postgres-secrets
+        env:
+        - name: POSTGRES_HOST
+          value: "postgres"
+        - name: REDIS_URL
+          value: "redis://redis:6379/0"

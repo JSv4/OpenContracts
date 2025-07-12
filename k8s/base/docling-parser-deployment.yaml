@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docling-parser
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: docling-parser
+  template:
+    metadata:
+      labels:
+        app: docling-parser
+    spec:
+      containers:
+      - name: docling-parser
+        image: jscrudato/docsling-local
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docling-parser
+spec:
+  selector:
+    app: docling-parser
+  ports:
+  - port: 8000
+    targetPort: 8000

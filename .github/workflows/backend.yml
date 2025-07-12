@@ -5,6 +5,10 @@ env:
   DOCKER_BUILDKIT: 1
   COMPOSE_DOCKER_CLI_BUILD: 1
   SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL: True
+  # Kind cluster settings
+  KIND_CLUSTER_NAME: opencontracts-ci
+  REGISTRY_NAME: opencontracts-registry
+  REGISTRY_PORT: 5005
 
 defaults:
  run:
@@ -100,96 +104,139 @@ jobs:
       - name: Remove CodeQL bundle
         run: sudo rm -rf /opt/hostedtoolcache/CodeQL
 
-      - name: Remove pip cache
-        run: |
-          pip cache dir
-          pip cache purge
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements/base.txt
+            requirements/local.txt
 
-      - name: Build the Stack
-        run:  docker compose -f test.yml build
-
-      - name: Aggressive Docker cleanup after build
+      - name: Install Python dependencies
         run: |
-          # Remove all build cache
-          docker builder prune -af
-          # Remove any dangling images
-          docker image prune -af
-          # List all images to see what we have
-          docker images
-          # Clean build cache
-          docker buildx prune -af
-          # Final system prune
-          docker system prune -af --volumes
-          df -h
+          pip install -r requirements/local.txt
+          pip install coverage pytest pytest-cov codecov
+
+      - name: Install kind
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x ./kubectl
+          sudo mv ./kubectl /usr/local/bin/kubectl
+
+      - name: Install ctlptl
+        run: |
+          curl -fsSL https://github.com/tilt-dev/ctlptl/releases/download/v0.8.29/ctlptl.0.8.29.linux.x86_64.tar.gz | sudo tar -xzv -C /usr/local/bin ctlptl
+
+      - name: Install Tilt
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash
+
+      - name: Setup Kind cluster with registry
+        run: |
+          # Use the tilt-setup.py script to create cluster and registry
+          python3 tilt-setup.py
+
+      - name: Wait for cluster to be ready
+        run: |
+          kubectl wait --for=condition=Ready nodes --all --timeout=120s
+          kubectl get nodes
+
+      - name: Build and load images
+        run: |
+          # Build postgres image
+          docker build -t localhost:${{ env.REGISTRY_PORT }}/opencontracts-postgres:latest -f ./compose/production/postgres/Dockerfile .
+          docker push localhost:${{ env.REGISTRY_PORT }}/opencontracts-postgres:latest
+          
+          # Build django image
+          docker build -t localhost:${{ env.REGISTRY_PORT }}/opencontracts-django:latest -f ./compose/local/django/Dockerfile .
+          docker push localhost:${{ env.REGISTRY_PORT }}/opencontracts-django:latest
+
+      - name: Start Tilt
+        run: |
+          # Start Tilt in CI mode with test configuration
+          OPENCONTRACTS_ENV=test tilt ci --port=0 -f Tiltfile.test
+
+      - name: Wait for services to be ready
+        run: |
+          # Wait for all deployments to be ready
+          kubectl wait --for=condition=available --timeout=300s deployment/postgres
+          kubectl wait --for=condition=available --timeout=300s deployment/redis
+          kubectl wait --for=condition=available --timeout=300s deployment/django
+          kubectl wait --for=condition=available --timeout=300s deployment/celeryworker
+          kubectl wait --for=condition=available --timeout=300s deployment/celerybeat
+          kubectl wait --for=condition=available --timeout=300s deployment/nlm-ingestor
+          kubectl wait --for=condition=available --timeout=300s deployment/docling-parser
+          kubectl wait --for=condition=available --timeout=300s deployment/vector-embedder
 
       - name: Run DB Migrations
-        run:  docker compose -f test.yml run --rm django python manage.py migrate
+        run: |
+          kubectl exec deployment/django -- python manage.py migrate
 
       - name: Collect Static Files
-        run: docker compose -f test.yml run --rm django python manage.py collectstatic
-
-      - name: Verify Docker Containers
         run: |
-          docker compose -f test.yml ps
+          kubectl exec deployment/django -- python manage.py collectstatic --noinput
 
-      - name: Final cleanup before tests
+      - name: Check Pod Health
         run: |
-          # Remove any stopped containers
-          docker container prune -f
-          # Remove unused networks
-          docker network prune -f
-          # Show current disk usage
-          df -h
-          # Show docker disk usage
-          docker system df
+          echo "=== Pod status ==="
+          kubectl get pods
+          echo "=== Pod descriptions ==="
+          kubectl describe pods
+          echo "=== Recent events ==="
+          kubectl get events --sort-by=.metadata.creationTimestamp
 
-      - name: Inspect Docker Network
-        run: |
-          docker network inspect $(docker compose -f test.yml ps -q | xargs docker inspect --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' | uniq)
-
-      - name: Capture Docker Compose Logs
+      - name: Capture Tilt Logs
         if: failure()
         run: |
-          docker compose -f test.yml logs --no-color > docker-compose-logs.txt
+          tilt logs > tilt-logs.txt
+          kubectl logs -l app=django --all-containers=true > django-logs.txt
+          kubectl logs -l app=postgres --all-containers=true > postgres-logs.txt
 
-      - name: Upload Docker Compose Logs
+      - name: Upload Tilt Logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: docker-compose-logs
-          path: docker-compose-logs.txt
+          name: tilt-logs
+          path: |
+            tilt-logs.txt
+            django-logs.txt
+            postgres-logs.txt
 
       - name: Log Disk Space Before Pytest
         run: df -h
 
-      - name: Check Container Health
-        run: |
-          echo "=== Docker containers status ==="
-          docker compose -f test.yml ps
-          echo "=== Container logs (last 20 lines each) ==="
-          for container in $(docker compose -f test.yml ps -q); do
-            name=$(docker inspect -f '{{.Name}}' $container | sed 's/^\///')
-            echo "--- Logs for $name ---"
-            docker logs --tail 20 $container 2>&1 || true
-          done
-          echo "=== Memory usage ==="
-          docker stats --no-stream
-          free -h
-
       - name: Build Pytest Coverage File
         timeout-minutes: 100
         run: |
+          # Port forward to django service
+          kubectl port-forward service/django 8000:8000 &
+          sleep 5
+          
           # Run the full test suite
-          docker compose -f test.yml run django coverage run -m pytest --cov-report=xml --cov -x -v
+          kubectl exec deployment/django -- coverage run -m pytest --cov-report=xml --cov -x -v
 
       - name: Upload Coverage Reports to Codecov
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           COMMIT_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || env.GITHUB_SHA }}
         run:  |
+              # Install codecov in the container first
+              kubectl exec deployment/django -- pip install codecov
               # use bash variable expression to get the substring
               ci_env=`bash <(curl -s https://codecov.io/env)`
-              docker compose -f test.yml run $ci_env django /bin/codecov -v -t ${CODECOV_TOKEN} -R . -f coverage.xml -C ${COMMIT_SHA}
+              kubectl exec deployment/django -- bash -c "$ci_env codecov -v -t ${CODECOV_TOKEN} -R . -f coverage.xml -C ${COMMIT_SHA}"
 
       - name: Tear down the Stack
-        run:  docker compose -f test.yml down
+        run:  |
+          # Delete the kind cluster
+          kind delete cluster --name=${{ env.KIND_CLUSTER_NAME }}
+          # Stop and remove the registry
+          docker stop ${{ env.REGISTRY_NAME }} || true
+          docker rm ${{ env.REGISTRY_NAME }} || true

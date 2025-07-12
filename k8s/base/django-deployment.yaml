@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      containers:
+      - name: django
+        image: localhost:5005/opencontracts-django
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: django-config
+        - secretRef:
+            name: django-secrets
+        - configMapRef:
+            name: postgres-config
+        - secretRef:
+            name: postgres-secrets
+        env:
+        - name: POSTGRES_HOST
+          value: "postgres"
+        - name: REDIS_URL
+          value: "redis://redis:6379/0"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: django
+spec:
+  selector:
+    app: django
+  ports:
+  - port: 8000
+    targetPort: 8000

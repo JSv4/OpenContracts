@@ -1,0 +1,85 @@
+# Tiltfile.test for OpenContracts CI/test environment
+# Used for running tests in GitHub Actions with Kind
+
+# Configuration
+CLUSTER_NAME = 'kind-opencontracts-ci'
+REGISTRY_NAME = 'opencontracts-registry'
+REGISTRY_PORT = '5005'
+
+# Set environment to test
+os.environ['OPENCONTRACTS_ENV'] = 'test'
+
+# Generate K8s configs and secrets from .env files
+# Django configurations
+k8s_yaml(local('python3 tilt-helpers.py django-secrets', quiet=True))
+k8s_yaml(local('python3 tilt-helpers.py django-config', quiet=True))
+
+# PostgreSQL configurations
+k8s_yaml(local('python3 tilt-helpers.py postgres-secrets', quiet=True))
+k8s_yaml(local('python3 tilt-helpers.py postgres-config', quiet=True))
+
+# Frontend configuration (not needed for tests)
+k8s_yaml(local('python3 tilt-helpers.py frontend-config', quiet=True))
+
+# Load static storage configuration
+k8s_yaml('./k8s/base/postgres-storage.yaml')
+
+# PostgreSQL deployment
+docker_build(
+    'localhost:{}/opencontracts-postgres'.format(REGISTRY_PORT),
+    context='.',
+    dockerfile='./compose/production/postgres/Dockerfile'
+)
+
+k8s_yaml('./k8s/base/postgres-deployment.yaml')
+k8s_resource('postgres', port_forwards='5432:5432')
+
+# Redis deployment
+k8s_yaml('./k8s/base/redis-deployment.yaml')
+k8s_resource('redis', port_forwards='6379:6379')
+
+# Django deployment with test settings
+docker_build(
+    'localhost:{}/opencontracts-django'.format(REGISTRY_PORT),
+    context='.',
+    dockerfile='./compose/local/django/Dockerfile',
+    build_args={'GITHUB_ACTIONS': 'true'}
+)
+
+# Load Django k8s manifests with test overrides
+k8s_yaml('./k8s/base/django-deployment.yaml')
+k8s_yaml('./k8s/test/django-test-overrides.yaml')
+
+k8s_resource('django', 
+    port_forwards='8000:8000',
+    resource_deps=['postgres', 'redis']
+)
+
+# Celery worker deployment
+k8s_yaml('./k8s/base/celeryworker-deployment.yaml')
+k8s_yaml('./k8s/test/celeryworker-test-overrides.yaml')
+
+k8s_resource('celeryworker',
+    resource_deps=['postgres', 'redis']
+)
+
+# Celery beat deployment
+k8s_yaml('./k8s/base/celerybeat-deployment.yaml')
+k8s_yaml('./k8s/test/celerybeat-test-overrides.yaml')
+
+k8s_resource('celerybeat',
+    resource_deps=['postgres', 'redis']
+)
+
+# External microservices (use existing images)
+k8s_yaml('./k8s/base/nlm-ingestor-deployment.yaml')
+k8s_yaml('./k8s/base/docling-parser-deployment.yaml')
+k8s_yaml('./k8s/base/vector-embedder-deployment.yaml')
+
+k8s_resource('nlm-ingestor')
+k8s_resource('docling-parser')
+k8s_resource('vector-embedder')
+
+print("✅ Test environment configured")
+print("🧪 Running in test mode with .envs/.test configuration")
+print("📊 Coverage reports will be generated")

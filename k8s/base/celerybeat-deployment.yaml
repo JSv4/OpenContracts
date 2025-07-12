@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celerybeat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celerybeat
+  template:
+    metadata:
+      labels:
+        app: celerybeat
+    spec:
+      containers:
+      - name: celerybeat
+        image: localhost:5005/opencontracts-celerybeat
+        envFrom:
+        - configMapRef:
+            name: django-config
+        - secretRef:
+            name: django-secrets
+        - configMapRef:
+            name: postgres-config
+        - secretRef:
+            name: postgres-secrets
+        env:
+        - name: POSTGRES_HOST
+          value: "postgres"
+        - name: REDIS_URL
+          value: "redis://redis:6379/0"

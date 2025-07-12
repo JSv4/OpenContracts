@@ -77,6 +77,10 @@ if __name__ == "__main__":
     
     command = sys.argv[1]
     
+    # Determine environment from ENV variable or default to local
+    env = os.environ.get('OPENCONTRACTS_ENV', 'local')
+    env_dir = '.envs/.test' if env == 'test' else '.envs/.local'
+    
     if command == 'django-secrets':
         # Keys that should be in the Secret
         secret_keys = [
@@ -91,7 +95,7 @@ if __name__ == "__main__":
             'HF_TOKEN',
             'ANTHROPIC_API_KEY'
         ]
-        print(generate_secret('django-secrets', '.envs/.local/.django', secret_keys))
+        print(generate_secret('django-secrets', f'{env_dir}/.django', secret_keys))
     
     elif command == 'django-config':
         # Keys that should NOT be in the ConfigMap (they go in secrets)
@@ -104,19 +108,19 @@ if __name__ == "__main__":
             'HF_TOKEN',
             'ANTHROPIC_API_KEY'
         ]
-        print(generate_configmap('django-config', '.envs/.local/.django', exclude_keys=exclude_keys))
+        print(generate_configmap('django-config', f'{env_dir}/.django', exclude_keys=exclude_keys))
     
     elif command == 'postgres-secrets':
         secret_keys = ['POSTGRES_PASSWORD']
-        print(generate_secret('postgres-secrets', '.envs/.local/.postgres', secret_keys))
+        print(generate_secret('postgres-secrets', f'{env_dir}/.postgres', secret_keys))
     
     elif command == 'postgres-config':
         exclude_keys = ['POSTGRES_PASSWORD']
-        print(generate_configmap('postgres-config', '.envs/.local/.postgres', exclude_keys=exclude_keys))
+        print(generate_configmap('postgres-config', f'{env_dir}/.postgres', exclude_keys=exclude_keys))
     
     elif command == 'frontend-config':
         # Frontend config if it exists
-        frontend_env = '.envs/.local/.frontend'
+        frontend_env = f'{env_dir}/.frontend'
         if os.path.exists(frontend_env):
             print(generate_configmap('frontend-config', frontend_env))
         else:

@@ -12,9 +12,10 @@ import shutil
 from pathlib import Path
 
 # Configuration
-CLUSTER_NAME = "kind-opencontracts-local"
-REGISTRY_NAME = "opencontracts-registry"
-REGISTRY_PORT = "5005"
+import os
+CLUSTER_NAME = os.environ.get("KIND_CLUSTER_NAME", "kind-opencontracts-local")
+REGISTRY_NAME = os.environ.get("REGISTRY_NAME", "opencontracts-registry")
+REGISTRY_PORT = os.environ.get("REGISTRY_PORT", "5005")
 
 # Colors for output
 class Colors:

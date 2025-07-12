@@ -3,7 +3,7 @@ import logging
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import include, path
 from django.views import defaults as default_views
 from django.views.decorators.csrf import csrf_exempt
@@ -21,8 +21,14 @@ def home_redirect(request):
     return HttpResponseRedirect(new_url)
 
 
+def health_check(request):
+    """Health check endpoint for Kubernetes deployments."""
+    return HttpResponse("OK", content_type="text/plain")
+
+
 urlpatterns = [
     path("", home_redirect, name="home_redirect"),  # Root URL redirect to port 3000
+    path("health/", health_check, name="health_check"),  # Kubernetes health check
     path(settings.ADMIN_URL, admin.site.urls),
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=settings.DEBUG))),
     *(

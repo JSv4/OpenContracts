@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: django
+spec:
+  selector:
+    app: django
+  ports:
+  - port: 8000
+    targetPort: 8000

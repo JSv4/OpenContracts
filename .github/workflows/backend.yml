@@ -153,7 +153,7 @@ jobs:
           # Build postgres image
           docker build -t localhost:${{ env.REGISTRY_PORT }}/opencontracts-postgres:latest -f ./compose/production/postgres/Dockerfile .
           docker push localhost:${{ env.REGISTRY_PORT }}/opencontracts-postgres:latest
-          
+
           # Build django image
           docker build -t localhost:${{ env.REGISTRY_PORT }}/opencontracts-django:latest -f ./compose/local/django/Dockerfile .
           docker push localhost:${{ env.REGISTRY_PORT }}/opencontracts-django:latest
@@ -218,7 +218,7 @@ jobs:
           # Port forward to django service
           kubectl port-forward service/django 8000:8000 &
           sleep 5
-          
+
           # Run the full test suite
           kubectl exec deployment/django -- coverage run -m pytest --cov-report=xml --cov -x -v
 

@@ -35,6 +35,7 @@ docker_build_with_restart(
 
 # Django deployment
 k8s_yaml('./k8s/dev/django-deployment.yaml')
+k8s_yaml('./k8s/dev/django-service.yaml')
 
 k8s_resource('django', port_forwards='8000:8000')
 
@@ -113,6 +114,7 @@ docker_build_with_restart(
 )
 
 k8s_yaml('./k8s/dev/flower-deployment.yaml')
+k8s_yaml('./k8s/dev/flower-service.yaml')
 
 k8s_resource('flower', port_forwards='5555:5555')
 
@@ -132,6 +134,7 @@ docker_build_with_restart(
 )
 
 k8s_yaml('./k8s/dev/frontend-deployment.yaml')
+k8s_yaml('./k8s/dev/frontend-service.yaml')
 
 k8s_resource('frontend', port_forwards='3000:3000')
 
@@ -140,7 +143,7 @@ k8s_resource(
     new_name='opencontracts-core',
     objects=[
         'django-config:configmap',
-        'postgres-config:configmap', 
+        'postgres-config:configmap',
         'frontend-config:configmap',
         'django-secrets:secret',
         'postgres-secrets:secret',
@@ -151,7 +154,7 @@ k8s_resource(
 
 print("🚀 OpenContracts development environment ready!")
 print("📊 Django API: http://localhost:8000")
-print("🎨 Frontend: http://localhost:3000")  
+print("🎨 Frontend: http://localhost:3000")
 print("🌸 Flower (Celery monitoring): http://localhost:5555")
 print("🔄 Live reload enabled for Django, Celery workers, and frontend")
 print("💾 PostgreSQL data persisted in Kind cluster")

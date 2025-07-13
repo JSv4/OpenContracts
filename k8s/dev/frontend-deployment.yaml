@@ -23,14 +23,3 @@ spec:
         env:
         - name: OPEN_CONTRACTS_REACT_APP_API_ROOT_URL
           value: "http://localhost:8000"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend
-spec:
-  selector:
-    app: frontend
-  ports:
-  - port: 3000
-    targetPort: 3000

@@ -28,7 +28,7 @@ function Invoke-SafeCommand {
         [string]$Command,
         [bool]$ThrowOnError = $true
     )
-    
+
     try {
         Write-Host "Executing: $Command" -ForegroundColor Gray
         Invoke-Expression $Command
@@ -49,21 +49,21 @@ function Invoke-SafeCommand {
 
 function Test-Prerequisites {
     Write-Info "Checking prerequisites..."
-    
+
     $requiredTools = @{
         'ctlptl' = 'https://github.com/tilt-dev/ctlptl'
         'tilt' = 'https://docs.tilt.dev/install.html'
         'kind' = 'https://kind.sigs.k8s.io/docs/user/quick-start/'
         'kubectl' = 'https://kubernetes.io/docs/tasks/tools/'
     }
-    
+
     $missingTools = @()
     foreach ($tool in $requiredTools.Keys) {
         if (-not (Test-CommandExists $tool)) {
             $missingTools += @{Tool = $tool; Url = $requiredTools[$tool]}
         }
     }
-    
+
     if ($missingTools.Count -gt 0) {
         Write-Error "Missing required tools:"
         foreach ($missing in $missingTools) {
@@ -71,7 +71,7 @@ function Test-Prerequisites {
         }
         exit 1
     }
-    
+
     Write-Success "All prerequisites are installed"
 }
 
@@ -85,7 +85,7 @@ function Test-RegistryExists {
 
 function Initialize-Cluster {
     Write-Info "Setting up Kind cluster and local registry..."
-    
+
     # Create registry if it doesn't exist
     if (-not (Test-RegistryExists)) {
         Write-Info "Creating local registry..."
@@ -93,7 +93,7 @@ function Initialize-Cluster {
     } else {
         Write-Success "Registry $REGISTRY_NAME already exists"
     }
-    
+
     # Create cluster if it doesn't exist
     if (-not (Test-ClusterExists)) {
         Write-Info "Creating Kind cluster..."
@@ -101,7 +101,7 @@ function Initialize-Cluster {
     } else {
         Write-Success "Cluster $CLUSTER_NAME already exists"
     }
-    
+
     Write-Success "Cluster and registry setup complete"
 }
 
@@ -117,22 +117,22 @@ function Start-Development {
 
 function Remove-Environment {
     Write-Info "Cleaning up resources..."
-    
+
     # Stop Tilt
     Invoke-SafeCommand "tilt down" -ThrowOnError $false
-    
+
     # Delete cluster
     if (Test-ClusterExists) {
         Write-Info "Deleting cluster $CLUSTER_NAME..."
         Invoke-SafeCommand "ctlptl delete cluster kind --name $CLUSTER_NAME"
     }
-    
+
     # Delete registry
     if (Test-RegistryExists) {
         Write-Info "Deleting registry $REGISTRY_NAME..."
         Invoke-SafeCommand "ctlptl delete registry $REGISTRY_NAME"
     }
-    
+
     Write-Success "Cleanup complete"
 }
 
@@ -142,13 +142,13 @@ function Show-Info {
     Write-Host "  PowerShell: $($PSVersionTable.PSVersion)"
     Write-Host "  Working Directory: $(Get-Location)"
     Write-Host ""
-    
+
     Write-Info "Tilt Configuration:"
     Write-Host "  Cluster Name: $CLUSTER_NAME"
     Write-Host "  Registry Name: $REGISTRY_NAME"
     Write-Host "  Registry Port: $REGISTRY_PORT"
     Write-Host ""
-    
+
     Write-Info "Tool Status:"
     $tools = @('ctlptl', 'tilt', 'kind', 'kubectl', 'docker')
     foreach ($tool in $tools) {

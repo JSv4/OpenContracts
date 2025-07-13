@@ -17,14 +17,3 @@ spec:
         image: jscrudato/docsling-local
         ports:
         - containerPort: 8000
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: docling-parser
-spec:
-  selector:
-    app: docling-parser
-  ports:
-  - port: 8000
-    targetPort: 8000

@@ -31,14 +31,3 @@ spec:
           value: "postgres"
         - name: REDIS_URL
           value: "redis://redis:6379/0"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: django
-spec:
-  selector:
-    app: django
-  ports:
-  - port: 8000
-    targetPort: 8000

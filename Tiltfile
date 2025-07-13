@@ -22,7 +22,7 @@ k8s_yaml(local('python3 tilt-helpers.py postgres-config', quiet=True))
 k8s_yaml(local('python3 tilt-helpers.py frontend-config', quiet=True))
 
 # Load static storage configuration
-k8s_yaml('./k8s/base/postgres-storage.yaml')
+k8s_yaml(['./k8s/base/postgres-data-pvc.yaml', './k8s/base/postgres-backups-pvc.yaml'])
 
 # PostgreSQL deployment
 docker_build(
@@ -32,18 +32,23 @@ docker_build(
 )
 
 k8s_yaml('./k8s/base/postgres-deployment.yaml')
+k8s_yaml('./k8s/base/postgres-service.yaml')
 
 k8s_resource('postgres', port_forwards='5432:5432')
 
 # Redis deployment
 k8s_yaml('./k8s/base/redis-deployment.yaml')
+k8s_yaml('./k8s/base/redis-service.yaml')
 
 k8s_resource('redis')
 
 # External microservices (use existing images)
 k8s_yaml('./k8s/base/nlm-ingestor-deployment.yaml')
+k8s_yaml('./k8s/base/nlm-ingestor-service.yaml')
 k8s_yaml('./k8s/base/docling-parser-deployment.yaml')
+k8s_yaml('./k8s/base/docling-parser-service.yaml')
 k8s_yaml('./k8s/base/vector-embedder-deployment.yaml')
+k8s_yaml('./k8s/base/vector-embedder-service.yaml')
 
 k8s_resource('nlm-ingestor')
 k8s_resource('docling-parser')

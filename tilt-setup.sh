@@ -32,41 +32,41 @@ print_error() {
 
 check_prerequisites() {
     print_status "Checking prerequisites..."
-    
+
     # Check if ctlptl is installed
     if ! command -v ctlptl &> /dev/null; then
         print_error "ctlptl is not installed. Please install it first:"
         echo "  https://github.com/tilt-dev/ctlptl"
         exit 1
     fi
-    
+
     # Check if tilt is installed
     if ! command -v tilt &> /dev/null; then
         print_error "tilt is not installed. Please install it first:"
         echo "  https://docs.tilt.dev/install.html"
         exit 1
     fi
-    
+
     # Check if kind is installed
     if ! command -v kind &> /dev/null; then
         print_error "kind is not installed. Please install it first:"
         echo "  https://kind.sigs.k8s.io/docs/user/quick-start/"
         exit 1
     fi
-    
+
     # Check if kubectl is installed
     if ! command -v kubectl &> /dev/null; then
         print_error "kubectl is not installed. Please install it first:"
         echo "  https://kubernetes.io/docs/tasks/tools/"
         exit 1
     fi
-    
+
     print_success "All prerequisites are installed"
 }
 
 setup_cluster() {
     print_status "Setting up Kind cluster and local registry..."
-    
+
     # Create registry if it doesn't exist
     if ! ctlptl get registry $REGISTRY_NAME &> /dev/null; then
         print_status "Creating local registry..."
@@ -74,7 +74,7 @@ setup_cluster() {
     else
         print_success "Registry $REGISTRY_NAME already exists"
     fi
-    
+
     # Create cluster if it doesn't exist
     if ! ctlptl get cluster kind --name $CLUSTER_NAME &> /dev/null; then
         print_status "Creating Kind cluster..."
@@ -82,7 +82,7 @@ setup_cluster() {
     else
         print_success "Cluster $CLUSTER_NAME already exists"
     fi
-    
+
     print_success "Cluster and registry setup complete"
 }
 
@@ -98,22 +98,22 @@ start_development() {
 
 cleanup() {
     print_status "Cleaning up resources..."
-    
+
     # Stop Tilt
     tilt down 2>/dev/null || true
-    
+
     # Delete cluster
     if ctlptl get cluster kind --name $CLUSTER_NAME &> /dev/null; then
         print_status "Deleting cluster $CLUSTER_NAME..."
         ctlptl delete cluster kind --name $CLUSTER_NAME
     fi
-    
+
     # Delete registry
     if ctlptl get registry $REGISTRY_NAME &> /dev/null; then
         print_status "Deleting registry $REGISTRY_NAME..."
         ctlptl delete registry $REGISTRY_NAME
     fi
-    
+
     print_success "Cleanup complete"
 }
 
@@ -123,13 +123,13 @@ show_info() {
     echo "  Shell: $SHELL"
     echo "  Working Directory: $(pwd)"
     echo ""
-    
+
     print_status "Tilt Configuration:"
     echo "  Cluster Name: $CLUSTER_NAME"
     echo "  Registry Name: $REGISTRY_NAME"
     echo "  Registry Port: $REGISTRY_PORT"
     echo ""
-    
+
     print_status "Tool Status:"
     for tool in ctlptl tilt kind kubectl docker; do
         if command -v $tool &> /dev/null; then

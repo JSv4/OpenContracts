@@ -8,7 +8,7 @@ Install the following tools:
 
 - **Docker**: Container runtime
 - **Kind**: Local Kubernetes clusters - https://kind.sigs.k8s.io/docs/user/quick-start/
-- **ctlptl**: Cluster management - https://github.com/tilt-dev/ctlptl  
+- **ctlptl**: Cluster management - https://github.com/tilt-dev/ctlptl
 - **Tilt**: Development environment - https://docs.tilt.dev/install.html
 - **kubectl**: Kubernetes CLI - https://kubernetes.io/docs/tasks/tools/
 
@@ -31,7 +31,7 @@ Install the following tools:
 # Check prerequisites
 ./tilt-setup.sh check
 
-# Start full development environment  
+# Start full development environment
 ./tilt-setup.sh dev
 
 # Clean up when done
@@ -79,7 +79,7 @@ tilt up -f Tiltfile.dev
 - Adds development services with live reload:
   - Django API server
   - Celery worker
-  - Celery beat scheduler  
+  - Celery beat scheduler
   - Flower monitoring
   - React frontend
 - Port forwards:
@@ -111,7 +111,7 @@ Sensitive patterns automatically go to Secrets:
 - **Migrations**: Automatically applied when detected
 - **Requirements**: Requires image rebuild
 
-### Frontend  
+### Frontend
 - **Code changes**: `frontend/src/`, `frontend/public/` - automatic rebuild
 - **Dependencies**: `package.json` changes trigger `yarn install`
 

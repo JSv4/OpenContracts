@@ -59,7 +59,7 @@ docker_build(
     # If the image already exists (from pre-build), Tilt will use it
     pull=False,
     # Only rebuild on file changes
-    only=['./opencontractserver', './config', './requirements', './manage.py', './compose']
+    only=['./opencontractserver', './config', './requirements', './manage.py', './compose', './setup_codecov.sh', './model_preloaders', './pytest.ini', './setup.cfg']
 )
 
 # Configure resources

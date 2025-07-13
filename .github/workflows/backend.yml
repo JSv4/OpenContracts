@@ -148,21 +148,29 @@ jobs:
           kubectl wait --for=condition=Ready nodes --all --timeout=120s
           kubectl get nodes
 
+      - name: Pre-build Django image
+        run: |
+          # Build Django image before starting Tilt to avoid timeouts
+          docker build -t localhost:${{ env.REGISTRY_PORT }}/opencontracts-django:latest \
+            -f ./compose/local/django/Dockerfile \
+            --build-arg GITHUB_ACTIONS=true .
+          docker push localhost:${{ env.REGISTRY_PORT }}/opencontracts-django:latest
 
       - name: Start Tilt
         run: |
           # Start Tilt in CI mode with test configuration
-          OPENCONTRACTS_ENV=test tilt ci --port=0 -f Tiltfile.test
+          # Increased timeout for image builds
+          OPENCONTRACTS_ENV=test tilt ci --port=0 -f Tiltfile.test --ci-timeout=40m
 
       - name: Wait for services to be ready
         run: |
           # Wait for all deployments to be ready
-          kubectl wait --for=condition=available --timeout=300s deployment/postgres
-          kubectl wait --for=condition=available --timeout=300s deployment/redis
-          kubectl wait --for=condition=available --timeout=800s deployment/django
-          kubectl wait --for=condition=available --timeout=800s deployment/celeryworker
-          kubectl wait --for=condition=available --timeout=300s deployment/docling-parser
-          kubectl wait --for=condition=available --timeout=300s deployment/vector-embedder
+          kubectl wait --for=condition=available --timeout=1800s deployment/postgres
+          kubectl wait --for=condition=available --timeout=1800s deployment/redis
+          kubectl wait --for=condition=available --timeout=1800s deployment/django
+          kubectl wait --for=condition=available --timeout=1800s deployment/celeryworker
+          kubectl wait --for=condition=available --timeout=1800s deployment/docling-parser
+          kubectl wait --for=condition=available --timeout=1800s deployment/vector-embedder
 
       - name: Run DB Migrations
         run: |

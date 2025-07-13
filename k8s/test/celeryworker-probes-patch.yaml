@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celeryworker
+spec:
+  template:
+    spec:
+      containers:
+      - name: celeryworker
+        # Use startup probe for slow container starts in CI
+        startupProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "echo 'Container started'"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 40  # 40 * 30s = 20 minutes max startup time

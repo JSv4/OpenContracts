@@ -1,12 +1,18 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Base resources to build upon
+# Test environment - includes base but removes celerybeat
 resources:
   - ../base
 
-# Patches to apply for test environment
+# Remove celerybeat deployment for test environment
 patches:
+  - patch: |
+      $patch: delete
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: celerybeat
   - path: django-patch.yaml
     target:
       kind: Deployment
@@ -15,7 +21,11 @@ patches:
     target:
       kind: Deployment
       name: celeryworker
-  - path: celerybeat-patch.yaml
+  - path: django-probes-patch.yaml
     target:
       kind: Deployment
-      name: celerybeat
+      name: django
+  - path: celeryworker-probes-patch.yaml
+    target:
+      kind: Deployment
+      name: celeryworker

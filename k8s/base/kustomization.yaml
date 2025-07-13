@@ -22,8 +22,6 @@ resources:
   - celerybeat-deployment.yaml
 
   # Microservices
-  - nlm-ingestor-deployment.yaml
-  - nlm-ingestor-service.yaml
   - docling-parser-deployment.yaml
   - docling-parser-service.yaml
   - vector-embedder-deployment.yaml

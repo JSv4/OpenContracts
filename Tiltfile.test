@@ -9,6 +9,14 @@ REGISTRY_PORT = '5005'
 # Set environment to test
 os.environ['OPENCONTRACTS_ENV'] = 'test'
 
+# Extend update settings for CI environments with long build times
+if os.getenv('CI'):
+    update_settings(
+        suppress_unused_image_warnings=None,
+        k8s_upsert_timeout_secs=1800,
+        max_parallel_updates=1  # Build one at a time to avoid timeouts
+    )
+
 # Load secret extension
 load('ext://secret', 'secret_create_generic')
 
@@ -42,14 +50,20 @@ docker_build(
 )
 
 # Django deployment with test settings
+# In CI, the image is pre-built, so only rebuild if files change
 docker_build(
     'localhost:{}/opencontracts-django'.format(REGISTRY_PORT),
     context='.',
     dockerfile='./compose/local/django/Dockerfile',
-    build_args={'GITHUB_ACTIONS': 'true'}
+    build_args={'GITHUB_ACTIONS': 'true'},
+    # If the image already exists (from pre-build), Tilt will use it
+    pull=False,
+    # Only rebuild on file changes
+    only=['./opencontractserver', './config', './requirements', './manage.py', './compose']
 )
 
 # Configure resources
+# Use different port for postgres to avoid conflicts
 k8s_resource('postgres', port_forwards='5432:5432')
 k8s_resource('redis', port_forwards='6379:6379')
 k8s_resource('django',
@@ -62,6 +76,7 @@ k8s_resource('celeryworker',
     resource_deps=['postgres', 'redis']
 )
 
+# Microservices
 k8s_resource('docling-parser')
 k8s_resource('vector-embedder')
 

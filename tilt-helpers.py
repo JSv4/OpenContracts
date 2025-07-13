@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
 """
 Helper functions for Tilt configuration
+Generates ConfigMaps from .env files (secrets are handled by Tilt's secret extension)
 """
-import base64
 import os
 import sys
 
 import yaml
-
-
-def base64_encode(value):
-    """Encode a string value to base64 for Kubernetes secrets"""
-    return base64.b64encode(value.encode("utf-8")).decode("utf-8")
 
 
 def read_env_file(file_path):
@@ -29,25 +24,6 @@ def read_env_file(file_path):
     except FileNotFoundError:
         print(f"Warning: Could not read env file: {file_path}", file=sys.stderr)
     return env_vars
-
-
-def generate_secret(name, env_file, secret_keys):
-    """Generate a K8s Secret from environment variables"""
-    env_vars = read_env_file(env_file)
-
-    secret = {
-        "apiVersion": "v1",
-        "kind": "Secret",
-        "metadata": {"name": name},
-        "type": "Opaque",
-        "data": {},
-    }
-
-    for key in secret_keys:
-        if key in env_vars:
-            secret["data"][key] = base64_encode(env_vars[key])
-
-    return yaml.dump(secret, default_flow_style=False)
 
 
 def generate_configmap(name, env_file, config_keys=None, exclude_keys=None):
@@ -87,23 +63,7 @@ if __name__ == "__main__":
     env = os.environ.get("OPENCONTRACTS_ENV", "local")
     env_dir = ".envs/.test" if env == "test" else ".envs/.local"
 
-    if command == "django-secrets":
-        # Keys that should be in the Secret
-        secret_keys = [
-            "DJANGO_SUPERUSER_PASSWORD",
-            "DJANGO_SUPERUSER_EMAIL",
-            "DJANGO_SUPERUSER_USERNAME",
-            "DJANGO_SECRET_KEY",
-            "AWS_ACCESS_KEY_ID",
-            "AWS_SECRET_ACCESS_KEY",
-            "AUTH0_M2M_MANAGEMENT_API_SECRET",
-            "OPENAI_API_KEY",
-            "HF_TOKEN",
-            "ANTHROPIC_API_KEY",
-        ]
-        print(generate_secret("django-secrets", f"{env_dir}/.django", secret_keys))
-
-    elif command == "django-config":
+    if command == "django-config":
         # Keys that should NOT be in the ConfigMap (they go in secrets)
         exclude_keys = [
             "DJANGO_SUPERUSER_PASSWORD",
@@ -119,10 +79,6 @@ if __name__ == "__main__":
                 "django-config", f"{env_dir}/.django", exclude_keys=exclude_keys
             )
         )
-
-    elif command == "postgres-secrets":
-        secret_keys = ["POSTGRES_PASSWORD"]
-        print(generate_secret("postgres-secrets", f"{env_dir}/.postgres", secret_keys))
 
     elif command == "postgres-config":
         exclude_keys = ["POSTGRES_PASSWORD"]

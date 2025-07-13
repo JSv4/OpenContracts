@@ -9,16 +9,23 @@ REGISTRY_PORT = '5005'
 # Note: Cluster and registry should be created using tilt-setup.py before running Tilt
 # This ensures cross-platform compatibility (Windows, macOS, Linux)
 
-# Generate K8s configs and secrets from .env files
-# Django configurations
-k8s_yaml(local('python3 tilt-helpers.py django-secrets', quiet=True))
+# Load secret extension
+load('ext://secret', 'secret_create_generic')
+
+# Create secrets from .env files
+secret_create_generic(
+    'django-secrets',
+    from_env_file='.envs/.local/.django'
+)
+
+secret_create_generic(
+    'postgres-secrets',
+    from_env_file='.envs/.local/.postgres'
+)
+
+# Generate K8s configs from .env files (non-sensitive only)
 k8s_yaml(local('python3 tilt-helpers.py django-config', quiet=True))
-
-# PostgreSQL configurations
-k8s_yaml(local('python3 tilt-helpers.py postgres-secrets', quiet=True))
 k8s_yaml(local('python3 tilt-helpers.py postgres-config', quiet=True))
-
-# Frontend configuration
 k8s_yaml(local('python3 tilt-helpers.py frontend-config', quiet=True))
 
 # Load static storage configuration

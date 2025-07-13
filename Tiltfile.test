@@ -9,13 +9,23 @@ REGISTRY_PORT = '5005'
 # Set environment to test
 os.environ['OPENCONTRACTS_ENV'] = 'test'
 
-# Generate K8s configs and secrets from .env files
-# Django configurations
-k8s_yaml(local('python3 tilt-helpers.py django-secrets', quiet=True))
-k8s_yaml(local('python3 tilt-helpers.py django-config', quiet=True))
+# Load secret extension
+load('ext://secret', 'secret_create_generic')
 
-# PostgreSQL configurations
-k8s_yaml(local('python3 tilt-helpers.py postgres-secrets', quiet=True))
+# Create secrets from test env files
+# These are committed to the repo for testing purposes
+secret_create_generic(
+    'django-secrets',
+    from_env_file='.envs/.test/.django'
+)
+
+secret_create_generic(
+    'postgres-secrets',
+    from_env_file='.envs/.test/.postgres'
+)
+
+# Generate K8s configs from .env files (non-sensitive only)
+k8s_yaml(local('python3 tilt-helpers.py django-config', quiet=True))
 k8s_yaml(local('python3 tilt-helpers.py postgres-config', quiet=True))
 
 # Frontend configuration (not needed for tests)

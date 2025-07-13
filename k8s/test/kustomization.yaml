@@ -3,25 +3,19 @@ kind: Kustomization
 
 # Base resources to build upon
 resources:
-  - ../base/postgres-data-pvc.yaml
-  - ../base/postgres-backups-pvc.yaml
-  - ../base/postgres-deployment.yaml
-  - ../base/postgres-service.yaml
-  - ../base/redis-deployment.yaml
-  - ../base/redis-service.yaml
-  - ../base/django-deployment.yaml
-  - ../base/django-service.yaml
-  - ../base/celeryworker-deployment.yaml
-  - ../base/celerybeat-deployment.yaml
-  - ../base/nlm-ingestor-deployment.yaml
-  - ../base/nlm-ingestor-service.yaml
-  - ../base/docling-parser-deployment.yaml
-  - ../base/docling-parser-service.yaml
-  - ../base/vector-embedder-deployment.yaml
-  - ../base/vector-embedder-service.yaml
+  - ../base
 
 # Patches to apply for test environment
-patchesStrategicMerge:
-  - django-patch.yaml
-  - celeryworker-patch.yaml
-  - celerybeat-patch.yaml
+patches:
+  - path: django-patch.yaml
+    target:
+      kind: Deployment
+      name: django
+  - path: celeryworker-patch.yaml
+    target:
+      kind: Deployment
+      name: celeryworker
+  - path: celerybeat-patch.yaml
+    target:
+      kind: Deployment
+      name: celerybeat

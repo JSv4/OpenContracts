@@ -6,7 +6,7 @@ env:
   COMPOSE_DOCKER_CLI_BUILD: 1
   SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL: True
   # Kind cluster settings
-  KIND_CLUSTER_NAME: opencontracts-ci
+  KIND_CLUSTER_NAME: kind-opencontracts-ci
   REGISTRY_NAME: opencontracts-registry
   REGISTRY_PORT: 5005
 

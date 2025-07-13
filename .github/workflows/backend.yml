@@ -141,7 +141,7 @@ jobs:
       - name: Setup Kind cluster with registry
         run: |
           # Use the tilt-setup.py script to create cluster and registry
-          python3 tilt-setup.py
+          python3 tilt-setup.py setup
 
       - name: Wait for cluster to be ready
         run: |

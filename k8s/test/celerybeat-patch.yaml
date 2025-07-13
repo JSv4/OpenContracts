@@ -1,16 +1,14 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: django
+  name: celerybeat
 spec:
   template:
     spec:
       containers:
-      - name: django
+      - name: celerybeat
         env:
         - name: DJANGO_SETTINGS_MODULE
           value: "config.settings.test"
         - name: DATABASE_URL
           value: "postgres://debug:debug@postgres:5432/opencontractserver"
-        command: ["/bin/bash", "-c"]
-        args: ["python manage.py migrate && /start"]

@@ -21,8 +21,8 @@ k8s_yaml(local('python3 tilt-helpers.py postgres-config', quiet=True))
 # Frontend configuration (not needed for tests)
 k8s_yaml(local('python3 tilt-helpers.py frontend-config', quiet=True))
 
-# Load static storage configuration
-k8s_yaml(['./k8s/base/postgres-data-pvc.yaml', './k8s/base/postgres-backups-pvc.yaml'])
+# Use Kustomize to load all resources with test patches applied
+k8s_yaml(kustomize('./k8s/test'))
 
 # PostgreSQL deployment
 docker_build(
@@ -30,14 +30,9 @@ docker_build(
     context='.',
     dockerfile='./compose/production/postgres/Dockerfile'
 )
-
-k8s_yaml('./k8s/base/postgres-deployment.yaml')
-k8s_yaml('./k8s/base/postgres-service.yaml')
 k8s_resource('postgres', port_forwards='5432:5432')
 
 # Redis deployment
-k8s_yaml('./k8s/base/redis-deployment.yaml')
-k8s_yaml('./k8s/base/redis-service.yaml')
 k8s_resource('redis', port_forwards='6379:6379')
 
 # Django deployment with test settings
@@ -48,39 +43,20 @@ docker_build(
     build_args={'GITHUB_ACTIONS': 'true'}
 )
 
-# Load Django k8s manifests with test overrides
-k8s_yaml('./k8s/base/django-deployment.yaml')
-k8s_yaml('./k8s/base/django-service.yaml')
-k8s_yaml('./k8s/test/django-test-overrides.yaml')
-
 k8s_resource('django',
     port_forwards='8000:8000',
     resource_deps=['postgres', 'redis']
 )
 
 # Celery worker deployment
-k8s_yaml('./k8s/base/celeryworker-deployment.yaml')
-k8s_yaml('./k8s/test/celeryworker-test-overrides.yaml')
-
 k8s_resource('celeryworker',
     resource_deps=['postgres', 'redis']
 )
 
 # Celery beat deployment
-k8s_yaml('./k8s/base/celerybeat-deployment.yaml')
-k8s_yaml('./k8s/test/celerybeat-test-overrides.yaml')
-
 k8s_resource('celerybeat',
     resource_deps=['postgres', 'redis']
 )
-
-# External microservices (use existing images)
-k8s_yaml('./k8s/base/nlm-ingestor-deployment.yaml')
-k8s_yaml('./k8s/base/nlm-ingestor-service.yaml')
-k8s_yaml('./k8s/base/docling-parser-deployment.yaml')
-k8s_yaml('./k8s/base/docling-parser-service.yaml')
-k8s_yaml('./k8s/base/vector-embedder-deployment.yaml')
-k8s_yaml('./k8s/base/vector-embedder-service.yaml')
 
 k8s_resource('nlm-ingestor')
 k8s_resource('docling-parser')

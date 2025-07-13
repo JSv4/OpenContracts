@@ -160,7 +160,7 @@ jobs:
         run: |
           # Start Tilt in CI mode with test configuration
           # Increased timeout for image builds
-          OPENCONTRACTS_ENV=test tilt ci --port=0 -f Tiltfile.test --ci-timeout=40m
+          OPENCONTRACTS_ENV=test tilt ci --port=0 -f Tiltfile.test --timeout=40m
 
       - name: Wait for services to be ready
         run: |

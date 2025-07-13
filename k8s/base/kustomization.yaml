@@ -6,21 +6,21 @@ resources:
   # Storage
   - postgres-data-pvc.yaml
   - postgres-backups-pvc.yaml
-  
+
   # Core services
   - postgres-deployment.yaml
   - postgres-service.yaml
   - redis-deployment.yaml
   - redis-service.yaml
-  
+
   # Django application
   - django-deployment.yaml
   - django-service.yaml
-  
+
   # Celery workers
   - celeryworker-deployment.yaml
   - celerybeat-deployment.yaml
-  
+
   # Microservices
   - nlm-ingestor-deployment.yaml
   - nlm-ingestor-service.yaml

@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
       - name: celeryworker
-        image: localhost:5005/opencontracts-celeryworker
+        image: localhost:5005/opencontracts-django
+        command: ["/start-celeryworker"]
         envFrom:
         - configMapRef:
             name: django-config

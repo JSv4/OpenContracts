@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
       - name: flower
-        image: localhost:5005/opencontracts-flower
+        image: localhost:5005/opencontracts-django
+        command: ["/start-flower"]
         ports:
         - containerPort: 5555
         envFrom:

@@ -40,10 +40,6 @@ docker_build(
     context='.',
     dockerfile='./compose/production/postgres/Dockerfile'
 )
-k8s_resource('postgres', port_forwards='5432:5432')
-
-# Redis deployment
-k8s_resource('redis', port_forwards='6379:6379')
 
 # Django deployment with test settings
 docker_build(
@@ -53,6 +49,9 @@ docker_build(
     build_args={'GITHUB_ACTIONS': 'true'}
 )
 
+# Configure resources
+k8s_resource('postgres', port_forwards='5432:5432')
+k8s_resource('redis', port_forwards='6379:6379')
 k8s_resource('django',
     port_forwards='8000:8000',
     resource_deps=['postgres', 'redis']

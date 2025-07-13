@@ -148,15 +148,6 @@ jobs:
           kubectl wait --for=condition=Ready nodes --all --timeout=120s
           kubectl get nodes
 
-      - name: Build and load images
-        run: |
-          # Build postgres image
-          docker build -t localhost:${{ env.REGISTRY_PORT }}/opencontracts-postgres:latest -f ./compose/production/postgres/Dockerfile .
-          docker push localhost:${{ env.REGISTRY_PORT }}/opencontracts-postgres:latest
-
-          # Build django image
-          docker build -t localhost:${{ env.REGISTRY_PORT }}/opencontracts-django:latest -f ./compose/local/django/Dockerfile .
-          docker push localhost:${{ env.REGISTRY_PORT }}/opencontracts-django:latest
 
       - name: Start Tilt
         run: |

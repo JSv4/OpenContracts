@@ -159,10 +159,8 @@ jobs:
           # Wait for all deployments to be ready
           kubectl wait --for=condition=available --timeout=300s deployment/postgres
           kubectl wait --for=condition=available --timeout=300s deployment/redis
-          kubectl wait --for=condition=available --timeout=300s deployment/django
-          kubectl wait --for=condition=available --timeout=300s deployment/celeryworker
-          kubectl wait --for=condition=available --timeout=300s deployment/celerybeat
-          kubectl wait --for=condition=available --timeout=300s deployment/nlm-ingestor
+          kubectl wait --for=condition=available --timeout=800s deployment/django
+          kubectl wait --for=condition=available --timeout=800s deployment/celeryworker
           kubectl wait --for=condition=available --timeout=300s deployment/docling-parser
           kubectl wait --for=condition=available --timeout=300s deployment/vector-embedder
 

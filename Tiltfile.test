@@ -62,12 +62,6 @@ k8s_resource('celeryworker',
     resource_deps=['postgres', 'redis']
 )
 
-# Celery beat deployment
-k8s_resource('celerybeat',
-    resource_deps=['postgres', 'redis']
-)
-
-k8s_resource('nlm-ingestor')
 k8s_resource('docling-parser')
 k8s_resource('vector-embedder')
 

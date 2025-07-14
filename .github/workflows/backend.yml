@@ -50,8 +50,8 @@ jobs:
         run: pre-commit run --all-files
 
   pytest:
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
+    runs-on: Larger
+    timeout-minutes: 60
 
     steps:
       - name: Free Disk Space (Ubuntu)

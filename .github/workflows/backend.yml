@@ -1,6 +1,7 @@
 name: Backend CI
 
-# Enable Buildkit and let compose use it to speed up image building
+permissions:
+  contents: read
 env:
   DOCKER_BUILDKIT: 1
   COMPOSE_DOCKER_CLI_BUILD: 1
@@ -50,42 +51,10 @@ jobs:
         run: pre-commit run --all-files
 
   pytest:
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
+    runs-on: Larger
+    timeout-minutes: 60
 
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: true
-
-          # all of these default to true, but feel free to set to
-          # "false" if necessary for your workflow
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
-
-      - name: Remove additional unnecessary tools
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/local/.ghcup
-          sudo rm -rf /usr/share/swift
-          sudo rm -rf /usr/local/julia*
-          sudo rm -rf /usr/share/miniconda
-          sudo rm -rf /usr/local/share/chromium
-          sudo rm -rf /usr/local/share/powershell
-          sudo rm -rf /opt/hostedtoolcache
-          df -h
-
       - name: Checkout Code Repository
         uses: actions/checkout@v4.2.2
 
@@ -94,15 +63,6 @@ jobs:
           # use bash variable expression to get the substring
           ci_env=`bash <(curl -s https://codecov.io/env)`
           echo "$ci_env"
-
-      - name: Delete frontend files
-        run: |
-          rm -rf docs/
-          rm -rf frontend/
-          rm -rf site/
-
-      - name: Remove CodeQL bundle
-        run: sudo rm -rf /opt/hostedtoolcache/CodeQL
 
       - name: Setup Python
         uses: actions/setup-python@v5

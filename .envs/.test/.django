@@ -44,3 +44,7 @@ OPENAI_MODEL=gpt-4o
 # Set Proper Settings Module
 # ------------------------------------------------------------------------------
 DJANGO_SETTINGS_MODULE=config.settings.test
+
+# Database URL (constructed from postgres env vars in entrypoint)
+# This is just for reference - the actual URL is built in the entrypoint script
+# DATABASE_URL=postgres://oc_user:dgj902j43rtrgkmn@postgres:5432/opencontractserver

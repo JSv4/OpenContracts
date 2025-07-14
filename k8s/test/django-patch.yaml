@@ -10,7 +10,5 @@ spec:
         env:
         - name: DJANGO_SETTINGS_MODULE
           value: "config.settings.test"
-        - name: DATABASE_URL
-          value: "postgres://debug:debug@postgres:5432/opencontractserver"
         command: ["/bin/bash", "-c"]
         args: ["python manage.py migrate && /start"]

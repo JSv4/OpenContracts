@@ -183,12 +183,11 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           COMMIT_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || env.GITHUB_SHA }}
-        run:  |
-              # Install codecov in the container first
-              kubectl exec deployment/django -- pip install codecov
-              # use bash variable expression to get the substring
-              ci_env=`bash <(curl -s https://codecov.io/env)`
-              kubectl exec deployment/django -- bash -c "$ci_env codecov -v -t ${CODECOV_TOKEN} -R . -f coverage.xml -C ${COMMIT_SHA}"
+        run: |
+          # Install codecov inside the Django container
+          kubectl exec deployment/django -- pip install --no-cache-dir codecov
+          # Upload coverage report to Codecov
+          kubectl exec deployment/django -- bash -c "cd /app && codecov -v -t ${CODECOV_TOKEN} -R . -f coverage.xml -C ${COMMIT_SHA}"
 
       - name: Tear down the Stack
         run:  |

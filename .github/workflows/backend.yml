@@ -185,9 +185,9 @@ jobs:
           COMMIT_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || env.GITHUB_SHA }}
         run: |
           # Install codecov inside the Django container
-          kubectl exec deployment/django -- pip install --no-cache-dir codecov
+          kubectl exec deployment/django -- pip install --no-cache-dir codecov-cli
           # Upload coverage report to Codecov
-          kubectl exec deployment/django -- bash -c "cd /app && codecov --verbose upload-process --disable-search -t ${CODECOV_TOKEN} -f coverage.xml"
+          kubectl exec deployment/django -- bash -c "cd /app && codecovcli --verbose do-upload -C ${COMMIT_SHA} --disable-search -t ${CODECOV_TOKEN} -f coverage.xml --git-service github"
 
       - name: Tear down the Stack
         run:  |

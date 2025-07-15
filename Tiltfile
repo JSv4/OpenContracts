@@ -41,40 +41,13 @@ docker_build(
 k8s_yaml('./k8s/base/postgres-deployment.yaml')
 k8s_yaml('./k8s/base/postgres-service.yaml')
 
-k8s_resource('postgres', port_forwards='5433:5432')
+k8s_resource('postgres', port_forwards='5432:5432')
 
 # Redis deployment
 k8s_yaml('./k8s/base/redis-deployment.yaml')
 k8s_yaml('./k8s/base/redis-service.yaml')
 
 k8s_resource('redis')
-
-# Django deployment
-docker_build(
-    'localhost:{}/opencontracts-django'.format(REGISTRY_PORT),
-    context='.',
-    dockerfile='./compose/local/django/Dockerfile'
-)
-
-k8s_yaml('./k8s/base/django-deployment.yaml')
-k8s_yaml('./k8s/base/django-service.yaml')
-
-k8s_resource('django',
-    port_forwards='8000:8000',
-    resource_deps=['postgres', 'redis']
-)
-
-# Celery workers
-k8s_yaml('./k8s/base/celeryworker-deployment.yaml')
-k8s_yaml('./k8s/base/celerybeat-deployment.yaml')
-
-k8s_resource('celeryworker',
-    resource_deps=['postgres', 'redis', 'django']
-)
-
-k8s_resource('celerybeat',
-    resource_deps=['postgres', 'redis', 'django']
-)
 
 # External microservices (use existing images)
 k8s_yaml('./k8s/base/docling-parser-deployment.yaml')

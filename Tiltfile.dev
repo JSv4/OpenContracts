@@ -39,79 +39,19 @@ k8s_yaml('./k8s/dev/django-service.yaml')
 
 k8s_resource('django', port_forwards='8000:8000')
 
-# Celery Worker with live reload
-docker_build_with_restart(
-    'localhost:{}/opencontracts-celeryworker'.format(REGISTRY_PORT),
-    context='.',
-    dockerfile='./compose/local/django/Dockerfile',
-    entrypoint=['/entrypoint', '/start-celeryworker'],
-    only=[
-        './requirements',
-        './opencontractserver',
-        './config',
-        './manage.py',
-        './compose/local/django',
-        './compose/production/django/entrypoint',
-        './model_preloaders',
-        './setup_codecov.sh'
-    ],
-    live_update=[
-        sync('./opencontractserver', '/app/opencontractserver'),
-        sync('./config', '/app/config')
-    ]
-)
+# No separate image build for celeryworker – it reuses 'opencontracts-django'
 
 k8s_yaml('./k8s/dev/celeryworker-deployment.yaml')
 
 k8s_resource('celeryworker')
 
-# Celery Beat scheduler
-docker_build_with_restart(
-    'localhost:{}/opencontracts-celerybeat'.format(REGISTRY_PORT),
-    context='.',
-    dockerfile='./compose/local/django/Dockerfile',
-    entrypoint=['/entrypoint', '/start-celerybeat'],
-    only=[
-        './requirements',
-        './opencontractserver',
-        './config',
-        './manage.py',
-        './compose/local/django',
-        './compose/production/django/entrypoint',
-        './model_preloaders',
-        './setup_codecov.sh'
-    ],
-    live_update=[
-        sync('./opencontractserver', '/app/opencontractserver'),
-        sync('./config', '/app/config')
-    ]
-)
+# No separate image build for celerybeat – it reuses 'opencontracts-django'
 
 k8s_yaml('./k8s/dev/celerybeat-deployment.yaml')
 
 k8s_resource('celerybeat')
 
 # Flower monitoring
-docker_build_with_restart(
-    'localhost:{}/opencontracts-flower'.format(REGISTRY_PORT),
-    context='.',
-    dockerfile='./compose/local/django/Dockerfile',
-    entrypoint=['/entrypoint', '/start-flower'],
-    only=[
-        './requirements',
-        './opencontractserver',
-        './config',
-        './manage.py',
-        './compose/local/django',
-        './compose/production/django/entrypoint',
-        './model_preloaders',
-        './setup_codecov.sh'
-    ],
-    live_update=[
-        sync('./opencontractserver', '/app/opencontractserver'),
-        sync('./config', '/app/config')
-    ]
-)
 
 k8s_yaml('./k8s/dev/flower-deployment.yaml')
 k8s_yaml('./k8s/dev/flower-service.yaml')

@@ -51,7 +51,7 @@ jobs:
         run: pre-commit run --all-files
 
   pytest:
-    runs-on: Larger
+    runs-on: Yuge
     timeout-minutes: 60
 
     steps:

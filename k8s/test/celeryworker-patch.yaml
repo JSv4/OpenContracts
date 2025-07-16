@@ -10,3 +10,10 @@ spec:
         env:
         - name: DJANGO_SETTINGS_MODULE
           value: "config.settings.test"
+        resources:
+          requests:
+            cpu: "1"
+            memory: "1Gi"
+          limits:
+            cpu: "2"
+            memory: "3Gi"

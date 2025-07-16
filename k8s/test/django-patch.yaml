@@ -13,8 +13,8 @@ spec:
         command: ["/start"]
         resources:
           requests:
-            cpu: "2"
-            memory: "6Gi"
+            cpu: "4"
+            memory: "10Gi"
           limits:
-            cpu: "2"
-            memory: "6Gi"
+            cpu: "4"
+            memory: "16Gi"

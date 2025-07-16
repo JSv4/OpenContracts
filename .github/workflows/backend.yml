@@ -187,7 +187,7 @@ jobs:
           # Install codecov inside the Django container
           kubectl exec deployment/django -- pip install --no-cache-dir codecov-cli
           # Upload coverage report to Codecov
-          kubectl exec deployment/django -- bash -c "cd /app && codecovcli --verbose do-upload -C ${COMMIT_SHA} --disable-search -t ${CODECOV_TOKEN} -f coverage.xml --git-service github"
+          kubectl exec deployment/django -- codecovcli --verbose do-upload -C ${COMMIT_SHA} -t ${CODECOV_TOKEN} --git-service github"
 
       - name: Tear down the Stack
         run:  |

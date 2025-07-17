@@ -176,8 +176,11 @@ jobs:
           kubectl port-forward service/django 8000:8000 &
           sleep 5
 
-          # Run the full test suite
-          kubectl exec deployment/django -- coverage run -m pytest --cov-report=xml --cov -x -v
+          # Run pytest with coverage and explicitly generate XML report
+          kubectl exec deployment/django -- bash -c "cd /app && python -m pytest --cov=opencontractserver --cov-report=xml:coverage.xml -x -v"
+          
+          # Verify the coverage file was created
+          kubectl exec deployment/django -- ls -la /app/coverage.xml
 
       - name: Upload Coverage Reports to Codecov
         env:
@@ -186,8 +189,8 @@ jobs:
         run: |
           # Install codecov inside the Django container
           kubectl exec deployment/django -- pip install --no-cache-dir codecov-cli
-          # Upload coverage report to Codecov
-          kubectl exec deployment/django -- codecovcli --verbose do-upload -C ${COMMIT_SHA} -t ${CODECOV_TOKEN} --git-service github -f /app/coverage.xml
+          # Upload coverage report to Codecov from the correct directory
+          kubectl exec deployment/django -- bash -c "cd /app && codecovcli --verbose upload-process -C ${COMMIT_SHA} -t ${CODECOV_TOKEN} --git-service github"
 
       - name: Tear down the Stack
         run:  |

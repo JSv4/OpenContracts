@@ -176,9 +176,9 @@ jobs:
           kubectl port-forward service/django 8000:8000 &
           sleep 5
 
-          # Run pytest with coverage and explicitly generate XML report
-          kubectl exec deployment/django -- bash -c "cd /app && python -m pytest --cov=opencontractserver --cov-report=xml:coverage.xml -x -v"
-          
+          # Run pytest with coverage in parallel (auto-detect CPU cores)
+          kubectl exec deployment/django -- bash -c "cd /app && python -m pytest -n auto --cov=opencontractserver --cov-report=xml:coverage.xml -x -v"
+
           # Verify the coverage file was created
           kubectl exec deployment/django -- ls -la /app/coverage.xml
 

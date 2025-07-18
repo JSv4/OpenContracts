@@ -177,7 +177,7 @@ jobs:
           sleep 5
 
           # Run pytest with coverage in parallel (auto-detect CPU cores)
-          kubectl exec deployment/django -- bash -c "cd /app && python -m pytest -n auto --cov=opencontractserver --cov-report=xml:coverage.xml -x -v"
+          kubectl exec deployment/django -- bash -c "cd /app && python -m pytest --cov=opencontractserver --cov-report=xml:coverage.xml -x -v"
 
           # Verify the coverage file was created
           kubectl exec deployment/django -- ls -la /app/coverage.xml

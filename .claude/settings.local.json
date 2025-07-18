@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "WebFetch",
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(pre-commit run check-yaml:*)"
+    ],
+    "deny": []
+  }
+}

@@ -6,3 +6,6 @@ POSTGRES_DB=opencontractserver
 POSTGRES_GREMLIN_DB=ocdb
 POSTGRES_USER=oc_user
 POSTGRES_PASSWORD=dgj902j43rtrgkmn
+
+# Database URL for Django (constructed from above values)
+DATABASE_URL=postgres://oc_user:dgj902j43rtrgkmn@postgres:5432/opencontractserver

@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django
+spec:
+  template:
+    spec:
+      containers:
+      - name: django
+        env:
+        - name: DJANGO_SETTINGS_MODULE
+          value: "config.settings.test"
+        command: ["/start"]
+        resources:
+          requests:
+            cpu: "4"
+            memory: "10Gi"
+          limits:
+            cpu: "4"
+            memory: "16Gi"

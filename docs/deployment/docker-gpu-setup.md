@@ -171,4 +171,4 @@ environment:
 2. **Test locally first**: Build and test images locally before pushing
 3. **Monitor builds**: Check GitHub Actions for build status
 4. **Use specific tags**: Avoid using `latest` in production
-5. **Clean up old images**: Periodically remove unused images from the registry 
+5. **Clean up old images**: Periodically remove unused images from the registry

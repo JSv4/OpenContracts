@@ -82,4 +82,4 @@ services:
 
   flower:
     <<: *django
-    command: /start-flower 
+    command: /start-flower

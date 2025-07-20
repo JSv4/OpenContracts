@@ -77,4 +77,4 @@ jobs:
           platforms: ${{ matrix.platforms }}
           build-args: |
             BUILD_ENVIRONMENT=production
-            PYTORCH_VERSION=2.7.1-cuda12.6-cudnn9-runtime 
+            PYTORCH_VERSION=2.7.1-cuda12.6-cudnn9-runtime

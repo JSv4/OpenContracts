@@ -2,7 +2,7 @@ name: Docker Build and Publish (Tagged Release)
 
 on:
   release:
-    types: 
+    types:
       - published
 
 env:
@@ -68,4 +68,4 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
           build-args: |
-            BUILD_ENVIRONMENT=production 
+            BUILD_ENVIRONMENT=production

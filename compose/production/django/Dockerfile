@@ -1,5 +1,5 @@
-ARG PYTHON_VERSION=3.12-slim-bookworm
-FROM python:${PYTHON_VERSION} as python
+ARG PYTORCH_VERSION=2.7.1-cuda12.6-cudnn9-runtime
+FROM pytorch/pytorch:${PYTORCH_VERSION} as python
 
 # Python build stage
 FROM python as python-build-stage
@@ -47,6 +47,12 @@ ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV BUILD_ENV ${BUILD_ENVIRONMENT}
 
+# CUDA-specific environment variables for optimal performance
+ENV CUDA_MODULE_LOADING=LAZY
+ENV TORCH_CUDA_ARCH_LIST="6.0;6.1;7.0;7.5;8.0;8.6;8.9;9.0"
+ENV CUDA_VISIBLE_DEVICES=0
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+
 WORKDIR ${APP_HOME}
 
 RUN groupadd --system django \
@@ -75,6 +81,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # Copy python dependency wheels from the python-build-stage and install them
 COPY --from=python-build-stage /usr/src/app/wheels /wheels/
 RUN pip install --upgrade pip
+
+# PyTorch is already installed in the base image with CUDA support
+# Just install sentence-transformers which will use the existing PyTorch
+RUN pip install sentence-transformers
 
 # Install the remaining Python dependencies from wheels
 RUN pip install --no-cache-dir --no-index --find-links=/wheels/ /wheels/* \

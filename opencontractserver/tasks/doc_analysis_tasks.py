@@ -1,263 +1,259 @@
 import logging
 from typing import Any
 
-import marvin
 from django.conf import settings
 
 from opencontractserver.shared.decorators import doc_analyzer_task
 from opencontractserver.types.dicts import TextSpan
 
-# Pass OpenAI API key to marvin for parsing / extract
-marvin.settings.openai.api_key = settings.OPENAI_API_KEY
-
 logger = logging.getLogger(__name__)
 
 
-@doc_analyzer_task()
-def contract_not_contract(*args, pdf_text_extract, **kawrgs):
-    """
-    # Contract Classification
+# @doc_analyzer_task()
+# def contract_not_contract(*args, pdf_text_extract, **kawrgs):
+#     """
+#     # Contract Classification
 
-    Uses Marvin and GPT-4 to triage documents into contract vs non-contract categories.
+#     Uses Marvin and GPT-4 to triage documents into contract vs non-contract categories.
 
-    ## Process
-    - Analyzes first and last 1000 characters of document text
-    - Classifies into one of:
-      - CONTRACT
-      - CONTRACT TEMPLATE
-      - PRESENTATION
-      - OTHER
-    """
-    print("Contract not contract")
-    category = marvin.classify(
-        f"INTRODUCTION:\n`{pdf_text_extract[:1000]}`\nCONCLUSION:\n\n`{pdf_text_extract[-1000:]}`",
-        instructions="You determine what type of document we're likely looking at based on the introduction and "
-        "conclusion - a contract template, a contract, presentation, other",
-        labels=["CONTRACT", "CONTRACT TEMPLATE", "PRESENTATION", "OTHER"],
-    )
+#     ## Process
+#     - Analyzes first and last 1000 characters of document text
+#     - Classifies into one of:
+#       - CONTRACT
+#       - CONTRACT TEMPLATE
+#       - PRESENTATION
+#       - OTHER
+#     """
+#     print("Contract not contract")
+#     category = marvin.classify(
+#         f"INTRODUCTION:\n`{pdf_text_extract[:1000]}`\nCONCLUSION:\n\n`{pdf_text_extract[-1000:]}`",
+#         instructions="You determine what type of document we're likely looking at based on the introduction and "
+#         "conclusion - a contract template, a contract, presentation, other",
+#         labels=["CONTRACT", "CONTRACT TEMPLATE", "PRESENTATION", "OTHER"],
+#     )
 
-    return [category], [], [], True
-
-
-@doc_analyzer_task(
-    input_schema={
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "InputSchema",
-        "type": "object",
-        "properties": {
-            "context": {
-                "type": "string",
-                "title": "Context",
-                "description": "A description or context for the input.",
-            },
-            "labels": {
-                "type": "array",
-                "title": "Labels",
-                "description": "An optional list of labels.",
-                "items": {"type": "string"},
-                "uniqueItems": True,
-            },
-        },
-        "required": ["context"],
-        "additionalProperties": False,
-    }
-)
-def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
-    """
-    # Legal Entity Tagger
-
-    Uses SALI tags, GLiNER, and spaCy sentence splitter to identify and tag legal entities in text.
-
-    ## Features
-    - Leverages pre-trained GLiNER model for entity recognition
-    - Supports custom label sets via input schema
-    - Default support for 39+ legal entity types including:
-      - Corporations (B, C, S Corps)
-      - Partnerships
-      - LLCs
-      - Government entities
-      - Committees
-      - And more
-
-    ## Process
-    1. Splits text into sentences using spaCy
-    2. Applies GLiNER model with confidence threshold of 0.7
-    3. Maps entities to text spans with precise character offsets
-
-    ## Parameters
-    - labels: Optional list of custom entity types to detect. If not provided, uses default legal entity types.
-
-    ## Returns
-    Tagged entities with:
-    - Entity text
-    - Entity type
-    - Character offsets
-    - Confidence score
-    """
-    import logging
-
-    import spacy
-    from gliner import GLiNER
-
-    logger = logging.getLogger(__name__)
-    logger.info("Starting legal entity tagger task")
-
-    logger.info(f"Task parameters: {kawrgs}")
-
-    logger.info("Loading spaCy model")
-    nlp = spacy.load("en_core_web_lg")
-    logger.info("Successfully loaded spaCy model")
-
-    logger.info("Loading GLiNER model")
-    model = GLiNER.from_pretrained("urchade/gliner_base")
-    model.set_sampling_params(
-        max_types=25,  # maximum number of entity types during training
-        shuffle_types=True,  # if shuffle or not entity types
-        random_drop=True,  # randomly drop entity types
-        max_neg_type_ratio=1,  # ratio of positive/negative types, 1 mean 50%/50%, 2 mean 33%/66%, 3 mean 25%/75% ...
-        max_len=2500,  # maximum sentence length
-    )
-    logger.info("Successfully loaded and configured GLiNER model")
-
-    # Use provided labels if available, otherwise fall back to defaults
-    default_labels = [
-        "Legal Entity",
-        "Entity",
-        "Business Trust",
-        "Cooperative",
-        "Corporation",
-        "B Corporation",
-        "C Corporation",
-        "S Corporation",
-        "Exempted Company",
-        "Governmental Entity",
-        "Limited Duration Company",
-        "Limited Liability Company",
-        "Municipal Corporation",
-        "Non-Governmental Organization",
-        "Non-Profit Organization",
-        "Partnership",
-        "Exempted Limited Partnership",
-        "General Partnership",
-        "Limited Liability Partnership",
-        "Limited Partnership",
-        "Political Party",
-        "Professional Limited Liability Company",
-        "Segregated Portfolio Company",
-        "Société Anonyme",
-        "Société en Commandite Simple",
-        "Société à Responsabilité Limitée",
-        "Sole Proprietorship",
-        "Sovereign State",
-        "Trade Union / Labor Union",
-        "Entity Groups",
-        "Board of Directors",
-        "Class",
-        "Committees",
-        "Ad Hoc/Unofficial Committee",
-        "Creditors' Committee",
-        "Independent Committee",
-        "Official Committee of Creditors",
-        "Official Committee of Unsecured Creditors",
-        "Joint Defense Group",
-        "Joint Defense Group Member",
-    ]
-
-    labels_to_use = kawrgs.get("labels", default_labels)
-    logger.info(f"Using label set with {len(labels_to_use)} labels")
-
-    logger.info("Splitting text into sentences")
-    sentences = [i for i in nlp(pdf_text_extract).sents]
-    logger.info(f"Split text into {len(sentences)} sentences")
-
-    results = []
-
-    for index, sent in enumerate(sentences):
-        logger.debug(f"Processing sentence {index + 1}/{len(sentences)}")
-        ents = model.predict_entities(sent.text, labels_to_use)
-        logger.debug(f"Found {len(ents)} potential entities in sentence {index + 1}")
-
-        for e in ents:
-            # Rough heuristic - drop anything with score of less than .7. Anecdotally, anything much lower is garbage.
-            if e["score"] > 0.7:
-                logger.debug(
-                    f"Found high-confidence entity: {e['text']} ({e['label']}) - score: {e['score']}"
-                )
-                span = TextSpan(
-                    id=str(index),
-                    start=sent.start_char + e["start"],
-                    end=sent.start_char + e["end"],
-                    text=e["text"],
-                )
-                results.append(
-                    (
-                        span,
-                        str(e["label"]),
-                    )
-                )
-            else:
-                logger.debug(
-                    f"Skipping low-confidence entity: {e['text']} ({e['label']}) - score: {e['score']}"
-                )
-
-    logger.info(f"Found {len(results)} total entities above confidence threshold")
-    logger.info("Completed legal entity tagger task")
-
-    return [], results, [], True
+#     return [category], [], [], True
 
 
-@doc_analyzer_task()
-def proper_name_tagger(*args, pdf_text_extract, **kawrgs):
-    """
-    # Proper Name Entity Tagger
+# @doc_analyzer_task(
+#     input_schema={
+#         "$schema": "http://json-schema.org/draft-07/schema#",
+#         "title": "InputSchema",
+#         "type": "object",
+#         "properties": {
+#             "context": {
+#                 "type": "string",
+#                 "title": "Context",
+#                 "description": "A description or context for the input.",
+#             },
+#             "labels": {
+#                 "type": "array",
+#                 "title": "Labels",
+#                 "description": "An optional list of labels.",
+#                 "items": {"type": "string"},
+#                 "uniqueItems": True,
+#             },
+#         },
+#         "required": ["context"],
+#         "additionalProperties": False,
+#     }
+# )
+# def legal_entity_tagger(*args, pdf_text_extract, **kawrgs):
+#     """
+#     # Legal Entity Tagger
 
-    Uses spaCy to identify and tag named entities in text.
+#     Uses SALI tags, GLiNER, and spaCy sentence splitter to identify and tag legal entities in text.
 
-    ## Entity Types
-    - Organizations (ORG)
-    - Geopolitical Entities (GPE)
-    - People (PERSON)
-    - Products (PRODUCT)
+#     ## Features
+#     - Leverages pre-trained GLiNER model for entity recognition
+#     - Supports custom label sets via input schema
+#     - Default support for 39+ legal entity types including:
+#       - Corporations (B, C, S Corps)
+#       - Partnerships
+#       - LLCs
+#       - Government entities
+#       - Committees
+#       - And more
 
-    ## Process
-    1. Applies spaCy's small English model
-    2. Extracts entities of specified types
-    3. Maps to text spans with character offsets
-    4. Returns top 10 most relevant entities
+#     ## Process
+#     1. Splits text into sentences using spaCy
+#     2. Applies GLiNER model with confidence threshold of 0.7
+#     3. Maps entities to text spans with precise character offsets
 
-    ## Notes
-    Currently limited to 10 entities to manage
-    annotation density. Future improvements planned for page-aware annotations.
-    """
+#     ## Parameters
+#     - labels: Optional list of custom entity types to detect. If not provided, uses default legal entity types.
 
-    import spacy
+#     ## Returns
+#     Tagged entities with:
+#     - Entity text
+#     - Entity type
+#     - Character offsets
+#     - Confidence score
+#     """
+#     import logging
 
-    nlp = spacy.load("en_core_web_sm")
-    doc = nlp(pdf_text_extract)
+#     import spacy
+#     from gliner import GLiNER
 
-    results = []
+#     logger = logging.getLogger(__name__)
+#     logger.info("Starting legal entity tagger task")
 
-    for index, ent in enumerate(
-        [ent for ent in doc.ents if ent.label_ in ["ORG", "GPE", "PERSON", "PRODUCT"]]
-    ):
-        results.append(
-            (
-                TextSpan(
-                    id=str(index),
-                    start=ent.start_char,
-                    end=ent.end_char,
-                    text="First ten",
-                ),
-                str(ent.label_),
-            )
-        )
-        # print(ent.text, ent.start_char, ent.end_char, ent.label_)
+#     logger.info(f"Task parameters: {kawrgs}")
 
-    # This generates a TON of labels... so artificially limiting to 10 for now... Ideal fix here is using page aware
-    # annotations, which I know I was using before for virtual loading. Think it ran into some issues with the jump
-    # to annotation functionality, but that should be largely solved with new functionality to render specified annots
-    # on annotator load.
-    return [], results[:10], [], True
+#     logger.info("Loading spaCy model")
+#     nlp = spacy.load("en_core_web_lg")
+#     logger.info("Successfully loaded spaCy model")
+
+#     logger.info("Loading GLiNER model")
+#     model = GLiNER.from_pretrained("urchade/gliner_base")
+#     model.set_sampling_params(
+#         max_types=25,  # maximum number of entity types during training
+#         shuffle_types=True,  # if shuffle or not entity types
+#         random_drop=True,  # randomly drop entity types
+#         max_neg_type_ratio=1,  # ratio of positive/negative types, 1 mean 50%/50%, 2 mean 33%/66%, 3 mean 25%/75% ...
+#         max_len=2500,  # maximum sentence length
+#     )
+#     logger.info("Successfully loaded and configured GLiNER model")
+
+#     # Use provided labels if available, otherwise fall back to defaults
+#     default_labels = [
+#         "Legal Entity",
+#         "Entity",
+#         "Business Trust",
+#         "Cooperative",
+#         "Corporation",
+#         "B Corporation",
+#         "C Corporation",
+#         "S Corporation",
+#         "Exempted Company",
+#         "Governmental Entity",
+#         "Limited Duration Company",
+#         "Limited Liability Company",
+#         "Municipal Corporation",
+#         "Non-Governmental Organization",
+#         "Non-Profit Organization",
+#         "Partnership",
+#         "Exempted Limited Partnership",
+#         "General Partnership",
+#         "Limited Liability Partnership",
+#         "Limited Partnership",
+#         "Political Party",
+#         "Professional Limited Liability Company",
+#         "Segregated Portfolio Company",
+#         "Société Anonyme",
+#         "Société en Commandite Simple",
+#         "Société à Responsabilité Limitée",
+#         "Sole Proprietorship",
+#         "Sovereign State",
+#         "Trade Union / Labor Union",
+#         "Entity Groups",
+#         "Board of Directors",
+#         "Class",
+#         "Committees",
+#         "Ad Hoc/Unofficial Committee",
+#         "Creditors' Committee",
+#         "Independent Committee",
+#         "Official Committee of Creditors",
+#         "Official Committee of Unsecured Creditors",
+#         "Joint Defense Group",
+#         "Joint Defense Group Member",
+#     ]
+
+#     labels_to_use = kawrgs.get("labels", default_labels)
+#     logger.info(f"Using label set with {len(labels_to_use)} labels")
+
+#     logger.info("Splitting text into sentences")
+#     sentences = [i for i in nlp(pdf_text_extract).sents]
+#     logger.info(f"Split text into {len(sentences)} sentences")
+
+#     results = []
+
+#     for index, sent in enumerate(sentences):
+#         logger.debug(f"Processing sentence {index + 1}/{len(sentences)}")
+#         ents = model.predict_entities(sent.text, labels_to_use)
+#         logger.debug(f"Found {len(ents)} potential entities in sentence {index + 1}")
+
+#         for e in ents:
+#             # Rough heuristic - drop anything with score of less than .7. Anecdotally, anything much lower is garbage.
+#             if e["score"] > 0.7:
+#                 logger.debug(
+#                     f"Found high-confidence entity: {e['text']} ({e['label']}) - score: {e['score']}"
+#                 )
+#                 span = TextSpan(
+#                     id=str(index),
+#                     start=sent.start_char + e["start"],
+#                     end=sent.start_char + e["end"],
+#                     text=e["text"],
+#                 )
+#                 results.append(
+#                     (
+#                         span,
+#                         str(e["label"]),
+#                     )
+#                 )
+#             else:
+#                 logger.debug(
+#                     f"Skipping low-confidence entity: {e['text']} ({e['label']}) - score: {e['score']}"
+#                 )
+
+#     logger.info(f"Found {len(results)} total entities above confidence threshold")
+#     logger.info("Completed legal entity tagger task")
+
+#     return [], results, [], True
+
+
+# @doc_analyzer_task()
+# def proper_name_tagger(*args, pdf_text_extract, **kawrgs):
+#     """
+#     # Proper Name Entity Tagger
+
+#     Uses spaCy to identify and tag named entities in text.
+
+#     ## Entity Types
+#     - Organizations (ORG)
+#     - Geopolitical Entities (GPE)
+#     - People (PERSON)
+#     - Products (PRODUCT)
+
+#     ## Process
+#     1. Applies spaCy's small English model
+#     2. Extracts entities of specified types
+#     3. Maps to text spans with character offsets
+#     4. Returns top 10 most relevant entities
+
+#     ## Notes
+#     Currently limited to 10 entities to manage
+#     annotation density. Future improvements planned for page-aware annotations.
+#     """
+
+#     import spacy
+
+#     nlp = spacy.load("en_core_web_sm")
+#     doc = nlp(pdf_text_extract)
+
+#     results = []
+
+#     for index, ent in enumerate(
+#         [ent for ent in doc.ents if ent.label_ in ["ORG", "GPE", "PERSON", "PRODUCT"]]
+#     ):
+#         results.append(
+#             (
+#                 TextSpan(
+#                     id=str(index),
+#                     start=ent.start_char,
+#                     end=ent.end_char,
+#                     text="First ten",
+#                 ),
+#                 str(ent.label_),
+#             )
+#         )
+#         # print(ent.text, ent.start_char, ent.end_char, ent.label_)
+
+#     # This generates a TON of labels... so artificially limiting to 10 for now... Ideal fix here is using page aware
+#     # annotations, which I know I was using before for virtual loading. Think it ran into some issues with the jump
+#     # to annotation functionality, but that should be largely solved with new functionality to render specified annots
+#     # on annotator load.
+#     return [], results[:10], [], True
 
 
 # TODO - more robust, more production-grade approach to knowlege base building

@@ -1,7 +1,7 @@
-ARG PYTHON_VERSION=3.12-slim-bookworm
+ARG PYTORCH_VERSION=2.7.1-cuda12.6-cudnn9-runtime
 
-# define an alias for the specfic python version used in this file.
-FROM python:${PYTHON_VERSION} as python
+# define an alias for the specific pytorch version used in this file.
+FROM pytorch/pytorch:${PYTORCH_VERSION} as python
 
 # Python build stage
 FROM python as python-build-stage
@@ -53,6 +53,12 @@ ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV BUILD_ENV ${BUILD_ENVIRONMENT}
 
+# CUDA-specific environment variables for optimal performance
+ENV CUDA_MODULE_LOADING=LAZY
+ENV TORCH_CUDA_ARCH_LIST="6.0;6.1;7.0;7.5;8.0;8.6;8.9;9.0"
+ENV CUDA_VISIBLE_DEVICES=0
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+
 WORKDIR ${APP_HOME}
 
 # Install required system dependencies
@@ -79,8 +85,8 @@ COPY --from=python-build-stage /usr/src/app/wheels  /wheels/
 
 RUN pip install --upgrade pip
 
-# Install CPU-less requirements
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+# PyTorch is already installed in the base image, so we skip torch installation
+# Just install sentence-transformers which will use the existing PyTorch
 RUN pip install sentence-transformers
 
 # use wheels to install python dependencies

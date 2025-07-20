@@ -37,7 +37,6 @@ sys.exit(0)
 END
 }
 
-# Add this to your entrypoint script before postgres_ready()
 echo "Python path: $(which python)"
 echo "Python version: $(python --version)"
 echo "Installed packages:"

@@ -1,2 +1,2 @@
-spacy
-gliner == 0.2.16
+# spacy
+# gliner == 0.2.16

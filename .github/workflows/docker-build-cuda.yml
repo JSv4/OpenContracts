@@ -59,7 +59,7 @@ jobs:
           fi
 
       - name: Build and push CUDA Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}

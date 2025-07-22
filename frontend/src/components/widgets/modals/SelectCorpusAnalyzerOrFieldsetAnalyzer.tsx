@@ -20,11 +20,8 @@ import {
 } from "lucide-react";
 import {
   GET_ANALYZERS,
-  GET_FIELDSETS,
   GetAnalyzersInputs,
   GetAnalyzersOutputs,
-  GetFieldsetsInputs,
-  GetFieldsetsOutputs,
 } from "../../../graphql/queries";
 import {
   REQUEST_CREATE_EXTRACT,
@@ -40,8 +37,12 @@ import {
   StartDocumentExtractInput,
   StartDocumentExtractOutput,
 } from "../../../graphql/mutations";
-import { CorpusType, DocumentType } from "../../../types/graphql-api";
-import { FieldsetModal } from "./FieldsetModal";
+import {
+  CorpusType,
+  DocumentType,
+  FieldsetType,
+} from "../../../types/graphql-api";
+import { UnifiedFieldsetSelector } from "../selectors/UnifiedFieldsetSelector";
 
 // Styled Components
 const ModalOverlay = styled(motion.div)`
@@ -350,19 +351,6 @@ const LoadingText = styled.p`
   font-weight: 500;
 `;
 
-const CreateFieldsetOption = styled.option`
-  font-style: italic;
-  color: #3b82f6;
-  font-weight: 500;
-`;
-
-const ErrorMessage = styled.p`
-  color: #ef4444;
-  font-size: 0.875rem;
-  margin-top: 0.5rem;
-  text-align: center;
-`;
-
 // Component
 interface SelectAnalyzerOrFieldsetModalProps {
   corpus?: CorpusType;
@@ -378,8 +366,10 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
     "analyzer"
   );
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [selectedFieldset, setSelectedFieldset] = useState<FieldsetType | null>(
+    null
+  );
   const [extractName, setExtractName] = useState<string>("");
-  const [showFieldsetModal, setShowFieldsetModal] = useState(false);
 
   const { loading: loadingAnalyzers, data: analyzersData } = useQuery<
     GetAnalyzersOutputs,
@@ -387,27 +377,6 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
   >(GET_ANALYZERS, {
     skip: !open,
   });
-
-  const {
-    loading: loadingFieldsets,
-    data: fieldsetsData,
-    refetch: refetchFieldsets,
-    error: fieldsetsError,
-  } = useQuery<GetFieldsetsOutputs, GetFieldsetsInputs>(GET_FIELDSETS, {
-    variables: {}, // Empty variables object since searchText is optional
-    fetchPolicy: "cache-and-network",
-    notifyOnNetworkStatusChange: true,
-    skip: !open,
-  });
-
-  // Temporary debug logging
-  useEffect(() => {
-    if (open) {
-      console.log("Modal opened, fieldsets loading:", loadingFieldsets);
-      console.log("Fieldsets data:", fieldsetsData);
-      console.log("Fieldsets error:", fieldsetsError);
-    }
-  }, [open, loadingFieldsets, fieldsetsData, fieldsetsError]);
 
   const [createExtract, { loading: creatingExtract }] = useMutation<
     RequestCreateExtractOutputType,
@@ -579,13 +548,13 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
       } catch (error) {
         toast.error("Error starting document analysis");
       }
-    } else if (activeTab === "fieldset" && selectedItem) {
+    } else if (activeTab === "fieldset" && selectedFieldset) {
       if (document) {
         try {
           const result = await startDocumentExtract({
             variables: {
               documentId: document.id,
-              fieldsetId: selectedItem,
+              fieldsetId: selectedFieldset.id,
               corpusId: corpus?.id,
             },
           });
@@ -604,7 +573,7 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
             variables: {
               corpusId: corpus.id,
               name: extractName,
-              fieldsetId: selectedItem,
+              fieldsetId: selectedFieldset.id,
             },
           });
           if (createResult.data?.createExtract.ok) {
@@ -627,25 +596,17 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
     }
   };
 
-  const handleFieldsetCreated = async (newFieldset: any) => {
-    // Refetch fieldsets to get the new one
-    await refetchFieldsets();
-    // Select the newly created fieldset
-    setSelectedItem(newFieldset.id);
-    setShowFieldsetModal(false);
+  const handleFieldsetChange = (fieldset: FieldsetType | null) => {
+    setSelectedFieldset(fieldset);
+    setSelectedItem(fieldset?.id || null);
   };
 
   const selectedAnalyzer = analyzersData?.analyzers.edges.find(
     (edge) => edge.node.id === selectedItem
   )?.node;
 
-  const selectedFieldset = fieldsetsData?.fieldsets.edges.find(
-    (edge) => edge.node.id === selectedItem
-  )?.node;
-
   const isLoading =
     loadingAnalyzers ||
-    loadingFieldsets ||
     creatingExtract ||
     startingExtract ||
     startingDocumentAnalysis ||
@@ -691,6 +652,7 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
             onClick={() => {
               setActiveTab("analyzer");
               setSelectedItem(null);
+              setSelectedFieldset(null);
             }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -703,6 +665,7 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
             onClick={() => {
               setActiveTab("fieldset");
               setSelectedItem(null);
+              setSelectedFieldset(null);
             }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -780,43 +743,13 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
 
                 <FormField>
                   <Label>Select Fieldset</Label>
-                  <SelectContainer>
-                    <Select
-                      value={selectedItem || ""}
-                      onChange={(e) => {
-                        if (e.target.value === "__create_new__") {
-                          setShowFieldsetModal(true);
-                        } else {
-                          setSelectedItem(e.target.value);
-                        }
-                      }}
-                      disabled={loadingFieldsets}
-                    >
-                      <option value="">
-                        {loadingFieldsets
-                          ? "Loading fieldsets..."
-                          : fieldsetsError
-                          ? "Error loading fieldsets"
-                          : "Choose a fieldset..."}
-                      </option>
-                      {fieldsetsData?.fieldsets.edges.map((edge) => (
-                        <option key={edge.node.id} value={edge.node.id}>
-                          {edge.node.name}
-                        </option>
-                      ))}
-                      {!loadingFieldsets && !fieldsetsError && (
-                        <CreateFieldsetOption value="__create_new__">
-                          + Create New Fieldset...
-                        </CreateFieldsetOption>
-                      )}
-                    </Select>
-                    <SelectIcon />
-                  </SelectContainer>
-                  {fieldsetsError && (
-                    <ErrorMessage>
-                      Error loading fieldsets: {fieldsetsError.message}
-                    </ErrorMessage>
-                  )}
+                  <UnifiedFieldsetSelector
+                    value={selectedFieldset}
+                    onChange={handleFieldsetChange}
+                    placeholder="Search or create a fieldset..."
+                    disabled={isLoading}
+                    showInfo={false}
+                  />
                 </FormField>
 
                 {selectedFieldset && (
@@ -897,11 +830,6 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
           )}
         </AnimatePresence>
       </ModalContainer>
-      <FieldsetModal
-        open={showFieldsetModal}
-        onClose={() => setShowFieldsetModal(false)}
-        onSuccess={handleFieldsetCreated}
-      />
     </ModalOverlay>
   );
 };

@@ -942,16 +942,22 @@ export const EditExtractModal = ({
         size="fullscreen"
         open={open}
         onClose={toggleModal}
+        data-testid="edit-extract-modal"
       >
         <ModalHeader>
           <HeaderTitle>
-            <ExtractName>{extract.name}</ExtractName>
-            <ExtractMeta>
+            <ExtractName id="extract-name" data-testid="extract-name">
+              {extract.name}
+            </ExtractName>
+            <ExtractMeta id="extract-meta" data-testid="extract-meta">
               Created by {extract.creator?.email} on{" "}
               {new Date(extract.created).toLocaleDateString()}
             </ExtractMeta>
           </HeaderTitle>
-          <MobileCloseButton onClick={toggleModal}>
+          <MobileCloseButton
+            onClick={toggleModal}
+            data-testid="close-button-mobile"
+          >
             <Icon name="close" size="large" />
           </MobileCloseButton>
         </ModalHeader>
@@ -960,36 +966,54 @@ export const EditExtractModal = ({
           <ContentWrapper>
             <TopSection>
               <StatsContainer>
-                <StatCard>
+                <StatCard data-testid="status-card">
                   <StatLabel>Status</StatLabel>
                   <StatValue>
                     {extract.started && !extract.finished && !extract.error ? (
-                      <StatusIcon $status="processing">
+                      <StatusIcon
+                        id="status-processing"
+                        $status="processing"
+                        data-testid="status-processing"
+                      >
                         <Icon name="spinner" loading />
                         <span>Processing</span>
                       </StatusIcon>
                     ) : extract.finished ? (
-                      <StatusIcon $status="completed">
+                      <StatusIcon
+                        id="status-completed"
+                        $status="completed"
+                        data-testid="status-completed"
+                      >
                         <Icon name="check circle" />
                         <span>Completed</span>
                       </StatusIcon>
                     ) : extract.error ? (
-                      <StatusIcon $status="failed">
+                      <StatusIcon
+                        id="status-failed"
+                        $status="failed"
+                        data-testid="status-failed"
+                      >
                         <Icon name="exclamation circle" />
                         <span>Failed</span>
                       </StatusIcon>
                     ) : (
                       <StatusWithButton>
-                        <StatusIcon $status="not-started">
+                        <StatusIcon
+                          id="status-not-started"
+                          $status="not-started"
+                          data-testid="status-not-started"
+                        >
                           <Icon name="clock outline" />
                           <span>{!isMobile && "Not Started"}</span>
                         </StatusIcon>
                         <StartButton
+                          id="start-extract-button"
                           onClick={() =>
                             startExtract({
                               variables: { extractId: extract.id },
                             })
                           }
+                          data-testid="start-extract-button"
                         >
                           <Icon name="play" />
                         </StartButton>
@@ -998,28 +1022,32 @@ export const EditExtractModal = ({
                   </StatValue>
                 </StatCard>
 
-                <StatCard>
+                <StatCard data-testid="docs-card">
                   <StatLabel>Docs</StatLabel>
                   <StatValue>
                     <Icon name="file outline" color="blue" />
-                    <span>{rows.length}</span>
+                    <span id="docs-count" data-testid="docs-count">
+                      {rows.length}
+                    </span>
                   </StatValue>
                 </StatCard>
 
-                <StatCard>
+                <StatCard data-testid="cols-card">
                   <StatLabel>Cols</StatLabel>
                   <StatValue>
                     <Icon name="columns" color="teal" />
-                    <span>{columns.length}</span>
+                    <span id="cols-count" data-testid="cols-count">
+                      {columns.length}
+                    </span>
                   </StatValue>
                 </StatCard>
 
                 {extract.corpus && (
-                  <StatCard>
+                  <StatCard data-testid="corpus-card">
                     <StatLabel>Corpus</StatLabel>
                     <StatValue>
                       <Icon name="database" color="purple" />
-                      <span>
+                      <span id="corpus-title" data-testid="corpus-title">
                         {extract.corpus.title && isMobile
                           ? extract.corpus.title.substring(0, 10) + "..."
                           : extract.corpus.title || "Untitled"}
@@ -1031,6 +1059,7 @@ export const EditExtractModal = ({
 
               <ControlsContainer>
                 <DownloadButton
+                  id="export-csv-button"
                   basic
                   onClick={() => dataGridRef.current?.exportToCsv()}
                   disabled={
@@ -1038,6 +1067,7 @@ export const EditExtractModal = ({
                     isGridLoading ||
                     networkStatus === NetworkStatus.refetch
                   }
+                  data-testid="export-csv-button"
                 >
                   <Icon name="download" style={styles.downloadIcon} />
                   {!isMobile && "Export CSV"}
@@ -1046,9 +1076,14 @@ export const EditExtractModal = ({
             </TopSection>
 
             <GridSection>
-              <DataGridContainer style={{ position: "relative" }}>
+              <DataGridContainer
+                style={{ position: "relative" }}
+                id="data-grid-container"
+                data-testid="data-grid-container"
+              >
                 {loading && (
                   <Dimmer
+                    id="loading-dimmer"
                     active
                     inverted
                     style={{
@@ -1056,6 +1091,7 @@ export const EditExtractModal = ({
                       margin: 0,
                       borderRadius: "12px",
                     }}
+                    data-testid="loading-dimmer"
                   >
                     <Loader>
                       {extract.started && !extract.finished
@@ -1076,6 +1112,7 @@ export const EditExtractModal = ({
                   rows={rows}
                   columns={columns}
                   loading={Boolean(isGridLoading)}
+                  data-testid="extract-data-grid"
                 />
               </DataGridContainer>
             </GridSection>
@@ -1083,7 +1120,13 @@ export const EditExtractModal = ({
         </StyledModalContent>
 
         <ModalActions>
-          <ResponsiveButton onClick={toggleModal}>Close</ResponsiveButton>
+          <ResponsiveButton
+            id="close-button"
+            onClick={toggleModal}
+            data-testid="close-button"
+          >
+            Close
+          </ResponsiveButton>
         </ModalActions>
       </StyledModal>
     </>

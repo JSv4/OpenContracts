@@ -6,16 +6,18 @@ import {
   useMutation,
   useQuery,
 } from "@apollo/client";
-import {
-  Modal,
-  Button,
-  Dimmer,
-  Loader,
-  Tab,
-  Form,
-  Message,
-} from "semantic-ui-react";
 import { toast } from "react-toastify";
+import styled from "styled-components";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  X,
+  BarChart3,
+  Database,
+  ChevronRight,
+  Sparkles,
+  Info,
+  Loader2,
+} from "lucide-react";
 import {
   GET_ANALYZERS,
   GET_FIELDSETS,
@@ -39,7 +41,329 @@ import {
   StartDocumentExtractOutput,
 } from "../../../graphql/mutations";
 import { CorpusType, DocumentType } from "../../../types/graphql-api";
+import { FieldsetModal } from "./FieldsetModal";
 
+// Styled Components
+const ModalOverlay = styled(motion.div)`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  padding: 1rem;
+`;
+
+const ModalContainer = styled(motion.div)`
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 640px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModalHeader = styled.div`
+  padding: 2rem 2rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #fafbfc 0%, rgba(250, 251, 252, 0) 100%);
+`;
+
+const HeaderTitle = styled.h2`
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
+const HeaderSubtitle = styled.p`
+  margin: 0.5rem 0 0;
+  color: #64748b;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+`;
+
+const CloseButton = styled(motion.button)`
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    color: #64748b;
+  }
+
+  &:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    svg {
+      color: #475569;
+    }
+  }
+`;
+
+const TabContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  padding: 1.5rem 2rem 0;
+`;
+
+const TabButton = styled(motion.button)<{ $active: boolean }>`
+  flex: 1;
+  padding: 1rem 1.5rem;
+  border: 2px solid ${(props) => (props.$active ? "#3b82f6" : "#e2e8f0")};
+  background: ${(props) => (props.$active ? "#eff6ff" : "white")};
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: ${(props) => (props.$active ? "#3b82f6" : "#64748b")};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover:not(:disabled) {
+    background: ${(props) => (props.$active ? "#eff6ff" : "#f8fafc")};
+    border-color: ${(props) => (props.$active ? "#3b82f6" : "#cbd5e1")};
+  }
+`;
+
+const ModalContent = styled.div`
+  padding: 2rem;
+  flex: 1;
+  overflow-y: auto;
+`;
+
+const FormField = styled.div`
+  margin-bottom: 1.5rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const Label = styled.label`
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.9375rem;
+  transition: all 0.2s ease;
+  background: white;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &:disabled {
+    background: #f8fafc;
+    cursor: not-allowed;
+  }
+`;
+
+const SelectContainer = styled.div`
+  position: relative;
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 0.875rem 3rem 0.875rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.9375rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &:disabled {
+    background: #f8fafc;
+    cursor: not-allowed;
+  }
+`;
+
+const SelectIcon = styled(ChevronRight)`
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  width: 20px;
+  height: 20px;
+  color: #64748b;
+  pointer-events: none;
+`;
+
+const InfoBox = styled(motion.div)`
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 1rem;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    color: #0284c7;
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+`;
+
+const InfoContent = styled.div`
+  flex: 1;
+`;
+
+const InfoTitle = styled.h4`
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #0c4a6e;
+`;
+
+const InfoDescription = styled.p`
+  margin: 0;
+  font-size: 0.875rem;
+  color: #075985;
+  line-height: 1.5;
+`;
+
+const ModalFooter = styled.div`
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #e2e8f0;
+  background: #fafbfc;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+`;
+
+const Button = styled(motion.button)<{ $variant?: "primary" | "secondary" }>`
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  ${(props) =>
+    props.$variant === "primary"
+      ? `
+    background: #3b82f6;
+    color: white;
+    border: 2px solid #3b82f6;
+
+    &:hover:not(:disabled) {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+
+    &:disabled {
+      background: #94a3b8;
+      border-color: #94a3b8;
+      cursor: not-allowed;
+    }
+  `
+      : `
+    background: white;
+    color: #64748b;
+    border: 2px solid #e2e8f0;
+
+    &:hover:not(:disabled) {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      color: #475569;
+    }
+  `}
+`;
+
+const LoadingOverlay = styled(motion.div)`
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+`;
+
+const LoadingContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+`;
+
+const SpinningLoader = styled(motion.div)`
+  color: #3b82f6;
+`;
+
+const LoadingText = styled.p`
+  font-size: 0.9375rem;
+  color: #64748b;
+  font-weight: 500;
+`;
+
+const CreateFieldsetOption = styled.option`
+  font-style: italic;
+  color: #3b82f6;
+  font-weight: 500;
+`;
+
+const ErrorMessage = styled.p`
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  text-align: center;
+`;
+
+// Component
 interface SelectAnalyzerOrFieldsetModalProps {
   corpus?: CorpusType;
   document?: DocumentType;
@@ -55,15 +379,35 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
   );
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [extractName, setExtractName] = useState<string>("");
+  const [showFieldsetModal, setShowFieldsetModal] = useState(false);
 
   const { loading: loadingAnalyzers, data: analyzersData } = useQuery<
     GetAnalyzersOutputs,
     GetAnalyzersInputs
-  >(GET_ANALYZERS);
-  const { loading: loadingFieldsets, data: fieldsetsData } = useQuery<
-    GetFieldsetsOutputs,
-    GetFieldsetsInputs
-  >(GET_FIELDSETS);
+  >(GET_ANALYZERS, {
+    skip: !open,
+  });
+
+  const {
+    loading: loadingFieldsets,
+    data: fieldsetsData,
+    refetch: refetchFieldsets,
+    error: fieldsetsError,
+  } = useQuery<GetFieldsetsOutputs, GetFieldsetsInputs>(GET_FIELDSETS, {
+    variables: {}, // Empty variables object since searchText is optional
+    fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
+    skip: !open,
+  });
+
+  // Temporary debug logging
+  useEffect(() => {
+    if (open) {
+      console.log("Modal opened, fieldsets loading:", loadingFieldsets);
+      console.log("Fieldsets data:", fieldsetsData);
+      console.log("Fieldsets error:", fieldsetsError);
+    }
+  }, [open, loadingFieldsets, fieldsetsData, fieldsetsError]);
 
   const [createExtract, { loading: creatingExtract }] = useMutation<
     RequestCreateExtractOutputType,
@@ -175,8 +519,8 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
       START_DOCUMENT_EXTRACT,
       {
         update(cache, { data }) {
-          if (data?.startDocumentExtract.ok && data.startDocumentExtract.obj) {
-            const newExtract = data.startDocumentExtract.obj;
+          if (data?.startExtractForDoc.ok && data.startExtractForDoc.obj) {
+            const newExtract = data.startExtractForDoc.obj;
             cache.modify({
               fields: {
                 extracts(existingExtracts = { edges: [] }, { readField }) {
@@ -216,13 +560,8 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
       }
     );
 
-  useEffect(() => {
-    console.log("Active tab changed", activeTab);
-  }, [activeTab]);
-
   const handleRun = async () => {
     if (activeTab === "analyzer" && selectedItem) {
-      console.log("Handle Run - for analyzer");
       try {
         const result = await startDocumentAnalysis({
           variables: {
@@ -250,7 +589,7 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
               corpusId: corpus?.id,
             },
           });
-          if (result.data?.startDocumentExtract.ok) {
+          if (result.data?.startExtractForDoc.ok) {
             toast.success("Document extract started successfully");
             onClose();
           } else {
@@ -260,7 +599,6 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
           toast.error("Error starting document extract");
         }
       } else if (corpus) {
-        console.log("Create extract for corpus", corpus);
         try {
           const createResult = await createExtract({
             variables: {
@@ -289,119 +627,281 @@ export const SelectAnalyzerOrFieldsetModal: React.FC<
     }
   };
 
-  const panes = [
-    {
-      menuItem: "Analyzer",
-      render: () => (
-        <Tab.Pane>
-          <Form>
-            <Form.Select
-              fluid
-              label="Select Analyzer"
-              options={
-                analyzersData?.analyzers.edges.map((edge) => ({
-                  key: edge.node.id,
-                  text: edge.node.description,
-                  value: edge.node.id,
-                })) || []
-              }
-              onChange={(_, { value }) => setSelectedItem(value as string)}
-            />
-          </Form>
-        </Tab.Pane>
-      ),
-    },
-    {
-      menuItem: "Fieldset",
-      render: () => (
-        <Tab.Pane>
-          <Form>
-            {!document && (
-              <Form.Input
-                fluid
-                label="Extract Name"
-                placeholder="Enter extract name"
-                value={extractName}
-                onChange={(e, { value }) => setExtractName(value)}
-              />
-            )}
-            <Form.Select
-              fluid
-              label="Select Fieldset"
-              options={
-                fieldsetsData?.fieldsets.edges.map((edge) => ({
-                  key: edge.node.id,
-                  text: edge.node.name,
-                  value: edge.node.id,
-                })) || []
-              }
-              onChange={(_, { value }) => setSelectedItem(value as string)}
-            />
-          </Form>
-        </Tab.Pane>
-      ),
-    },
-  ];
+  const handleFieldsetCreated = async (newFieldset: any) => {
+    // Refetch fieldsets to get the new one
+    await refetchFieldsets();
+    // Select the newly created fieldset
+    setSelectedItem(newFieldset.id);
+    setShowFieldsetModal(false);
+  };
+
+  const selectedAnalyzer = analyzersData?.analyzers.edges.find(
+    (edge) => edge.node.id === selectedItem
+  )?.node;
+
+  const selectedFieldset = fieldsetsData?.fieldsets.edges.find(
+    (edge) => edge.node.id === selectedItem
+  )?.node;
+
+  const isLoading =
+    loadingAnalyzers ||
+    loadingFieldsets ||
+    creatingExtract ||
+    startingExtract ||
+    startingDocumentAnalysis ||
+    startingDocumentExtract;
+
+  if (!open) return null;
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      style={{ zIndex: 999999 }}
-      className="high-z-index-modal"
+    <ModalOverlay
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
     >
-      <Modal.Header>
-        Select {activeTab === "analyzer" ? "Analyzer" : "Fieldset"} for{" "}
-        {document ? document.title : corpus?.title}
-      </Modal.Header>
-      <Modal.Content>
-        {(loadingAnalyzers ||
-          loadingFieldsets ||
-          creatingExtract ||
-          startingExtract ||
-          startingDocumentAnalysis ||
-          startingDocumentExtract) && (
-          <Dimmer active>
-            <Loader>Loading...</Loader>
-          </Dimmer>
-        )}
-        <Tab
-          panes={panes}
-          onTabChange={(_, data) => {
-            setActiveTab(data.activeIndex === 0 ? "analyzer" : "fieldset");
-            setSelectedItem(null);
-          }}
-        />
-        {selectedItem && (
-          <Message positive>
-            <Message.Header>
-              {activeTab === "analyzer" ? "Analyzer" : "Fieldset"} selected
-            </Message.Header>
-            <p>
-              {activeTab === "analyzer"
-                ? analyzersData?.analyzers.edges.find(
-                    (edge) => edge.node.id === selectedItem
-                  )?.node.description
-                : fieldsetsData?.fieldsets.edges.find(
-                    (edge) => edge.node.id === selectedItem
-                  )?.node.name}
-            </p>
-          </Message>
-        )}
-      </Modal.Content>
-      <Modal.Actions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button
-          positive
-          onClick={handleRun}
-          disabled={
-            !selectedItem ||
-            (activeTab === "fieldset" && !document && !extractName)
-          }
-        >
-          Run
-        </Button>
-      </Modal.Actions>
-    </Modal>
+      <ModalContainer
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ModalHeader>
+          <HeaderTitle>
+            <Sparkles size={24} />
+            Start Analysis
+          </HeaderTitle>
+          <HeaderSubtitle>
+            {document
+              ? `Analyze "${document.title}"`
+              : `Analyze all documents in "${corpus?.title}"`}
+          </HeaderSubtitle>
+          <CloseButton
+            onClick={onClose}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <X />
+          </CloseButton>
+        </ModalHeader>
+
+        <TabContainer>
+          <TabButton
+            $active={activeTab === "analyzer"}
+            onClick={() => {
+              setActiveTab("analyzer");
+              setSelectedItem(null);
+            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <BarChart3 />
+            Analyzer
+          </TabButton>
+          <TabButton
+            $active={activeTab === "fieldset"}
+            onClick={() => {
+              setActiveTab("fieldset");
+              setSelectedItem(null);
+            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Database />
+            Fieldset
+          </TabButton>
+        </TabContainer>
+
+        <ModalContent>
+          <AnimatePresence>
+            {activeTab === "analyzer" ? (
+              <motion.div
+                key="analyzer"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+              >
+                <FormField>
+                  <Label>Select Analyzer</Label>
+                  <SelectContainer>
+                    <Select
+                      value={selectedItem || ""}
+                      onChange={(e) => setSelectedItem(e.target.value)}
+                      disabled={loadingAnalyzers}
+                    >
+                      <option value="">Choose an analyzer...</option>
+                      {analyzersData?.analyzers.edges.map((edge) => (
+                        <option key={edge.node.id} value={edge.node.id}>
+                          {edge.node.description}
+                        </option>
+                      ))}
+                    </Select>
+                    <SelectIcon />
+                  </SelectContainer>
+                </FormField>
+
+                {selectedAnalyzer && (
+                  <InfoBox
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <Info />
+                    <InfoContent>
+                      <InfoTitle>{selectedAnalyzer.description}</InfoTitle>
+                      <InfoDescription>
+                        {selectedAnalyzer.manifest?.metadata?.description ||
+                          "This analyzer will process your document and extract insights."}
+                      </InfoDescription>
+                    </InfoContent>
+                  </InfoBox>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="fieldset"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+              >
+                {!document && (
+                  <FormField>
+                    <Label>Extract Name</Label>
+                    <Input
+                      type="text"
+                      placeholder="Enter a name for this extract..."
+                      value={extractName}
+                      onChange={(e) => setExtractName(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </FormField>
+                )}
+
+                <FormField>
+                  <Label>Select Fieldset</Label>
+                  <SelectContainer>
+                    <Select
+                      value={selectedItem || ""}
+                      onChange={(e) => {
+                        if (e.target.value === "__create_new__") {
+                          setShowFieldsetModal(true);
+                        } else {
+                          setSelectedItem(e.target.value);
+                        }
+                      }}
+                      disabled={loadingFieldsets}
+                    >
+                      <option value="">
+                        {loadingFieldsets
+                          ? "Loading fieldsets..."
+                          : fieldsetsError
+                          ? "Error loading fieldsets"
+                          : "Choose a fieldset..."}
+                      </option>
+                      {fieldsetsData?.fieldsets.edges.map((edge) => (
+                        <option key={edge.node.id} value={edge.node.id}>
+                          {edge.node.name}
+                        </option>
+                      ))}
+                      {!loadingFieldsets && !fieldsetsError && (
+                        <CreateFieldsetOption value="__create_new__">
+                          + Create New Fieldset...
+                        </CreateFieldsetOption>
+                      )}
+                    </Select>
+                    <SelectIcon />
+                  </SelectContainer>
+                  {fieldsetsError && (
+                    <ErrorMessage>
+                      Error loading fieldsets: {fieldsetsError.message}
+                    </ErrorMessage>
+                  )}
+                </FormField>
+
+                {selectedFieldset && (
+                  <InfoBox
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <Database />
+                    <InfoContent>
+                      <InfoTitle>{selectedFieldset.name}</InfoTitle>
+                      <InfoDescription>
+                        {selectedFieldset.description ||
+                          "This fieldset will extract structured data from your document."}
+                      </InfoDescription>
+                    </InfoContent>
+                  </InfoBox>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </ModalContent>
+
+        <ModalFooter>
+          <Button
+            onClick={onClose}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            $variant="primary"
+            onClick={handleRun}
+            disabled={
+              !selectedItem ||
+              (activeTab === "fieldset" && !document && !extractName) ||
+              isLoading
+            }
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {isLoading ? (
+              <>
+                <SpinningLoader
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                >
+                  <Loader2 size={18} />
+                </SpinningLoader>
+                Processing...
+              </>
+            ) : (
+              <>
+                <Sparkles size={18} />
+                Run Analysis
+              </>
+            )}
+          </Button>
+        </ModalFooter>
+
+        <AnimatePresence>
+          {isLoading && (
+            <LoadingOverlay
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <LoadingContent>
+                <SpinningLoader
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                >
+                  <Loader2 size={32} />
+                </SpinningLoader>
+                <LoadingText>Starting analysis...</LoadingText>
+              </LoadingContent>
+            </LoadingOverlay>
+          )}
+        </AnimatePresence>
+      </ModalContainer>
+      <FieldsetModal
+        open={showFieldsetModal}
+        onClose={() => setShowFieldsetModal(false)}
+        onSuccess={handleFieldsetCreated}
+      />
+    </ModalOverlay>
   );
 };

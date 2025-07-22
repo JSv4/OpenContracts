@@ -10,9 +10,13 @@ import {
   EyeOff,
   BarChart3,
   Database,
+  Plus,
 } from "lucide-react";
 import { Checkbox, CheckboxProps } from "semantic-ui-react";
 import { useAnnotationDisplay } from "../../annotator/context/UISettingsAtom";
+import { useCorpusState } from "../../annotator/context/CorpusAtom";
+import { showSelectCorpusAnalyzerOrFieldsetModal } from "../../../graphql/cache";
+import { PermissionTypes } from "../../types";
 
 const ControlsContainer = styled(motion.div)<{ $panelOffset?: number }>`
   position: fixed;
@@ -199,6 +203,12 @@ export const FloatingDocumentControls: React.FC<
     setShowBoundingBoxes,
   } = useAnnotationDisplay();
 
+  // Get corpus permissions to check if user can create analyses
+  const { selectedCorpus } = useCorpusState();
+  const canCreateAnalysis =
+    selectedCorpus?.myPermissions?.includes(PermissionTypes.CAN_READ) &&
+    selectedCorpus?.myPermissions?.includes(PermissionTypes.CAN_UPDATE);
+
   if (!visible) return null;
 
   const handleShowSelectedChange = (checked: boolean) => {
@@ -332,6 +342,19 @@ export const FloatingDocumentControls: React.FC<
       >
         <BarChart3 />
       </ActionButton>
+
+      {/* New button: Start Analysis - only show if user has permissions */}
+      {canCreateAnalysis && (
+        <ActionButton
+          $color="#10b981"
+          onClick={() => showSelectCorpusAnalyzerOrFieldsetModal(true)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          title="Start New Analysis"
+        >
+          <Plus />
+        </ActionButton>
+      )}
     </ControlsContainer>
   );
 };

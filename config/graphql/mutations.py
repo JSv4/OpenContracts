@@ -2045,6 +2045,7 @@ class StartDocumentExtract(graphene.Mutation):
     class Arguments:
         document_id = graphene.ID(required=True)
         fieldset_id = graphene.ID(required=True)
+        corpus_id = graphene.ID(required=False)
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -2052,17 +2053,25 @@ class StartDocumentExtract(graphene.Mutation):
 
     @staticmethod
     @login_required
-    def mutate(root, info, document_id, fieldset_id):
+    def mutate(root, info, document_id, fieldset_id, corpus_id=None):
+        from opencontractserver.corpuses.models import Corpus
+
         doc_pk = from_global_id(document_id)[1]
         fieldset_pk = from_global_id(fieldset_id)[1]
 
         document = Document.objects.get(pk=doc_pk)
         fieldset = Fieldset.objects.get(pk=fieldset_pk)
 
+        corpus = None
+        if corpus_id:
+            corpus_pk = from_global_id(corpus_id)[1]
+            corpus = Corpus.objects.get(pk=corpus_pk)
+
         extract = Extract.objects.create(
             name=f"Extract {uuid.uuid4()} for {document.title}",
             fieldset=fieldset,
             creator=info.context.user,
+            corpus=corpus,
         )
         extract.documents.add(document)
         extract.save()

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -551,6 +551,18 @@ export const FloatingSummaryPreview: React.FC<FloatingSummaryPreviewProps> = ({
     updateSummary,
     refetch,
   } = useSummaryVersions(documentId, corpusId);
+
+  /* ------------------------------------------------------------------ */
+  /* Refresh summary versions whenever the preview is expanded           */
+  /* ------------------------------------------------------------------ */
+  useEffect(() => {
+    if (state.isExpanded) {
+      // Trigger a background refetch so the version stack is fresh.
+      // Apollo will serve cached data immediately and update when the
+      // network response arrives, keeping the UI snappy.
+      refetch();
+    }
+  }, [state.isExpanded, refetch]);
 
   const handleVersionClick = (version: number) => {
     if (version === currentVersion) {

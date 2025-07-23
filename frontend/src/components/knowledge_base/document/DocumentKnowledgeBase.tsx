@@ -1027,7 +1027,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     viewerContent = (
       <PDFContainer id="pdf-container" ref={containerRefCallback}>
         {viewState === ViewState.LOADED ? (
-          <TxtAnnotatorWrapper readOnly={true} allowInput={false} />
+          <TxtAnnotatorWrapper readOnly={false} allowInput={true} />
         ) : viewState === ViewState.LOADING ? (
           <Loader active inline="centered" content="Loading Text..." />
         ) : (

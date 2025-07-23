@@ -186,6 +186,50 @@ export const mockPdfDocumentForStructuralTest: RawDocumentType = {
   allNotes: [],
 };
 
+// Mock label for text annotations
+const mockTextLabel = {
+  __typename: "AnnotationLabelType" as const,
+  id: "text-label-1",
+  text: "Important Text",
+  color: "#3B82F6",
+  icon: "tag" as any,
+  description: "Label for important text sections",
+  labelType: LabelType.SpanLabel,
+};
+
+// Mock annotations for TXT document
+export const mockTxtAnnotation1: RawServerAnnotationType = {
+  id: "txt-annot-1",
+  page: 0,
+  parent: null,
+  annotationLabel: mockTextLabel,
+  annotationType: LabelType.SpanLabel,
+  rawText: "Lorem ipsum",
+  json: {
+    start: 0,
+    end: 11,
+  },
+  structural: false,
+  myPermissions: ["read", "write", "delete", "update"],
+  __typename: "AnnotationType",
+};
+
+export const mockTxtAnnotation2: RawServerAnnotationType = {
+  id: "txt-annot-2",
+  page: 0,
+  parent: null,
+  annotationLabel: mockTextLabel,
+  annotationType: LabelType.SpanLabel,
+  rawText: "consectetur adipiscing",
+  json: {
+    start: 28,
+    end: 50,
+  },
+  structural: false,
+  myPermissions: ["read", "write", "delete", "update"],
+  __typename: "AnnotationType",
+};
+
 export const mockTxtDocument: RawDocumentType = {
   ...mockPdfDocument,
   id: TXT_DOC_ID,
@@ -195,6 +239,7 @@ export const mockTxtDocument: RawDocumentType = {
   pawlsParseFile: undefined,
   txtExtractFile: "dummy-txt.txt",
   mdSummaryFile: undefined,
+  allAnnotations: [mockTxtAnnotation1, mockTxtAnnotation2],
 };
 
 export const mockCorpusData = {
@@ -219,6 +264,15 @@ export const mockCorpusData = {
         color: "#FF0000",
         icon: undefined,
         description: "A person entity",
+      },
+      {
+        __typename: "AnnotationLabelType",
+        id: "text-label-1",
+        text: "Important Text",
+        labelType: LabelType.SpanLabel,
+        color: "#3B82F6",
+        icon: undefined,
+        description: "Label for important text sections",
       },
       {
         __typename: "AnnotationLabelType",

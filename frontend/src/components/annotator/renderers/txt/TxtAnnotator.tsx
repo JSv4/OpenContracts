@@ -690,6 +690,7 @@ const TxtAnnotator: React.FC<TxtAnnotatorProps> = ({
     <>
       <PaperContainer
         ref={containerRef}
+        id="txt-annotator-txt-container"
         data-testid="txt-annotator"
         style={{
           maxHeight: maxHeight || "auto",

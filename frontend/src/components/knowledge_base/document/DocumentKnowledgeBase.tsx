@@ -135,6 +135,10 @@ interface DocumentKnowledgeBaseProps {
    */
   initialAnnotationIds?: string[];
   onClose?: () => void;
+  /**
+   * When true, disables all editing capabilities and shows only view-only features.
+   */
+  readOnly?: boolean;
 }
 
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
@@ -142,6 +146,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   corpusId,
   initialAnnotationIds,
   onClose,
+  readOnly = false,
 }) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -965,6 +970,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             filters={feedFilters}
             sortBy={feedSortBy}
             isLoading={loading}
+            readOnly={readOnly}
             onItemSelect={(item) => {
               // Handle item selection based on type
               if (item.type === "annotation" || item.type === "relationship") {
@@ -993,6 +999,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           }}
           corpusId={corpusId}
           initialMessage={pendingChatMessage}
+          readOnly={readOnly}
         />
       </div>
     );
@@ -1005,7 +1012,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       <PDFContainer id="pdf-container" ref={containerRefCallback}>
         {viewState === ViewState.LOADED ? (
           <PDF
-            read_only={false}
+            read_only={readOnly}
             containerWidth={containerWidth}
             createAnnotationHandler={createAnnotationHandler}
           />
@@ -1027,7 +1034,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     viewerContent = (
       <PDFContainer id="pdf-container" ref={containerRefCallback}>
         {viewState === ViewState.LOADED ? (
-          <TxtAnnotatorWrapper readOnly={false} allowInput={true} />
+          <TxtAnnotatorWrapper readOnly={readOnly} allowInput={!readOnly} />
         ) : viewState === ViewState.LOADING ? (
           <Loader active inline="centered" content="Loading Text..." />
         ) : (
@@ -1071,6 +1078,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         corpusId={corpusId}
         metadata={metadata}
         parentLoading={loading}
+        readOnly={readOnly}
       />
     ) : (
       <div
@@ -1206,6 +1214,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             showRightPanel={showRightPanel}
             panelOffset={floatingControlsState.offset}
             hideControls={!floatingControlsState.visible}
+            readOnly={readOnly}
           />
 
           {/* Floating Summary Preview - always visible, acts as picture-in-picture for knowledge layer */}
@@ -1457,6 +1466,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       </Modal>
 
       <NoteModal
+        id={`note-modal_${selectedNote?.id}`}
         closeIcon
         open={!!selectedNote}
         onClose={() => setSelectedNote(null)}
@@ -1469,16 +1479,18 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
               <SafeMarkdown>{selectedNote.content}</SafeMarkdown>
             </Modal.Content>
             <Modal.Actions>
-              <Button
-                primary
-                onClick={() => {
-                  setEditingNoteId(selectedNote.id);
-                  setSelectedNote(null);
-                }}
-              >
-                <Icon name="edit" />
-                Edit Note
-              </Button>
+              {!readOnly && (
+                <Button
+                  primary
+                  onClick={() => {
+                    setEditingNoteId(selectedNote.id);
+                    setSelectedNote(null);
+                  }}
+                >
+                  <Icon name="edit" />
+                  Edit Note
+                </Button>
+              )}
               <Button onClick={() => setSelectedNote(null)}>Close</Button>
             </Modal.Actions>
             <div className="meta">
@@ -1489,7 +1501,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         )}
       </NoteModal>
 
-      {editingNoteId && (
+      {!readOnly && editingNoteId && (
         <NoteEditor
           noteId={editingNoteId}
           isOpen={true}
@@ -1501,16 +1513,18 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         />
       )}
 
-      <NewNoteModal
-        isOpen={showNewNoteModal}
-        onClose={() => setShowNewNoteModal(false)}
-        documentId={documentId}
-        corpusId={corpusId}
-        onCreated={() => {
-          // Refetch the document data to get the new note
-          refetch();
-        }}
-      />
+      {!readOnly && (
+        <NewNoteModal
+          isOpen={showNewNoteModal}
+          onClose={() => setShowNewNoteModal(false)}
+          documentId={documentId}
+          corpusId={corpusId}
+          onCreated={() => {
+            // Refetch the document data to get the new note
+            refetch();
+          }}
+        />
+      )}
     </FullScreenModal>
   );
 };

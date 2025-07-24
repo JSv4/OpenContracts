@@ -69,7 +69,7 @@ export const mockPdfDocument: RawDocumentType = {
   allStructuralAnnotations: [],
   allRelationships: [],
   allDocRelationships: [],
-  allNotes: [],
+  allNotes: [], // Will be overridden in specific document mocks
 };
 
 // Mock Annotations for Structural Test based on provided examples
@@ -230,6 +230,43 @@ export const mockTxtAnnotation2: RawServerAnnotationType = {
   __typename: "AnnotationType",
 };
 
+// Mock notes
+const mockNote1 = {
+  id: "note-1",
+  __typename: "NoteType" as const,
+  title: "Test Note 1",
+  content: "This is a test note for the document.",
+  created: new Date("2023-10-26T10:00:00.000Z").toISOString(),
+  modified: new Date("2023-10-26T10:00:00.000Z").toISOString(),
+  creator: {
+    __typename: "UserType" as const,
+    id: "user-1",
+    email: "test@test.com",
+  },
+  corpus: null,
+  document: { __typename: "DocumentType" as const, id: PDF_DOC_ID },
+  page: 1,
+  myPermissions: ["read", "write", "delete", "update"],
+};
+
+const mockNote2 = {
+  id: "note-2",
+  __typename: "NoteType" as const,
+  title: "Another Note",
+  content: "This is another test note.",
+  created: new Date("2023-10-26T11:00:00.000Z").toISOString(),
+  modified: new Date("2023-10-26T11:00:00.000Z").toISOString(),
+  creator: {
+    __typename: "UserType" as const,
+    id: "user-1",
+    email: "test@test.com",
+  },
+  corpus: null,
+  document: { __typename: "DocumentType" as const, id: PDF_DOC_ID },
+  page: 2,
+  myPermissions: ["read", "write", "delete", "update"],
+};
+
 export const mockTxtDocument: RawDocumentType = {
   ...mockPdfDocument,
   id: TXT_DOC_ID,
@@ -338,7 +375,15 @@ export const graphqlMocks: ReadonlyArray<MockedResponse> = [
         analysisId: undefined,
       },
     },
-    result: { data: { document: mockPdfDocument, corpus: mockCorpusData } },
+    result: {
+      data: {
+        document: {
+          ...mockPdfDocument,
+          allNotes: [mockNote1, mockNote2],
+        },
+        corpus: mockCorpusData,
+      },
+    },
   },
   // --- Add the PDF knowledge+annotations query AGAIN for the refetch ---
   {
@@ -350,7 +395,15 @@ export const graphqlMocks: ReadonlyArray<MockedResponse> = [
         analysisId: undefined, // Assuming refetch doesn't add analysisId initially
       },
     },
-    result: { data: { document: mockPdfDocument, corpus: mockCorpusData } }, // Same result
+    result: {
+      data: {
+        document: {
+          ...mockPdfDocument,
+          allNotes: [mockNote1, mockNote2],
+        },
+        corpus: mockCorpusData,
+      },
+    }, // Same result
   },
   // 2) Original knowledge+annotations query for TXT
   {
@@ -362,7 +415,15 @@ export const graphqlMocks: ReadonlyArray<MockedResponse> = [
         analysisId: undefined,
       },
     },
-    result: { data: { document: mockTxtDocument, corpus: mockCorpusData } },
+    result: {
+      data: {
+        document: {
+          ...mockTxtDocument,
+          allNotes: [mockNote1, mockNote2],
+        },
+        corpus: mockCorpusData,
+      },
+    },
   },
   // 3) CORRECTED: Stub for Analyses/Extracts (documentCorpusActions) - PDF
   {

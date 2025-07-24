@@ -39,6 +39,8 @@ interface UnifiedContentFeedProps {
   onItemSelect?: (item: UnifiedContentItem) => void;
   /** Fetch more callback for infinite scroll */
   fetchMore?: () => Promise<void>;
+  /** Read-only mode disables editing capabilities */
+  readOnly?: boolean;
 }
 
 /* Styled Components */
@@ -121,6 +123,7 @@ export const UnifiedContentFeed: React.FC<UnifiedContentFeedProps> = ({
   isLoading = false,
   onItemSelect,
   fetchMore,
+  readOnly = false,
 }) => {
   /* Data sources */
   const visibleAnnotations = useVisibleAnnotations();

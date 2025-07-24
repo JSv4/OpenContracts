@@ -1224,6 +1224,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             documentTitle={metadata.title || "Untitled Document"}
             isVisible={true}
             isInKnowledgeLayer={activeLayer === "knowledge"}
+            readOnly={readOnly}
             onSwitchToKnowledge={(content?: string) => {
               setActiveLayer("knowledge");
               setShowRightPanel(false);
@@ -1274,6 +1275,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             <FloatingDocumentInput
               fixed={false}
               visible={activeLayer === "document"}
+              readOnly={readOnly}
               onChatSubmit={(message) => {
                 setPendingChatMessage(message);
                 setSidebarViewMode("chat");
@@ -1296,6 +1298,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             analysesOpen={showAnalysesPanel}
             extractsOpen={showExtractsPanel}
             panelOffset={floatingControlsState.offset}
+            readOnly={readOnly}
           />
 
           {/* Floating Analyses Panel */}
@@ -1308,6 +1311,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             analyses={analyses}
             onClose={() => setShowAnalysesPanel(false)}
             panelOffset={floatingControlsState.offset}
+            readOnly={readOnly}
           />
 
           {/* Floating Extracts Panel */}
@@ -1320,6 +1324,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             extracts={extracts}
             onClose={() => setShowExtractsPanel(false)}
             panelOffset={floatingControlsState.offset}
+            readOnly={readOnly}
           />
 
           {/* Right Panel, if needed */}

@@ -14,6 +14,7 @@ interface FloatingDocumentInputTestWrapperProps {
   onToggleChat?: () => void;
   panelOffset?: number;
   fixed?: boolean;
+  readOnly?: boolean;
   // Test configuration props
   initialSearchText?: string;
   initialSearchMatches?: any[];
@@ -60,6 +61,7 @@ export const FloatingDocumentInputTestWrapper: React.FC<
   onToggleChat,
   panelOffset = 0,
   fixed = true,
+  readOnly = false,
   initialSearchText = "",
   initialSearchMatches = [],
   initialSelectedIndex = 0,
@@ -95,6 +97,7 @@ export const FloatingDocumentInputTestWrapper: React.FC<
               onToggleChat={onToggleChat}
               panelOffset={panelOffset}
               fixed={fixed}
+              readOnly={readOnly}
             />
           </div>
         </div>

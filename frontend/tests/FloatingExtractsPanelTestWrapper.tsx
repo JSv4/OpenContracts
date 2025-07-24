@@ -9,6 +9,7 @@ interface FloatingExtractsPanelTestWrapperProps {
   onClose?: () => void;
   panelOffset?: number;
   initiallyExpanded?: boolean;
+  readOnly?: boolean;
 }
 
 // Mock extract data
@@ -47,6 +48,7 @@ export const FloatingExtractsPanelTestWrapper: React.FC<
   onClose = () => {},
   panelOffset = 0,
   initiallyExpanded = false,
+  readOnly = false,
 }) => {
   return (
     <JotaiProvider>
@@ -64,6 +66,7 @@ export const FloatingExtractsPanelTestWrapper: React.FC<
           onClose={onClose}
           panelOffset={panelOffset}
           initiallyExpanded={initiallyExpanded}
+          readOnly={readOnly}
         />
       </div>
     </JotaiProvider>

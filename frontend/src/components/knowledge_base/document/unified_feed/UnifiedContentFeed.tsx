@@ -461,6 +461,7 @@ export const UnifiedContentFeed: React.FC<UnifiedContentFeedProps> = ({
                     <ContentItemRenderer
                       item={item}
                       onSelect={() => onItemSelect?.(item)}
+                      readOnly={readOnly}
                     />
                   </ContentWrapper>
                 </div>

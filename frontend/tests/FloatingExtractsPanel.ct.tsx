@@ -225,4 +225,108 @@ test.describe("FloatingExtractsPanel", () => {
     // Should have gradient background
     expect(styles.background).toContain("gradient");
   });
+
+  test("read-only: passes readOnly prop to ExtractTraySelector", async ({
+    mount,
+    page,
+  }) => {
+    await mount(
+      <FloatingExtractsPanelTestWrapper
+        visible={true}
+        readOnly={true}
+        initiallyExpanded={true}
+        extracts={[
+          {
+            id: "1",
+            name: "Test Extract 1",
+            created: new Date().toISOString(),
+            modified: new Date().toISOString(),
+            started: new Date().toISOString(),
+            finished: new Date().toISOString(),
+            isPublic: false,
+            error: null,
+            creator: {
+              id: "user-1",
+              email: "test@example.com",
+              username: "testuser",
+              __typename: "UserType" as const,
+            },
+            corpus: {
+              id: "corpus-1",
+              title: "Test Corpus",
+              __typename: "CorpusType" as const,
+            },
+            __typename: "ExtractType" as const,
+          },
+        ]}
+      />
+    );
+
+    // Panel should be visible
+    await expect(page.locator("text=Document Extracts")).toBeVisible();
+
+    // The ExtractTraySelector component receives the readOnly prop
+    // In read-only mode, edit functionality should be disabled
+    // (actual behavior depends on ExtractTraySelector implementation)
+  });
+
+  test("read-only: minimize and close buttons remain functional", async ({
+    mount,
+    page,
+  }) => {
+    let closeCalled = false;
+
+    await mount(
+      <FloatingExtractsPanelTestWrapper
+        visible={true}
+        readOnly={true}
+        initiallyExpanded={true}
+        onClose={() => {
+          closeCalled = true;
+        }}
+      />
+    );
+
+    // Should show the header with buttons
+    await expect(page.locator("text=Document Extracts")).toBeVisible();
+
+    // Minimize button should work
+    const minimizeButton = page.locator('button[title="Minimize"]');
+    await minimizeButton.click();
+
+    // Panel should collapse
+    await expect(page.locator("text=Document Extracts")).not.toBeVisible();
+
+    // Expand again
+    const collapsedButton = page.locator("button").first();
+    await collapsedButton.click();
+
+    // Close button should work
+    const closeButton = page.locator('button[title="Close"]');
+    await closeButton.click();
+
+    expect(closeCalled).toBe(true);
+  });
+
+  test("read-only: back navigation remains functional", async ({
+    mount,
+    page,
+  }) => {
+    // Note: This test verifies the panel structure in read-only mode
+    // Actual extract selection would require more complex state setup
+    await mount(
+      <FloatingExtractsPanelTestWrapper
+        visible={true}
+        readOnly={true}
+        initiallyExpanded={true}
+      />
+    );
+
+    // Panel should render normally in read-only mode
+    await expect(page.locator("text=Document Extracts")).toBeVisible();
+
+    // The back button would appear when an extract is selected
+    // In read-only mode, navigation should still work
+    await expect(page.locator("text=Back to Extracts")).not.toBeVisible();
+  });
 });

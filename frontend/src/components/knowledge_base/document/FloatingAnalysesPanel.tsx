@@ -10,6 +10,7 @@ interface FloatingAnalysesPanelProps {
   analyses: AnalysisType[];
   onClose: () => void;
   panelOffset?: number;
+  readOnly?: boolean;
 }
 
 const FloatingContainer = styled(motion.div)<{ $panelOffset?: number }>`
@@ -270,6 +271,7 @@ export const FloatingAnalysesPanel: React.FC<FloatingAnalysesPanelProps> = ({
   analyses,
   onClose,
   panelOffset = 0,
+  readOnly = false,
 }) => {
   const [viewMode, setViewMode] = useState<"compact" | "expanded">("expanded");
   const [searchTerm, setSearchTerm] = useState("");
@@ -363,7 +365,7 @@ export const FloatingAnalysesPanel: React.FC<FloatingAnalysesPanelProps> = ({
         <Content>
           <AnalysisSelectorWrapper $viewMode={viewMode}>
             <AnalysisTraySelector
-              read_only={false}
+              read_only={readOnly}
               analyses={analyses}
               viewMode={viewMode}
               searchTerm={searchTerm}

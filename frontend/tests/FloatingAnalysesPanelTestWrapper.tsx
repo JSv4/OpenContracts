@@ -7,6 +7,7 @@ interface FloatingAnalysesPanelTestWrapperProps {
   analyses?: AnalysisType[];
   onClose?: () => void;
   panelOffset?: number;
+  readOnly?: boolean;
 }
 
 // Mock analysis data helper (also defined in test file to avoid import issues)
@@ -64,6 +65,7 @@ export const FloatingAnalysesPanelTestWrapper: React.FC<
   ],
   onClose = () => {},
   panelOffset = 0,
+  readOnly = false,
 }) => {
   return (
     <div
@@ -79,6 +81,7 @@ export const FloatingAnalysesPanelTestWrapper: React.FC<
         analyses={analyses}
         onClose={onClose}
         panelOffset={panelOffset}
+        readOnly={readOnly}
       />
     </div>
   );

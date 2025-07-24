@@ -354,4 +354,87 @@ test.describe("FloatingDocumentControls", () => {
     await createAnalysisButton.click();
     // No error should occur
   });
+
+  test("read-only: hides create analysis button even with permissions", async ({
+    mount,
+    page,
+  }) => {
+    const component = await mount(
+      <FloatingDocumentControlsTestWrapper
+        visible={true}
+        readOnly={true}
+        corpusPermissions={["CAN_READ", "CAN_UPDATE"]} // Has permissions
+      />
+    );
+
+    // Count visible buttons
+    const settingsButton = page.locator("button").first();
+    const extractsButton = page.locator('button[title="View Extracts"]');
+    const analysesButton = page.locator('button[title="View Analyses"]');
+
+    await expect(settingsButton).toBeVisible();
+    await expect(extractsButton).toBeVisible();
+    await expect(analysesButton).toBeVisible();
+
+    // The create analysis button should NOT be visible in read-only mode
+    const createAnalysisButton = page.locator(
+      'button[title="Start New Analysis"]'
+    );
+    await expect(createAnalysisButton).not.toBeVisible();
+  });
+
+  test("read-only: settings panel still functions normally", async ({
+    mount,
+    page,
+  }) => {
+    const component = await mount(
+      <FloatingDocumentControlsTestWrapper
+        visible={true}
+        readOnly={true}
+        showBoundingBoxes={false}
+      />
+    );
+
+    // Open settings panel
+    const settingsButton = component.getByRole("button").first();
+    await settingsButton.click();
+
+    // Settings panel should still be functional
+    await expect(page.locator("text=Visualization Settings")).toBeVisible();
+
+    // Toggle should still work
+    const toggleRow = page.locator("text=Show Bounding Boxes").locator("..");
+    const toggle = toggleRow.locator('input[type="checkbox"]');
+
+    await expect(toggle).not.toBeChecked();
+    await toggle.click();
+    await expect(toggle).toBeChecked();
+  });
+
+  test("read-only: view buttons remain functional", async ({ mount }) => {
+    let analysesCalled = false;
+    let extractsCalled = false;
+
+    const component = await mount(
+      <FloatingDocumentControlsTestWrapper
+        visible={true}
+        readOnly={true}
+        onAnalysesClick={() => {
+          analysesCalled = true;
+        }}
+        onExtractsClick={() => {
+          extractsCalled = true;
+        }}
+      />
+    );
+
+    // View buttons should still work in read-only mode
+    const extractsButton = component.getByRole("button").nth(1);
+    await extractsButton.click();
+    expect(extractsCalled).toBe(true);
+
+    const analysesButton = component.getByRole("button").nth(2);
+    await analysesButton.click();
+    expect(analysesCalled).toBe(true);
+  });
 });

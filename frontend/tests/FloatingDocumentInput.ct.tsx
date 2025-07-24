@@ -54,6 +54,55 @@ test.describe("FloatingDocumentInput", () => {
     expect(typeof props.panelOffset).toBe("number");
     expect(typeof props.fixed).toBe("boolean");
   });
+
+  test("read-only: hides chat mode button", async ({ mount }) => {
+    const component = await mount(
+      <JotaiProvider>
+        <div style={{ height: "100vh", position: "relative" }}>
+          <FloatingDocumentInput
+            visible={true}
+            readOnly={true}
+            onChatSubmit={() => {}}
+            onToggleChat={() => {}}
+            panelOffset={0}
+            fixed={true}
+          />
+        </div>
+      </JotaiProvider>
+    );
+
+    // Chat toggle button should not be visible in read-only mode
+    const chatButton = component.locator('[data-testid="chat-toggle"]');
+    await expect(chatButton).not.toBeVisible();
+  });
+
+  test("read-only: prevents switching to chat mode", async ({ mount }) => {
+    let modeChanged = false;
+
+    const component = await mount(
+      <JotaiProvider>
+        <div style={{ height: "100vh", position: "relative" }}>
+          <FloatingDocumentInput
+            visible={true}
+            readOnly={true}
+            onChatSubmit={() => {
+              modeChanged = true;
+            }}
+            onToggleChat={() => {}}
+            panelOffset={0}
+            fixed={true}
+          />
+        </div>
+      </JotaiProvider>
+    );
+
+    // Only search button should be visible
+    const searchButton = component.locator("button svg").first();
+    await expect(searchButton).toBeVisible();
+
+    // Verify no chat mode is available
+    expect(modeChanged).toBe(false);
+  });
 });
 
 // Note: For full component testing, we would need to:

@@ -21,6 +21,7 @@ interface FloatingSummaryPreviewProps {
   onSwitchToKnowledge?: (content?: string) => void;
   onBackToDocument?: () => void;
   isInKnowledgeLayer?: boolean;
+  readOnly?: boolean;
 }
 
 const FloatingContainer = styled(motion.div)`
@@ -538,6 +539,7 @@ export const FloatingSummaryPreview: React.FC<FloatingSummaryPreviewProps> = ({
   onSwitchToKnowledge,
   onBackToDocument,
   isInKnowledgeLayer = false,
+  readOnly = false,
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const { state, setExpanded, setStackFanned, setHovered } =

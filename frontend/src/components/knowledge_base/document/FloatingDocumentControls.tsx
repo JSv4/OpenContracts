@@ -180,6 +180,8 @@ interface FloatingDocumentControlsProps {
   extractsOpen?: boolean;
   /** Offset to apply when sliding panel is open */
   panelOffset?: number;
+  /** When true, hide create/edit functionality */
+  readOnly?: boolean;
 }
 
 export const FloatingDocumentControls: React.FC<
@@ -191,6 +193,7 @@ export const FloatingDocumentControls: React.FC<
   analysesOpen = false,
   extractsOpen = false,
   panelOffset = 0,
+  readOnly = false,
 }) => {
   const [expandedSettings, setExpandedSettings] = useState(false);
 
@@ -343,8 +346,8 @@ export const FloatingDocumentControls: React.FC<
         <BarChart3 />
       </ActionButton>
 
-      {/* New button: Start Analysis - only show if user has permissions */}
-      {canCreateAnalysis && (
+      {/* New button: Start Analysis - only show if user has permissions and not in readOnly mode */}
+      {canCreateAnalysis && !readOnly && (
         <ActionButton
           $color="#10b981"
           onClick={() => showSelectCorpusAnalyzerOrFieldsetModal(true)}

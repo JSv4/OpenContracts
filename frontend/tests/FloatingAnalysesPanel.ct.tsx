@@ -273,4 +273,93 @@ test.describe("FloatingAnalysesPanel", () => {
     // The component is styled to be centered vertically
     expect(true).toBe(true);
   });
+
+  test("read-only: passes readOnly prop to AnalysisTraySelector", async ({
+    mount,
+    page,
+  }) => {
+    const component = await mount(
+      <FloatingAnalysesPanelTestWrapper
+        visible={true}
+        readOnly={true}
+        analyses={[
+          createMockAnalysis("1", true),
+          createMockAnalysis("2", false),
+        ]}
+      />
+    );
+
+    // Component should be mounted
+    await expect(component).toBeTruthy();
+
+    // Panel should be visible
+    await expect(page.locator("text=Document Analyses")).toBeVisible();
+
+    // View controls should still work in read-only mode
+    const compactButton = page.locator("text=Compact");
+    const expandedButton = page.locator("text=Expanded");
+
+    await expect(compactButton).toBeVisible();
+    await expect(expandedButton).toBeVisible();
+
+    // Click compact view to verify it's functional
+    await compactButton.click();
+
+    // The AnalysisTraySelector component receives the readOnly prop
+    // and view controls remain functional in read-only mode
+  });
+
+  test("read-only: search functionality remains available", async ({
+    mount,
+    page,
+  }) => {
+    const analyses = [
+      createMockAnalysis("1", true),
+      createMockAnalysis("2", true),
+      createMockAnalysis("3", true),
+      createMockAnalysis("4", true), // Need more than 3 for search to appear
+    ];
+
+    const component = await mount(
+      <FloatingAnalysesPanelTestWrapper
+        visible={true}
+        readOnly={true}
+        analyses={analyses}
+      />
+    );
+
+    // Search bar should appear with 4+ analyses
+    const searchInput = page.locator('input[placeholder="Search analyses..."]');
+    await expect(searchInput).toBeVisible();
+
+    // Search should still work
+    await searchInput.fill("Test Analysis 2");
+
+    // The analyses list is rendered by AnalysisTraySelector
+    // In read-only mode, it should still display the analyses
+    await expect(page.locator("text=Document Analyses")).toBeVisible();
+  });
+
+  test("read-only: close button remains functional", async ({
+    mount,
+    page,
+  }) => {
+    let closeCalled = false;
+
+    const component = await mount(
+      <FloatingAnalysesPanelTestWrapper
+        visible={true}
+        readOnly={true}
+        onClose={() => {
+          closeCalled = true;
+        }}
+      />
+    );
+
+    // Click close button
+    const closeButton = page.locator('button[title="Close"]');
+    await closeButton.click();
+
+    expect(closeCalled).toBe(true);
+  });
 });

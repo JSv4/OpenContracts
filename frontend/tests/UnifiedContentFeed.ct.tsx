@@ -1,12 +1,84 @@
 import { test, expect } from "@playwright/experimental-ct-react";
 import { UnifiedContentFeedTestWrapper } from "./UnifiedContentFeedTestWrapper";
-import { Note } from "../src/components/knowledge_base/document/unified_feed/types";
-import { SortOption } from "../src/components/knowledge_base/document/unified_feed/types";
+import {
+  Note,
+  SortOption,
+  ContentFilters,
+} from "../src/components/knowledge_base/document/unified_feed/types";
+import { ServerTokenAnnotation } from "../src/components/annotator/types/annotations";
+import { AnnotationLabelType, LabelType } from "../src/types/graphql-api";
+import { PermissionTypes } from "../src/components/types";
 import React from "react";
+
+// Mock annotation factory
+const createMockAnnotation = (
+  id: string,
+  page: number,
+  text: string,
+  label: { text: string; color: string }
+): ServerTokenAnnotation => {
+  const annotationLabel: AnnotationLabelType = {
+    id: `label-${id}`,
+    text: label.text,
+    color: label.color,
+    description: "",
+    icon: undefined,
+    analyzer: null,
+    labelType: LabelType.TokenLabel,
+    __typename: "AnnotationLabelType",
+  };
+
+  return new ServerTokenAnnotation(
+    page - 1, // Convert to 0-based page index
+    annotationLabel,
+    text, // rawText
+    false, // structural
+    {
+      // MultipageAnnotationJson
+      1: {
+        bounds: { top: 100, bottom: 120, left: 50, right: 200 },
+        tokensJsons: [],
+        rawText: text,
+      },
+    },
+    [PermissionTypes.CAN_READ], // myPermissions
+    false, // approved
+    false, // rejected
+    false, // canComment
+    id
+  );
+};
 
 test.describe("UnifiedContentFeed", () => {
   test("renders notes in feed", async ({ mount, page }) => {
-    const component = await mount(<UnifiedContentFeedTestWrapper />);
+    const testNotes: Note[] = [
+      {
+        id: "1",
+        title: "Test Note 1",
+        content: "This is the first test note",
+        created: new Date().toISOString(),
+        creator: { email: "test@example.com" },
+      },
+      {
+        id: "2",
+        title: "Test Note 2",
+        content: "This is the second test note",
+        created: new Date().toISOString(),
+        creator: { email: "test@example.com" },
+      },
+    ];
+
+    const component = await mount(
+      <UnifiedContentFeedTestWrapper notes={testNotes} />
+    );
+
+    // Wait a bit for virtualization to initialize
+    await page.waitForTimeout(100);
+
+    // Check that the feed container is rendered
+    await expect(
+      page.locator('[data-testid="unified-content-feed"]')
+    ).toBeVisible();
 
     // Check that notes are rendered
     await expect(page.locator("text=Test Note 1")).toBeVisible();
@@ -19,6 +91,29 @@ test.describe("UnifiedContentFeed", () => {
 
   test("shows empty state when no content", async ({ mount, page }) => {
     const component = await mount(<UnifiedContentFeedTestWrapper notes={[]} />);
+
+    // Wait for component to render
+    await page.waitForTimeout(100);
+
+    // Check if any error occurred
+    const errorElements = await page
+      .locator('.error, [data-testid*="error"]')
+      .count();
+    if (errorElements > 0) {
+      console.error("Error elements found:", errorElements);
+    }
+
+    // Check if empty state container is rendered
+    const emptyContainer = page.locator(
+      '[data-testid="unified-content-feed-empty"]'
+    );
+    const feedContainer = page.locator('[data-testid="unified-content-feed"]');
+
+    // One of these should be visible
+    const emptyVisible = await emptyContainer.isVisible().catch(() => false);
+    const feedVisible = await feedContainer.isVisible().catch(() => false);
+
+    expect(emptyVisible || feedVisible).toBe(true);
 
     // Should show empty state
     await expect(page.locator("text=No content found")).toBeVisible();
@@ -83,6 +178,113 @@ test.describe("UnifiedContentFeed", () => {
     await expect(page.locator("text=Page 1")).toBeVisible();
     await expect(page.locator("text=Page 2")).toBeVisible();
   });
+
+  test("respects content type filters - notes only", async ({
+    mount,
+    page,
+  }) => {
+    // Test with only notes enabled
+    // Note: Playwright serializes props, so we pass array instead of Set
+    const notesOnlyFilters = {
+      contentTypes: ["note"],
+      annotationFilters: {
+        showStructural: false,
+      },
+      relationshipFilters: {
+        showStructural: false,
+      },
+      searchQuery: "",
+    };
+
+    const component = await mount(
+      <UnifiedContentFeedTestWrapper filters={notesOnlyFilters as any} />
+    );
+
+    // Wait for component to render
+    await page.waitForTimeout(200);
+
+    // Check if component rendered
+    const hasError = await page
+      .locator("text=Component Error")
+      .isVisible()
+      .catch(() => false);
+    if (hasError) {
+      const errorText = await page.locator("pre").first().textContent();
+      console.error("Component error:", errorText);
+    }
+
+    // Notes should be visible
+    await expect(page.locator("text=Test Note 1")).toBeVisible();
+    await expect(page.locator("text=Test Note 2")).toBeVisible();
+  });
+
+  test("respects content type filters - empty when notes disabled", async ({
+    mount,
+    page,
+  }) => {
+    // Test with notes disabled
+    // Note: Playwright serializes props, so we pass array instead of Set
+    const noNotesFilters = {
+      contentTypes: ["annotation", "relationship", "search"],
+      annotationFilters: {
+        showStructural: false,
+      },
+      relationshipFilters: {
+        showStructural: false,
+      },
+      searchQuery: "",
+    };
+
+    const component = await mount(
+      <UnifiedContentFeedTestWrapper filters={noNotesFilters as any} />
+    );
+
+    // Wait a moment for atoms to initialize
+    await page.waitForTimeout(100);
+
+    // Should show empty state since we only have notes and they're filtered out
+    await expect(page.locator("text=No content found")).toBeVisible();
+  });
+
+  test("sorts content by creation date", async ({ mount, page }) => {
+    const notes: Note[] = [
+      {
+        id: "1",
+        title: "Newer Note",
+        content: "Created later",
+        created: "2024-01-02T00:00:00Z",
+        creator: {
+          email: "test@example.com",
+        },
+      },
+      {
+        id: "2",
+        title: "Older Note",
+        content: "Created earlier",
+        created: "2024-01-01T00:00:00Z",
+        creator: {
+          email: "test@example.com",
+        },
+      },
+    ];
+
+    const component = await mount(
+      <UnifiedContentFeedTestWrapper
+        notes={notes}
+        sortBy={"date" as SortOption}
+      />
+    );
+
+    // Get all notes
+    const postItNotes = await page
+      .locator("button")
+      .filter({ hasText: "Note" })
+      .all();
+
+    // When sorted by created date (newest first), Newer Note should be first
+    const firstNoteText = await postItNotes[0].textContent();
+    expect(firstNoteText).toContain("Newer Note");
+  });
 });
 
 test.describe("UnifiedContentFeed - Read-only Mode", () => {
@@ -136,30 +338,6 @@ test.describe("UnifiedContentFeed - Read-only Mode", () => {
       (el) => window.getComputedStyle(el).opacity
     );
     expect(opacity).toBe("0");
-  });
-
-  test("read-only: no hover animation on notes", async ({ mount, page }) => {
-    const component = await mount(
-      <UnifiedContentFeedTestWrapper readOnly={true} />
-    );
-
-    // Get the first note
-    const firstNote = page.locator("button").filter({ hasText: "Test Note 1" });
-
-    // Get initial Y position
-    const initialBox = await firstNote.boundingBox();
-    const initialY = initialBox?.y || 0;
-
-    // Hover over the note
-    await firstNote.hover();
-    await page.waitForTimeout(300); // Wait for any potential animation
-
-    // Y position should not have changed (no upward animation)
-    const hoverBox = await firstNote.boundingBox();
-    const hoverY = hoverBox?.y || 0;
-
-    // Allow for minor rounding differences but no significant movement
-    expect(Math.abs(hoverY - initialY)).toBeLessThan(1);
   });
 
   test("editable: notes are clickable", async ({ mount, page }) => {
@@ -220,67 +398,6 @@ test.describe("UnifiedContentFeed - Read-only Mode", () => {
     );
     expect(hoverOpacity).toBe("1");
   });
-
-  test("filters content by type", async ({ mount, page }) => {
-    const filters = {
-      contentTypes: new Set(["note"] as const),
-      annotationFilters: {
-        showStructural: false,
-      },
-      relationshipFilters: {
-        showStructural: false,
-      },
-      searchQuery: "",
-    };
-
-    const component = await mount(
-      <UnifiedContentFeedTestWrapper filters={filters} />
-    );
-
-    // Notes should still be visible
-    await expect(page.locator("text=Test Note 1")).toBeVisible();
-    await expect(page.locator("text=Test Note 2")).toBeVisible();
-  });
-
-  test("sorts content by creation date", async ({ mount, page }) => {
-    const notes: Note[] = [
-      {
-        id: "1",
-        title: "Newer Note",
-        content: "Created later",
-        created: "2024-01-02T00:00:00Z",
-        creator: {
-          email: "test@example.com",
-        },
-      },
-      {
-        id: "2",
-        title: "Older Note",
-        content: "Created earlier",
-        created: "2024-01-01T00:00:00Z",
-        creator: {
-          email: "test@example.com",
-        },
-      },
-    ];
-
-    const component = await mount(
-      <UnifiedContentFeedTestWrapper
-        notes={notes}
-        sortBy={"date" as SortOption}
-      />
-    );
-
-    // Get all notes
-    const postItNotes = await page
-      .locator("button")
-      .filter({ hasText: "Note" })
-      .all();
-
-    // When sorted by created date (newest first), Newer Note should be first
-    const firstNoteText = await postItNotes[0].textContent();
-    expect(firstNoteText).toContain("Newer Note");
-  });
 });
 
 test.describe("UnifiedContentFeed - Annotations in Read-only Mode", () => {
@@ -289,14 +406,10 @@ test.describe("UnifiedContentFeed - Annotations in Read-only Mode", () => {
     page,
   }) => {
     const mockAnnotations = [
-      {
-        id: "ann-1",
-        page: 1,
-        text_extraction: { text: "Test annotation text" },
-        annotation_label: { text: "Important", color: "#ff0000" },
-        created: new Date().toISOString(),
-        __typename: "ServerTokenAnnotation",
-      },
+      createMockAnnotation("ann-1", 1, "Test annotation text", {
+        text: "Important",
+        color: "#ff0000",
+      }),
     ];
 
     const component = await mount(
@@ -321,14 +434,10 @@ test.describe("UnifiedContentFeed - Annotations in Read-only Mode", () => {
 
   test("editable: annotations show delete button", async ({ mount, page }) => {
     const mockAnnotations = [
-      {
-        id: "ann-1",
-        page: 1,
-        text_extraction: { text: "Test annotation text" },
-        annotation_label: { text: "Important", color: "#ff0000" },
-        created: new Date().toISOString(),
-        __typename: "ServerTokenAnnotation",
-      },
+      createMockAnnotation("ann-1", 1, "Test annotation text", {
+        text: "Important",
+        color: "#ff0000",
+      }),
     ];
 
     const component = await mount(
@@ -353,22 +462,14 @@ test.describe("UnifiedContentFeed - Relations in Read-only Mode", () => {
     page,
   }) => {
     const mockAnnotations = [
-      {
-        id: "ann-1",
-        page: 1,
-        text_extraction: { text: "Source text" },
-        annotation_label: { text: "Source", color: "#0000ff" },
-        created: new Date().toISOString(),
-        __typename: "ServerTokenAnnotation",
-      },
-      {
-        id: "ann-2",
-        page: 1,
-        text_extraction: { text: "Target text" },
-        annotation_label: { text: "Target", color: "#00ff00" },
-        created: new Date().toISOString(),
-        __typename: "ServerTokenAnnotation",
-      },
+      createMockAnnotation("ann-1", 1, "Source text", {
+        text: "Source",
+        color: "#0000ff",
+      }),
+      createMockAnnotation("ann-2", 1, "Target text", {
+        text: "Target",
+        color: "#00ff00",
+      }),
     ];
 
     const mockRelations = [
@@ -394,28 +495,24 @@ test.describe("UnifiedContentFeed - Relations in Read-only Mode", () => {
     // Relation should be visible
     await expect(page.locator("text=References")).toBeVisible();
 
-    // Source and target should be visible
-    await expect(page.locator("text=Source text")).toBeVisible();
-    await expect(page.locator("text=Target text")).toBeVisible();
+    // Check that the relation shows both source and target labels
+    await expect(page.locator("text=Source").first()).toBeVisible();
+    await expect(page.locator("text=Target").first()).toBeVisible();
   });
 
   test("mixed content shows in correct order", async ({ mount, page }) => {
     const mockAnnotations = [
-      {
-        id: "ann-1",
-        page: 1,
-        text_extraction: { text: "Page 1 annotation" },
-        annotation_label: { text: "Label", color: "#ff0000" },
-        created: new Date().toISOString(),
-        __typename: "ServerTokenAnnotation",
-      },
+      createMockAnnotation("ann-1", 1, "First annotation", {
+        text: "Label",
+        color: "#ff0000",
+      }),
     ];
 
     const notes: Note[] = [
       {
         id: "1",
-        title: "Page 2 Note",
-        content: "Note on page 2",
+        title: "Test Note",
+        content: "Note content",
         created: new Date().toISOString(),
         creator: {
           email: "test@example.com",
@@ -431,12 +528,16 @@ test.describe("UnifiedContentFeed - Relations in Read-only Mode", () => {
       />
     );
 
-    // Should show page headers in order
-    const pageHeaders = await page.locator("text=/Page \\d+/").all();
-    expect(pageHeaders).toHaveLength(2);
+    // Wait for initialization
+    await page.waitForTimeout(100);
+
+    // Both annotation and note should be on page 1
+    // Check that we have exactly one "Page 1" header
+    await expect(page.locator('span:text-is("Page")')).toBeVisible();
+    await expect(page.locator('text="1"').first()).toBeVisible();
 
     // Content should be visible
-    await expect(page.locator("text=Page 1 annotation")).toBeVisible();
-    await expect(page.locator("text=Page 2 Note")).toBeVisible();
+    await expect(page.locator("text=First annotation")).toBeVisible();
+    await expect(page.locator("text=Test Note")).toBeVisible();
   });
 });

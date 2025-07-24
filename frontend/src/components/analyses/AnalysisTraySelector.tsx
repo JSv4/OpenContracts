@@ -799,7 +799,8 @@ const AnalysisTraySelector: React.FC<AnalysisTraySelectorProps> = ({
 
                   {isVisible && (
                     <div className="annotations-container">
-                      <AnnotationList read_only={false} />
+                      {/* Pass through the read_only prop from AnalysisTraySelector to ensure read-only mode cascades correctly */}
+                      <AnnotationList read_only={read_only} />
                     </div>
                   )}
                 </div>

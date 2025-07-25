@@ -135,13 +135,6 @@ All component tests follow a crucial wrapper pattern to avoid Apollo query/mutat
 ✅ COMPLETED - All floating components have comprehensive test coverage
 ✅ COMPLETED - **UnifiedContentFeed** full read-only implementation
 
-### Low Priority (UI Controls)
-6. ⚠️ Consider disabling **ResizeHandle & ResizeHandleControl** in read-only mode
-7. ⚠️ Consider disabling **WidthControlMenu** in read-only mode
-8. ⚠️ Consider whether **ControlButton** (panel close) should be disabled
-9. ⚠️ Consider whether **ChatIndicator** should be disabled
-10. ⚠️ Review **Graph Modal** for read-only behavior
-
 ### Tests Created
 
 #### DocumentKnowledgeBase Component Tests
@@ -209,7 +202,7 @@ Comprehensive read-only tests have been added to `UnifiedContentFeed.ct.tsx`:
 
 ## UnifiedContentFeed Read-Only Implementation (COMPLETED)
 
-The UnifiedContentFeed component's read-only implementation has been completed. All required changes have been applied across its component tree.
+The UnifiedContentFeed component's feed was also made read-only.
 
 ### Implementation Summary
 

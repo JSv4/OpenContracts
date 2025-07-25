@@ -375,17 +375,20 @@ test("minimizes when minimize button is clicked", async ({ mount, page }) => {
   // Expand
   const summaryButton = page.locator("button").filter({ hasText: "Summary" });
   await summaryButton.click();
-  await expect(page.locator('h3:has-text("Document Summary")')).toBeVisible();
+  // In normal mode (not knowledge layer), title is "Document Summary" without "(Preview)"
+  await expect(
+    page.locator('h3:has-text("Document Summary")').first()
+  ).toBeVisible();
 
   // Click minimize
   const minimizeButton = page.getByTestId("minimize-button");
   await expect(minimizeButton).toBeVisible();
-  const handleMin = await minimizeButton.elementHandle();
-  if (handleMin) {
-    await page.evaluate((el) => (el as HTMLElement).click(), handleMin);
-  }
+  await minimizeButton.click();
 
-  // Should be collapsed again
+  // Wait for animation to complete
+  await page.waitForTimeout(500);
+
+  // Should be collapsed again - the h3 title should not be visible
   await expect(
     page.locator('h3:has-text("Document Summary")')
   ).not.toBeVisible();

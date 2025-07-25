@@ -628,6 +628,7 @@ export const FloatingSummaryPreview: React.FC<FloatingSummaryPreviewProps> = ({
             </FloatingContainer>
           ) : (
             <FloatingContainer
+              id="floating-summary-preview-floating-container"
               key="expanded-knowledge"
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

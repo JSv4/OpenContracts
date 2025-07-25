@@ -2131,7 +2131,7 @@ test.describe("Read-Only Mode Tests", () => {
     );
   });
 
-  test("read-only: hides Edit Note button in note modal", async ({
+  test("read-only: prevents note click and shows correct cursor", async ({
     mount,
     page,
   }) => {
@@ -2167,52 +2167,25 @@ test.describe("Read-Only Mode Tests", () => {
     // Wait for notes to load in the feed
     await page.waitForTimeout(1000);
 
-    // Debug: Check if we can find any notes
-    const noteButtons = await page.locator("button").all();
-    console.log(`[TEST] Found ${noteButtons.length} total buttons`);
+    // Find the note - PostItNote with the test content
+    const noteItem = page.locator("button").filter({ hasText: "Test Note 1" });
 
-    // Find notes specifically - PostItNote is a styled motion.button
-    const notesWithTitle = await page.locator("button >> .title").count();
-    console.log(`[TEST] Found ${notesWithTitle} buttons with .title class`);
+    // In read-only mode, notes should have default cursor, not pointer
+    await expect(noteItem).toHaveCSS("cursor", "default");
 
-    // Look for the specific note - use text content directly
-    const noteItem = page
-      .locator("button")
-      .filter({ hasText: "Test Note 1" })
-      .first();
+    // Try to click the note
+    await noteItem.click({ force: true });
 
-    // Alternative selector if the above doesn't work
-    const altNoteItem = page
-      .locator('text="Test Note 1"')
-      .locator("xpath=ancestor::button[1]");
+    // Wait a bit to ensure no modal appears
+    await page.waitForTimeout(500);
 
-    // Try the first selector
-    const noteVisible = await noteItem.isVisible().catch(() => false);
-    if (noteVisible) {
-      await noteItem.click();
-    } else {
-      console.log("[TEST] Primary selector failed, trying alternative");
-      await expect(altNoteItem).toBeVisible({ timeout: LONG_TIMEOUT });
-      await altNoteItem.click();
-    }
-
-    // Note modal should open
-    // Select the dialog whose id starts with "note-modal_"
+    // Note modal should NOT open in read-only mode
     const noteModal = page.locator('[id^="note-modal_"]');
-    await expect(noteModal).toBeVisible({ timeout: LONG_TIMEOUT });
+    await expect(noteModal).not.toBeVisible();
 
-    // Edit Note button should NOT be visible in read-only mode
-    const editNoteButton = noteModal.getByRole("button", {
-      name: /Edit Note/i,
-    });
-    await expect(editNoteButton).not.toBeVisible({ timeout: 3000 });
     console.log(
-      "[TEST SUCCESS] Edit Note button correctly hidden in read-only mode"
+      "[TEST SUCCESS] Note correctly non-clickable in read-only mode"
     );
-
-    // Close modal
-    const closeButton = noteModal.getByRole("button", { name: /Close/i });
-    await closeButton.click();
   });
 
   test("read-only: ChatTray starts with new conversation and hides history", async ({

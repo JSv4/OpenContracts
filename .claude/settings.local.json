@@ -10,7 +10,8 @@
       "Bash(yarn prettier:*)",
       "Bash(yarn:*)",
       "Bash(rm:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

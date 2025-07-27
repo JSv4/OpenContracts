@@ -25,7 +25,42 @@ const createMetadataTestCache = () =>
         },
       },
       CorpusType: { keyFields: ["id"] },
-      ColumnType: { keyFields: ["id"] },
+      ColumnType: {
+        keyFields: ["id"],
+        fields: {
+          // Allow these fields even if they're not in the schema
+          helpText: {
+            read(existing) {
+              return existing || "";
+            },
+          },
+          defaultValue: {
+            read(existing) {
+              return existing || null;
+            },
+          },
+          dataType: {
+            read(existing) {
+              return existing || "STRING";
+            },
+          },
+          validationConfig: {
+            read(existing) {
+              return existing || {};
+            },
+          },
+          isManualEntry: {
+            read(existing) {
+              return existing !== undefined ? existing : true;
+            },
+          },
+          displayOrder: {
+            read(existing) {
+              return existing || 0;
+            },
+          },
+        },
+      },
       DatacellType: { keyFields: ["id"] },
       FieldsetType: { keyFields: ["id"] },
     },

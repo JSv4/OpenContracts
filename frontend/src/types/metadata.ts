@@ -255,7 +255,24 @@ export const formatMetadataValue = (
   switch (dataType) {
     case MetadataDataType.BOOLEAN:
       return value ? "Yes" : "No";
+    case MetadataDataType.NUMBER:
+    case MetadataDataType.INTEGER:
+    case MetadataDataType.FLOAT:
+      return typeof value === "number" ? value.toLocaleString() : String(value);
     case MetadataDataType.DATE:
+      // Parse date string without timezone conversion
+      // Expected format: YYYY-MM-DD
+      if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split("-");
+        // Create date in local timezone to avoid UTC conversion issues
+        const date = new Date(
+          parseInt(year),
+          parseInt(month) - 1,
+          parseInt(day)
+        );
+        return date.toLocaleDateString();
+      }
+      // Fallback for other formats
       return new Date(value).toLocaleDateString();
     case MetadataDataType.DATETIME:
       return new Date(value).toLocaleString();

@@ -17,6 +17,7 @@ interface MetadataCellEditorProps {
   onChange: (value: any) => void;
   onValidationChange?: (isValid: boolean) => void;
   onBlur?: () => void;
+  onNavigate?: (direction: "next" | "previous" | "down" | "up") => void;
   error?: string;
   autoFocus?: boolean;
   readOnly?: boolean;
@@ -98,6 +99,7 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
   value,
   onChange,
   onBlur,
+  onNavigate,
   error,
   autoFocus,
   readOnly,
@@ -109,9 +111,25 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
 
   useEffect(() => {
     if (autoFocus && inputRef.current) {
-      inputRef.current.focus();
-      if (inputRef.current.select) {
-        inputRef.current.select();
+      // Handle Semantic UI components that might wrap the actual input
+      const element = inputRef.current;
+
+      // Try to find the actual input element
+      let inputElement = element;
+      if (element.querySelector) {
+        // For Semantic UI components, find the actual input inside
+        const actualInput = element.querySelector("input, textarea, select");
+        if (actualInput) {
+          inputElement = actualInput;
+        }
+      }
+
+      // Safely call focus if it exists
+      if (inputElement && typeof inputElement.focus === "function") {
+        inputElement.focus();
+        if (typeof inputElement.select === "function") {
+          inputElement.select();
+        }
       }
     }
   }, [autoFocus]);
@@ -126,8 +144,20 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
   }, [value, column, onValidationChange]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Tab" || e.key === "Enter") {
-      // Let parent handle navigation
+    if (e.key === "Tab") {
+      e.preventDefault();
+      e.stopPropagation();
+      if (onNavigate) {
+        onNavigate(e.shiftKey ? "previous" : "next");
+      }
+      return;
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (onNavigate) {
+        onNavigate("down");
+      }
       return;
     }
     e.stopPropagation();

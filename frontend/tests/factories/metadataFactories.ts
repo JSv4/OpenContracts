@@ -15,7 +15,9 @@ export const createMockColumn = (
   extractIsList: false,
   isManualEntry: true,
   validationRules: {},
+  validationConfig: {},
   orderIndex: 0,
+  displayOrder: 0,
   __typename: "ColumnType",
   ...overrides,
 });
@@ -84,8 +86,8 @@ export const createValidationRules = {
     choices: choices,
   }),
   number: (min?: number, max?: number) => ({
-    min: min,
-    max: max,
+    min_value: min,
+    max_value: max,
   }),
   date: (minDate?: string, maxDate?: string) => ({
     min_date: minDate,
@@ -101,13 +103,16 @@ export const createMetadataTestScenario = () => {
       name: "Contract Date",
       dataType: MetadataDataType.DATE,
       orderIndex: 0,
+      displayOrder: 0,
     }),
     createMockColumn({
       id: "col2",
       name: "Contract Value",
       dataType: MetadataDataType.NUMBER,
       validationRules: createValidationRules.number(0, 1000000),
+      validationConfig: createValidationRules.number(0, 1000000),
       orderIndex: 1,
+      displayOrder: 1,
     }),
     createMockColumn({
       id: "col3",
@@ -118,13 +123,20 @@ export const createMetadataTestScenario = () => {
         "Pending",
         "Completed",
       ]),
+      validationConfig: createValidationRules.string(50, [
+        "Active",
+        "Pending",
+        "Completed",
+      ]),
       orderIndex: 2,
+      displayOrder: 2,
     }),
     createMockColumn({
       id: "col4",
       name: "Is Confidential",
       dataType: MetadataDataType.BOOLEAN,
       orderIndex: 3,
+      displayOrder: 3,
     }),
   ];
 

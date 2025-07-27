@@ -7,7 +7,7 @@ import {
   GET_CORPUS_METADATA_COLUMNS,
   CREATE_METADATA_COLUMN,
   SET_METADATA_VALUE,
-  GET_DOCUMENT_METADATA_VALUES,
+  GET_DOCUMENT_METADATA_DATACELLS,
 } from "../src/graphql/metadataOperations";
 import { createMetadataTestScenario } from "./factories/metadataFactories";
 import { GraphQLError } from "graphql";
@@ -121,23 +121,12 @@ test.describe("Metadata Error Handling", () => {
     const baseMocks = [
       {
         request: {
-          query: GET_DOCUMENT_METADATA_VALUES,
-          variables: { documentIds: documents.map((d) => d.id) },
+          query: GET_CORPUS_METADATA_COLUMNS,
+          variables: { corpusId },
         },
         result: {
           data: {
-            documents: {
-              edges: documents.map((doc) => ({
-                node: {
-                  id: doc.id,
-                  title: doc.title,
-                  metadata: doc.metadata,
-                  __typename: "DocumentType",
-                },
-                __typename: "DocumentTypeEdge",
-              })),
-              __typename: "DocumentTypeConnection",
-            },
+            corpusMetadataColumns: columns,
           },
         },
       },
@@ -146,11 +135,7 @@ test.describe("Metadata Error Handling", () => {
 
     await mount(
       <MetadataTestWrapper mocks={baseMocks}>
-        <DocumentMetadataGrid
-          documents={documents}
-          columns={columns}
-          corpusId={corpusId}
-        />
+        <DocumentMetadataGrid documents={documents} corpusId={corpusId} />
       </MetadataTestWrapper>
     );
 
@@ -183,23 +168,12 @@ test.describe("Metadata Error Handling", () => {
     const baseMocks = [
       {
         request: {
-          query: GET_DOCUMENT_METADATA_VALUES,
-          variables: { documentIds: documents.map((d) => d.id) },
+          query: GET_CORPUS_METADATA_COLUMNS,
+          variables: { corpusId },
         },
         result: {
           data: {
-            documents: {
-              edges: documents.map((doc) => ({
-                node: {
-                  id: doc.id,
-                  title: doc.title,
-                  metadata: doc.metadata,
-                  __typename: "DocumentType",
-                },
-                __typename: "DocumentTypeEdge",
-              })),
-              __typename: "DocumentTypeConnection",
-            },
+            corpusMetadataColumns: columns,
           },
         },
       },
@@ -208,11 +182,7 @@ test.describe("Metadata Error Handling", () => {
 
     await mount(
       <MetadataTestWrapper mocks={baseMocks}>
-        <DocumentMetadataGrid
-          documents={documents}
-          columns={columns}
-          corpusId={corpusId}
-        />
+        <DocumentMetadataGrid documents={documents} corpusId={corpusId} />
       </MetadataTestWrapper>
     );
 

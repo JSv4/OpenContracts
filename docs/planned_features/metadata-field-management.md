@@ -159,8 +159,8 @@ export const CorpusMetadataSettings: React.FC<{ corpusId: string }> = ({ corpusI
   // Component will include:
   // 1. Header with "Add Metadata Field" button
   // 2. Table/List of existing metadata columns
-  // 4. Edit/Delete actions per column
-  // 5. Modal for creating/editing columns
+  // 3. Edit/Delete actions per column
+  // 4. Modal for creating/editing columns
 };
 ```
 

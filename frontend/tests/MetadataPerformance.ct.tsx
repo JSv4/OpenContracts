@@ -3,7 +3,8 @@ import { test, expect } from "@playwright/experimental-ct-react";
 import { MetadataTestWrapper } from "./MetadataTestWrapper";
 import { DocumentMetadataGrid } from "../src/components/documents/DocumentMetadataGrid";
 import {
-  GET_DOCUMENT_METADATA_VALUES,
+  GET_CORPUS_METADATA_COLUMNS,
+  GET_DOCUMENT_METADATA_DATACELLS,
   SET_METADATA_VALUE,
 } from "../src/graphql/metadataOperations";
 import { generateLargeDataset } from "./factories/metadataFactories";
@@ -18,37 +19,37 @@ test.describe("Metadata Performance", () => {
     const largeMocks = [
       {
         request: {
-          query: GET_DOCUMENT_METADATA_VALUES,
-          variables: { documentIds: documents.map((d) => d.id) },
+          query: GET_CORPUS_METADATA_COLUMNS,
+          variables: { corpusId },
         },
         result: {
           data: {
-            documents: {
-              edges: documents.map((doc) => ({
-                node: {
-                  id: doc.id,
-                  title: doc.title,
-                  metadata: doc.metadata,
-                  __typename: "DocumentType",
-                },
-                __typename: "DocumentTypeEdge",
-              })),
-              __typename: "DocumentTypeConnection",
-            },
+            corpusMetadataColumns: columns,
           },
         },
       },
     ];
 
+    // Add individual document metadata mocks for first few documents
+    const documentMocks = documents.slice(0, 10).map((doc) => ({
+      request: {
+        query: GET_DOCUMENT_METADATA_DATACELLS,
+        variables: { documentId: doc.id, corpusId },
+      },
+      result: {
+        data: {
+          documentMetadataDatacells: doc.metadata.edges.map(
+            (edge) => edge.node
+          ),
+        },
+      },
+    }));
+
     const startTime = Date.now();
 
     await mount(
-      <MetadataTestWrapper mocks={largeMocks}>
-        <DocumentMetadataGrid
-          documents={documents}
-          columns={columns}
-          corpusId={corpusId}
-        />
+      <MetadataTestWrapper mocks={[...largeMocks, ...documentMocks]}>
+        <DocumentMetadataGrid documents={documents} corpusId={corpusId} />
       </MetadataTestWrapper>
     );
 
@@ -109,23 +110,12 @@ test.describe("Metadata Performance", () => {
     const baseMocks = [
       {
         request: {
-          query: GET_DOCUMENT_METADATA_VALUES,
-          variables: { documentIds: documents.map((d) => d.id) },
+          query: GET_CORPUS_METADATA_COLUMNS,
+          variables: { corpusId },
         },
         result: {
           data: {
-            documents: {
-              edges: documents.map((doc) => ({
-                node: {
-                  id: doc.id,
-                  title: doc.title,
-                  metadata: doc.metadata,
-                  __typename: "DocumentType",
-                },
-                __typename: "DocumentTypeEdge",
-              })),
-              __typename: "DocumentTypeConnection",
-            },
+            corpusMetadataColumns: columns,
           },
         },
       },
@@ -134,12 +124,7 @@ test.describe("Metadata Performance", () => {
 
     await mount(
       <MetadataTestWrapper mocks={baseMocks}>
-        <DocumentMetadataGrid
-          documents={documents}
-          columns={columns}
-          corpusId={corpusId}
-          autoSaveDelay={300} // 300ms debounce
-        />
+        <DocumentMetadataGrid documents={documents} corpusId={corpusId} />
       </MetadataTestWrapper>
     );
 
@@ -188,23 +173,12 @@ test.describe("Metadata Performance", () => {
     const mocks = [
       {
         request: {
-          query: GET_DOCUMENT_METADATA_VALUES,
-          variables: { documentIds: documents.map((d) => d.id) },
+          query: GET_CORPUS_METADATA_COLUMNS,
+          variables: { corpusId },
         },
         result: {
           data: {
-            documents: {
-              edges: documents.map((doc) => ({
-                node: {
-                  id: doc.id,
-                  title: doc.title,
-                  metadata: doc.metadata,
-                  __typename: "DocumentType",
-                },
-                __typename: "DocumentTypeEdge",
-              })),
-              __typename: "DocumentTypeConnection",
-            },
+            corpusMetadataColumns: complexColumns,
           },
         },
       },
@@ -214,11 +188,7 @@ test.describe("Metadata Performance", () => {
 
     await mount(
       <MetadataTestWrapper mocks={mocks}>
-        <DocumentMetadataGrid
-          documents={documents}
-          columns={complexColumns}
-          corpusId={corpusId}
-        />
+        <DocumentMetadataGrid documents={documents} corpusId={corpusId} />
       </MetadataTestWrapper>
     );
 
@@ -254,33 +224,12 @@ test.describe("Metadata Performance", () => {
     const paginatedMocks = [
       {
         request: {
-          query: GET_DOCUMENT_METADATA_VALUES,
-          variables: {
-            documentIds: firstPageDocs.map((d) => d.id),
-            first: pageSize,
-          },
+          query: GET_CORPUS_METADATA_COLUMNS,
+          variables: { corpusId },
         },
         result: {
           data: {
-            documents: {
-              edges: firstPageDocs.map((doc) => ({
-                node: {
-                  id: doc.id,
-                  title: doc.title,
-                  metadata: doc.metadata,
-                  __typename: "DocumentType",
-                },
-                __typename: "DocumentTypeEdge",
-              })),
-              pageInfo: {
-                hasNextPage: true,
-                hasPreviousPage: false,
-                startCursor: null,
-                endCursor: `cursor-${pageSize}`,
-                __typename: "PageInfo",
-              },
-              __typename: "DocumentTypeConnection",
-            },
+            corpusMetadataColumns: columns,
           },
         },
       },
@@ -288,12 +237,7 @@ test.describe("Metadata Performance", () => {
 
     await mount(
       <MetadataTestWrapper mocks={paginatedMocks}>
-        <DocumentMetadataGrid
-          documents={firstPageDocs}
-          columns={columns}
-          corpusId={corpusId}
-          pageSize={pageSize}
-        />
+        <DocumentMetadataGrid documents={firstPageDocs} corpusId={corpusId} />
       </MetadataTestWrapper>
     );
 
@@ -315,23 +259,12 @@ test.describe("Metadata Performance", () => {
     const mocks = [
       {
         request: {
-          query: GET_DOCUMENT_METADATA_VALUES,
-          variables: { documentIds: documents.map((d) => d.id) },
+          query: GET_CORPUS_METADATA_COLUMNS,
+          variables: { corpusId },
         },
         result: {
           data: {
-            documents: {
-              edges: documents.map((doc) => ({
-                node: {
-                  id: doc.id,
-                  title: doc.title,
-                  metadata: doc.metadata,
-                  __typename: "DocumentType",
-                },
-                __typename: "DocumentTypeEdge",
-              })),
-              __typename: "DocumentTypeConnection",
-            },
+            corpusMetadataColumns: columns,
           },
         },
       },
@@ -341,11 +274,7 @@ test.describe("Metadata Performance", () => {
       <MetadataTestWrapper mocks={mocks}>
         <div>
           <input data-testid="search-input" placeholder="Search metadata..." />
-          <DocumentMetadataGrid
-            documents={documents}
-            columns={columns}
-            corpusId={corpusId}
-          />
+          <DocumentMetadataGrid documents={documents} corpusId={corpusId} />
         </div>
       </MetadataTestWrapper>
     );

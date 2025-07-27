@@ -211,6 +211,7 @@ export const MetadataColumnModal: React.FC<MetadataColumnModalProps> = ({
           <>
             <Form.Group widths="equal">
               <Form.Input
+                id="metadata-min-length"
                 label="Minimum Length"
                 type="number"
                 min="0"
@@ -221,6 +222,7 @@ export const MetadataColumnModal: React.FC<MetadataColumnModalProps> = ({
                 placeholder="No minimum"
               />
               <Form.Input
+                id="metadata-max-length"
                 label="Maximum Length"
                 type="number"
                 min="0"
@@ -233,6 +235,7 @@ export const MetadataColumnModal: React.FC<MetadataColumnModalProps> = ({
             </Form.Group>
             {dataType === MetadataDataType.STRING && (
               <Form.Input
+                id="metadata-pattern"
                 label="Pattern (Regular Expression)"
                 value={regexPattern}
                 onChange={(e, { value }) => setRegexPattern(value)}
@@ -248,6 +251,7 @@ export const MetadataColumnModal: React.FC<MetadataColumnModalProps> = ({
         return (
           <Form.Group widths="equal">
             <Form.Input
+              id="metadata-min-value"
               label="Minimum Value"
               type="number"
               step={dataType === MetadataDataType.FLOAT ? "0.01" : "1"}
@@ -258,6 +262,7 @@ export const MetadataColumnModal: React.FC<MetadataColumnModalProps> = ({
               placeholder="No minimum"
             />
             <Form.Input
+              id="metadata-max-value"
               label="Maximum Value"
               type="number"
               step={dataType === MetadataDataType.FLOAT ? "0.01" : "1"}
@@ -330,6 +335,7 @@ export const MetadataColumnModal: React.FC<MetadataColumnModalProps> = ({
       <Modal.Content>
         <Form>
           <Form.Input
+            id="metadata-field-name"
             label="Field Name"
             value={name}
             onChange={(e, { value }) => setName(value)}
@@ -339,6 +345,7 @@ export const MetadataColumnModal: React.FC<MetadataColumnModalProps> = ({
           />
 
           <Form.Dropdown
+            id="metadata-data-type"
             label="Data Type"
             selection
             options={dataTypeOptions}
@@ -348,8 +355,9 @@ export const MetadataColumnModal: React.FC<MetadataColumnModalProps> = ({
           />
 
           <Form.Field>
-            <label>Help Text</label>
+            <label htmlFor="metadata-help-text">Help Text</label>
             <TextArea
+              id="metadata-help-text"
               value={helpText}
               onChange={(e, { value }) => setHelpText(value as string)}
               placeholder="Provide guidance for users filling out this field..."

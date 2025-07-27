@@ -450,26 +450,26 @@ export const CorpusMetadataSettings = ({
                   </DataTypeBadge>
                 </Table.Cell>
                 <Table.Cell>
-                  {column.validationRules?.choices && (
+                  {column.validationConfig?.choices && (
                     <div>
-                      Choices: {column.validationRules.choices.join(", ")}
+                      Choices: {column.validationConfig.choices.join(", ")}
                     </div>
                   )}
-                  {column.validationRules?.max_length && (
-                    <div>Max length: {column.validationRules.max_length}</div>
+                  {column.validationConfig?.max_length && (
+                    <div>Max length: {column.validationConfig.max_length}</div>
                   )}
-                  {column.validationRules?.min !== undefined && (
+                  {column.validationConfig?.min_value !== undefined && (
                     <div>
-                      Min: {column.validationRules.min.toLocaleString()}
+                      Min: {column.validationConfig.min_value.toLocaleString()}
                     </div>
                   )}
-                  {column.validationRules?.max !== undefined && (
+                  {column.validationConfig?.max_value !== undefined && (
                     <div>
-                      Max: {column.validationRules.max.toLocaleString()}
+                      Max: {column.validationConfig.max_value.toLocaleString()}
                     </div>
                   )}
-                  {!column.validationRules ||
-                    (Object.keys(column.validationRules).length === 0 && "—")}
+                  {!column.validationConfig ||
+                    (Object.keys(column.validationConfig).length === 0 && "—")}
                 </Table.Cell>
                 <Table.Cell>{column.helpText || "-"}</Table.Cell>
                 <Table.Cell textAlign="center">

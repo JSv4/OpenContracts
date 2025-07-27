@@ -7,12 +7,8 @@ import {
   CREATE_METADATA_COLUMN,
   UPDATE_METADATA_COLUMN,
   DELETE_METADATA_COLUMN,
-  REORDER_METADATA_COLUMNS,
 } from "../src/graphql/metadataOperations";
-import {
-  createMockColumn,
-  createMockFieldset,
-} from "./factories/metadataFactories";
+import { createMockColumn } from "./factories/metadataFactories";
 import { MetadataDataType } from "../src/types/metadata";
 
 test.describe("CorpusMetadataSettings", () => {
@@ -28,13 +24,13 @@ test.describe("CorpusMetadataSettings", () => {
     createMockColumn({
       id: "col2",
       name: "Contract Value",
-      dataType: MetadataDataType.NUMBER,
-      validationRules: { min: 0 },
+      dataType: MetadataDataType.INTEGER,
+      validationConfig: { min_value: 0 },
       orderIndex: 1,
     }),
   ];
 
-  const mockFieldset = createMockFieldset(mockColumns);
+  // mockFieldset no longer needed with updated flat-column GraphQL mocks
 
   const baseMocks = [
     {
@@ -44,11 +40,7 @@ test.describe("CorpusMetadataSettings", () => {
       },
       result: {
         data: {
-          corpus: {
-            id: corpusId,
-            metadataSchema: mockFieldset,
-            __typename: "CorpusType",
-          },
+          corpusMetadataColumns: mockColumns,
         },
       },
     },
@@ -65,9 +57,9 @@ test.describe("CorpusMetadataSettings", () => {
     await expect(page.getByText("Contract Date")).toBeVisible();
     await expect(page.getByText("Contract Value")).toBeVisible();
 
-    // Check data types
-    await expect(page.getByText("DATE")).toBeVisible();
-    await expect(page.getByText("NUMBER")).toBeVisible();
+    // Check data types (ensure unique element)
+    await expect(page.getByText(/^DATE$/)).toBeVisible();
+    await expect(page.getByText(/^INTEGER$/)).toBeVisible();
 
     // Check validation info
     await expect(page.getByText("Min: 0")).toBeVisible();
@@ -82,11 +74,7 @@ test.describe("CorpusMetadataSettings", () => {
         },
         result: {
           data: {
-            corpus: {
-              id: corpusId,
-              metadataSchema: null,
-              __typename: "CorpusType",
-            },
+            corpusMetadataColumns: [],
           },
         },
       },
@@ -100,11 +88,18 @@ test.describe("CorpusMetadataSettings", () => {
 
     await expect(page.getByText("No metadata fields defined")).toBeVisible();
     await expect(
-      page.getByRole("button", { name: /add.*field/i })
+      page.getByRole("button", { name: /add.*field/i }).first()
     ).toBeVisible();
   });
 
   test("adds new metadata column", async ({ mount, page }) => {
+    const newStatusColumn = createMockColumn({
+      id: "col3",
+      name: "Status",
+      dataType: MetadataDataType.STRING,
+      orderIndex: 2,
+    });
+
     const createMock = {
       request: {
         query: CREATE_METADATA_COLUMN,
@@ -112,153 +107,158 @@ test.describe("CorpusMetadataSettings", () => {
           corpusId,
           name: "Status",
           dataType: "STRING",
-          extractIsList: false,
-          validationRules: {},
+          validationConfig: { required: false },
+          defaultValue: "",
+          displayOrder: 2,
         },
       },
       result: {
         data: {
           createMetadataColumn: {
-            fieldset: {
-              ...mockFieldset,
-              columns: {
-                ...mockFieldset.columns,
-                edges: [
-                  ...mockFieldset.columns.edges,
-                  {
-                    node: createMockColumn({
-                      id: "col3",
-                      name: "Status",
-                      dataType: MetadataDataType.STRING,
-                      orderIndex: 2,
-                    }),
-                    __typename: "ColumnTypeEdge",
-                  },
-                ],
-              },
-            },
-            __typename: "CreateMetadataColumnMutation",
+            ok: true,
+            message: "Column created",
+            obj: newStatusColumn,
           },
         },
       },
     };
 
+    const refetchAfterCreateMock = {
+      request: {
+        query: GET_CORPUS_METADATA_COLUMNS,
+        variables: { corpusId },
+      },
+      result: {
+        data: {
+          corpusMetadataColumns: [...mockColumns, newStatusColumn],
+        },
+      },
+    };
+
     await mount(
-      <MetadataTestWrapper mocks={[...baseMocks, createMock]}>
+      <MetadataTestWrapper
+        mocks={[...baseMocks, createMock, refetchAfterCreateMock]}
+      >
         <CorpusMetadataSettings corpusId={corpusId} />
       </MetadataTestWrapper>
     );
 
     // Click add button
-    await page.getByRole("button", { name: /add.*field/i }).click();
+    const addFieldButton = page
+      .getByRole("button", { name: /add.*field/i })
+      .first();
+    await addFieldButton.click({ force: true });
+    await page.waitForTimeout(500); // Wait for modal animation
 
     // Modal should appear
-    await expect(
-      page.getByRole("heading", { name: /add metadata field/i })
-    ).toBeVisible();
+    await expect(page.getByText("Create Metadata Field")).toBeVisible();
 
     // Fill form
     await page.getByLabel("Field Name").fill("Status");
 
     // Select data type
-    const dropdown = page.getByLabel("Data Type");
+    const dropdown = page.locator("#metadata-data-type").first();
     await dropdown.click();
-    await page.getByText("Text (Single Line)").click();
+    await page.getByRole("option", { name: "Short Text" }).click();
+
+    await page.waitForTimeout(500); // Allow state to settle
 
     // Save
-    await page.getByRole("button", { name: /save/i }).click();
+    await page.getByText("Create Field").click();
 
     // Modal should close and new column should appear
-    await expect(
-      page.getByRole("heading", { name: /add metadata field/i })
-    ).not.toBeVisible();
+    await expect(page.getByText("Create Metadata Field")).not.toBeVisible();
     await expect(page.getByText("Status")).toBeVisible();
   });
 
   test("adds column with validation rules", async ({ mount, page }) => {
+    const newPriorityColumn = createMockColumn({
+      id: "col3",
+      name: "Priority",
+      dataType: MetadataDataType.CHOICE,
+      validationConfig: { choices: ["High", "Medium", "Low"] },
+      orderIndex: 2,
+    });
+
     const createMock = {
       request: {
         query: CREATE_METADATA_COLUMN,
         variables: {
           corpusId,
           name: "Priority",
-          dataType: "STRING",
-          extractIsList: false,
-          validationRules: {
+          dataType: "CHOICE",
+          validationConfig: {
             choices: ["High", "Medium", "Low"],
+            required: false,
           },
+          defaultValue: null,
+          displayOrder: 2,
         },
       },
       result: {
         data: {
           createMetadataColumn: {
-            fieldset: createMockFieldset([
-              ...mockColumns,
-              createMockColumn({
-                id: "col3",
-                name: "Priority",
-                dataType: MetadataDataType.STRING,
-                validationRules: { choices: ["High", "Medium", "Low"] },
-                orderIndex: 2,
-              }),
-            ]),
-            __typename: "CreateMetadataColumnMutation",
+            ok: true,
+            message: "Column created",
+            obj: newPriorityColumn,
           },
         },
       },
     };
 
+    const refetchAfterCreateMock2 = {
+      request: {
+        query: GET_CORPUS_METADATA_COLUMNS,
+        variables: { corpusId },
+      },
+      result: {
+        data: {
+          corpusMetadataColumns: [...mockColumns, newPriorityColumn],
+        },
+      },
+    };
+
     await mount(
-      <MetadataTestWrapper mocks={[...baseMocks, createMock]}>
+      <MetadataTestWrapper
+        mocks={[...baseMocks, createMock, refetchAfterCreateMock2]}
+      >
         <CorpusMetadataSettings corpusId={corpusId} />
       </MetadataTestWrapper>
     );
 
-    await page.getByRole("button", { name: /add.*field/i }).click();
+    await page
+      .getByRole("button", { name: /add.*field/i })
+      .first()
+      .click();
 
     await page.getByLabel("Field Name").fill("Priority");
 
     // Select dropdown type
-    const typeDropdown = page.getByLabel("Data Type");
+    const typeDropdown = page.locator("#metadata-data-type").first();
     await typeDropdown.click();
-    await page.getByText("Text (Single Line)").click();
+    await page.getByRole("option", { name: "Single Choice" }).click();
 
-    // Add choices
-    await page.getByLabel("Allowed Values").fill("High, Medium, Low");
+    await page.waitForTimeout(500); // Allow state to settle
 
-    await page.getByRole("button", { name: /save/i }).click();
+    // Fill first choice and add two more
+    const choice1 = page.locator('input[placeholder="Choice 1"]');
+    await choice1.fill("High");
+    await page.getByText("Add Choice").click();
+    const choice2 = page.locator('input[placeholder="Choice 2"]');
+    await choice2.fill("Medium");
+    await page.getByText("Add Choice").click();
+    const choice3 = page.locator('input[placeholder="Choice 3"]');
+    await choice3.fill("Low");
+
+    await page.getByText("Create Field").click();
 
     // Verify choices are displayed
     await expect(page.getByText("Choices: High, Medium, Low")).toBeVisible();
   });
 
   test("reorders columns with buttons", async ({ mount, page }) => {
-    const reorderMock = {
-      request: {
-        query: REORDER_METADATA_COLUMNS,
-        variables: {
-          corpusId,
-          columnOrders: [
-            { columnId: "col2", orderIndex: 0 },
-            { columnId: "col1", orderIndex: 1 },
-          ],
-        },
-      },
-      result: {
-        data: {
-          reorderMetadataColumns: {
-            fieldset: createMockFieldset([
-              { ...mockColumns[1], orderIndex: 0 },
-              { ...mockColumns[0], orderIndex: 1 },
-            ]),
-            __typename: "ReorderMetadataColumnsMutation",
-          },
-        },
-      },
-    };
-
     await mount(
-      <MetadataTestWrapper mocks={[...baseMocks, reorderMock]}>
+      <MetadataTestWrapper mocks={baseMocks}>
         <CorpusMetadataSettings corpusId={corpusId} />
       </MetadataTestWrapper>
     );
@@ -267,7 +267,7 @@ test.describe("CorpusMetadataSettings", () => {
     const firstRow = page
       .locator('[data-testid="metadata-column-row"]')
       .first();
-    const moveDownBtn = firstRow.getByRole("button", { name: /move down/i });
+    const moveDownBtn = firstRow.locator("button:has(i.chevron.down.icon)");
 
     await expect(moveDownBtn).toBeVisible();
     await moveDownBtn.click();
@@ -289,25 +289,60 @@ test.describe("CorpusMetadataSettings", () => {
         query: UPDATE_METADATA_COLUMN,
         variables: {
           columnId: "col2",
-          validationRules: { min: 0, max: 1000000 },
+          name: "Contract Value",
+          validationConfig: {
+            required: false,
+            min_value: 0,
+            max_value: 1000000,
+          },
+          defaultValue: 0,
         },
       },
       result: {
         data: {
           updateMetadataColumn: {
-            column: {
+            ok: true,
+            message: "Updated",
+            obj: {
               ...mockColumns[1],
-              validationRules: { min: 0, max: 1000000 },
+              validationConfig: {
+                min_value: 0,
+                max_value: 1000000,
+                required: false,
+              },
               __typename: "ColumnType",
             },
-            __typename: "UpdateMetadataColumnMutation",
           },
         },
       },
     };
 
+    const refetchAfterUpdateMock = {
+      request: {
+        query: GET_CORPUS_METADATA_COLUMNS,
+        variables: { corpusId },
+      },
+      result: {
+        data: {
+          corpusMetadataColumns: [
+            mockColumns[0],
+            {
+              ...mockColumns[1],
+              validationConfig: {
+                min_value: 0,
+                max_value: 1000000,
+                required: false,
+              },
+            },
+          ],
+        },
+      },
+    };
+
     await mount(
-      <MetadataTestWrapper mocks={[...baseMocks, updateMock]}>
+      <MetadataTestWrapper
+        mocks={[...baseMocks, updateMock, refetchAfterUpdateMock]}
+      >
         <CorpusMetadataSettings corpusId={corpusId} />
       </MetadataTestWrapper>
     );
@@ -318,18 +353,20 @@ test.describe("CorpusMetadataSettings", () => {
       .filter({
         hasText: "Contract Value",
       });
-    await valueRow.getByRole("button", { name: /edit/i }).click();
+    await valueRow.locator("button:has(i.edit.icon)").click({ force: true });
+    await page.waitForTimeout(500); // Wait for modal animation
 
     // Modal should show with existing values
-    await expect(
-      page.getByRole("heading", { name: /edit metadata field/i })
-    ).toBeVisible();
+    await expect(page.getByText("Edit Metadata Field")).toBeVisible();
     await expect(page.getByLabel("Field Name")).toHaveValue("Contract Value");
+
+    // Wait for validation fields to render
+    await page.waitForSelector("#metadata-min-value", { state: "visible" });
     await expect(page.getByLabel("Minimum Value")).toHaveValue("0");
 
     // Add max constraint
     await page.getByLabel("Maximum Value").fill("1000000");
-    await page.getByRole("button", { name: /save/i }).click();
+    await page.getByText("Update Field").click();
 
     // Verify updated
     await expect(page.getByText("Max: 1,000,000")).toBeVisible();
@@ -344,8 +381,8 @@ test.describe("CorpusMetadataSettings", () => {
       result: {
         data: {
           deleteMetadataColumn: {
-            success: true,
-            __typename: "DeleteMetadataColumnMutation",
+            ok: true,
+            message: "Deleted",
           },
         },
       },
@@ -360,11 +397,7 @@ test.describe("CorpusMetadataSettings", () => {
         },
         result: {
           data: {
-            corpus: {
-              id: corpusId,
-              metadataSchema: createMockFieldset([mockColumns[0]]),
-              __typename: "CorpusType",
-            },
+            corpusMetadataColumns: [mockColumns[0]],
           },
         },
       },
@@ -384,10 +417,10 @@ test.describe("CorpusMetadataSettings", () => {
       .filter({
         hasText: "Contract Value",
       });
-    await valueRow.getByRole("button", { name: /delete/i }).click();
+    await valueRow.locator("button:has(i.trash.icon)").click();
 
     // Confirm deletion
-    await page.getByRole("button", { name: /confirm/i }).click();
+    await page.getByRole("button", { name: "Delete Field" }).click();
 
     // Wait for deletion
     await page.waitForTimeout(500);
@@ -406,11 +439,7 @@ test.describe("CorpusMetadataSettings", () => {
         },
         result: {
           data: {
-            corpus: {
-              id: corpusId,
-              metadataSchema: mockFieldset,
-              __typename: "CorpusType",
-            },
+            corpusMetadataColumns: mockColumns,
           },
         },
         delay: 1000, // Simulate slow loading

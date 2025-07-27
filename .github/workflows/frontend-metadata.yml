@@ -1,0 +1,66 @@
+name: Frontend Metadata Tests
+
+defaults:
+  run:
+    working-directory: ./frontend
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/src/components/metadata/**'
+      - 'frontend/src/components/corpuses/CorpusMetadataSettings.tsx'
+      - 'frontend/src/components/documents/DocumentMetadataGrid.tsx'
+      - 'frontend/src/graphql/metadataOperations.ts'
+      - 'frontend/src/types/metadata.ts'
+      - 'frontend/tests/**/*[Mm]etadata*'
+      - '.github/workflows/frontend-metadata.yml'
+
+jobs:
+  metadata-tests:
+    name: Metadata Feature Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Install Playwright Browsers
+        run: yarn playwright install --with-deps
+
+      - name: Run Metadata Unit Tests
+        run: |
+          yarn run test:unit src/types/metadata.test.ts
+          yarn run test:unit src/utils/metadataUtils.test.ts
+
+      - name: Run Metadata Component Tests
+        run: |
+          yarn run test:ct tests/CorpusMetadataSettings.ct.tsx
+          yarn run test:ct tests/DocumentMetadataGrid.ct.tsx
+          yarn run test:ct tests/MetadataCellEditor.ct.tsx
+          yarn run test:ct tests/MetadataWorkflow.ct.tsx
+          yarn run test:ct tests/MetadataErrorHandling.ct.tsx
+          yarn run test:ct tests/MetadataPerformance.ct.tsx
+
+      - name: Generate Coverage Report
+        run: yarn run test:coverage --testPathPattern=metadata
+        continue-on-error: true
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: metadata-test-results
+          path: |
+            frontend/test-results/
+            frontend/coverage/

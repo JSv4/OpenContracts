@@ -86,86 +86,134 @@ export interface MetadataCompletionStatus {
   missingRequired: string[];
 }
 
+interface ValidationResult {
+  valid: boolean;
+  message: string;
+}
+
 // Helper functions for metadata validation
 export const validateMetadataValue = (
   value: any,
   column: MetadataColumn
-): boolean => {
-  const { dataType, validationRules, extractIsList } = column;
+): ValidationResult => {
+  const rules = column.validationConfig || column.validationRules;
 
   // Empty values are valid unless required
   if (value === null || value === undefined || value === "") {
-    return !validationRules?.required;
+    const valid = !rules?.required;
+    return {
+      valid,
+      message: valid ? "" : `${column.name} is required.`,
+    };
   }
 
   // Handle list validation
-  if (extractIsList) {
-    if (!Array.isArray(value)) return false;
+  if (column.extractIsList) {
+    if (!Array.isArray(value)) {
+      return { valid: false, message: "Expected a list of values." };
+    }
 
     // Check max items constraint
-    if (
-      validationRules?.max_items &&
-      value.length > validationRules.max_items
-    ) {
-      return false;
+    if (rules?.max_items && value.length > rules.max_items) {
+      return {
+        valid: false,
+        message: `Maximum of ${rules.max_items} items allowed.`,
+      };
     }
 
     // Validate each item
-    return value.every((item) =>
-      validateSingleValue(item, dataType, validationRules)
-    );
+    for (const item of value) {
+      const result = validateSingleValue(item, column.dataType, rules);
+      if (!result.valid) return result;
+    }
+
+    return { valid: true, message: "" };
   }
 
-  return validateSingleValue(value, dataType, validationRules);
+  return validateSingleValue(value, column.dataType, rules);
 };
 
 const validateSingleValue = (
   value: any,
   dataType: MetadataDataType,
   rules: any
-): boolean => {
-  if (value === null || value === undefined) return true;
+): ValidationResult => {
+  if (value === null || value === undefined)
+    return { valid: true, message: "" };
 
   switch (dataType) {
     case MetadataDataType.STRING:
     case MetadataDataType.TEXT:
-      if (typeof value !== "string") return false;
-      if (rules?.max_length && value.length > rules.max_length) return false;
-      if (rules?.choices && !rules.choices.includes(value)) return false;
-      return true;
+      if (typeof value !== "string") {
+        return { valid: false, message: "Must be a string." };
+      }
+      if (rules?.max_length && value.length > rules.max_length) {
+        return {
+          valid: false,
+          message: `Must be ≤ ${rules.max_length} characters.`,
+        };
+      }
+      if (rules?.choices && !rules.choices.includes(value)) {
+        return { valid: false, message: "Invalid choice." };
+      }
+      return { valid: true, message: "" };
 
     case MetadataDataType.NUMBER:
     case MetadataDataType.INTEGER:
     case MetadataDataType.FLOAT:
-      if (typeof value !== "number") return false;
-      if (rules?.min !== undefined && value < rules.min) return false;
-      if (rules?.max !== undefined && value > rules.max) return false;
-      return true;
+      if (typeof value !== "number") {
+        return { valid: false, message: "Must be a number." };
+      }
+      if (rules?.min_value !== undefined && value < rules.min_value) {
+        return { valid: false, message: `Must be ≥ ${rules.min_value}.` };
+      }
+      if (rules?.max_value !== undefined && value > rules.max_value) {
+        return { valid: false, message: `Must be ≤ ${rules.max_value}.` };
+      }
+      return { valid: true, message: "" };
 
     case MetadataDataType.BOOLEAN:
-      return typeof value === "boolean";
+      return {
+        valid: typeof value === "boolean",
+        message:
+          typeof value === "boolean" ? "" : "Must be a true/false value.",
+      };
 
     case MetadataDataType.DATE:
-      if (typeof value !== "string") return false;
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-      if (rules?.min_date && value < rules.min_date) return false;
-      if (rules?.max_date && value > rules.max_date) return false;
-      return true;
+      if (typeof value !== "string") {
+        return { valid: false, message: "Must be a date string." };
+      }
+      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) {
+        return { valid: false, message: "Invalid date format (YYYY-MM-DD)." };
+      }
+      if (rules?.min_date && value < rules.min_date) {
+        return {
+          valid: false,
+          message: `Date must be after ${rules.min_date}`,
+        };
+      }
+      if (rules?.max_date && value < rules.max_date) {
+        return {
+          valid: false,
+          message: `Date must be before ${rules.max_date}`,
+        };
+      }
+      return { valid: true, message: "" };
 
     case MetadataDataType.JSON:
-      if (typeof value === "object") return true;
+      if (typeof value === "object") return { valid: true, message: "" };
       if (typeof value === "string") {
         try {
           JSON.parse(value);
-          return true;
+          return { valid: true, message: "" };
         } catch {
-          return false;
+          return { valid: false, message: "Invalid JSON" };
         }
       }
-      return false;
+      return { valid: false, message: "Must be valid JSON." };
 
     default:
-      return true;
+      return { valid: true, message: "" };
   }
 };
 

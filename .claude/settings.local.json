@@ -11,7 +11,8 @@
       "Bash(yarn:*)",
       "Bash(rm:*)",
       "Bash(grep:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }

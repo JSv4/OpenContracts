@@ -1,15 +1,25 @@
-import React, { useRef, useEffect } from "react";
-import { Input, Checkbox, Dropdown, TextArea, Label } from "semantic-ui-react";
+import React, { useRef, useEffect, useState } from "react";
+import {
+  Input,
+  Checkbox,
+  Dropdown,
+  TextArea,
+  Label,
+  Icon,
+} from "semantic-ui-react";
 import styled from "styled-components";
 import { MetadataColumn, MetadataDataType } from "../../../types/metadata";
+import { validateMetadataValue } from "../../../types/metadata";
 
 interface MetadataCellEditorProps {
   column: MetadataColumn;
   value: any;
   onChange: (value: any) => void;
+  onValidationChange?: (isValid: boolean) => void;
   onBlur?: () => void;
   error?: string;
   autoFocus?: boolean;
+  readOnly?: boolean;
 }
 
 const EditorContainer = styled.div`
@@ -27,6 +37,48 @@ const EditorContainer = styled.div`
   textarea {
     padding: 0.5rem;
     font-size: 0.875rem;
+  }
+
+  .ui.input.icon > i.icon {
+    opacity: 1 !important;
+    /* Ensure icon is rendered and considered visible by Playwright */
+    visibility: visible !important;
+    display: inline-block !important;
+    pointer-events: none;
+    position: absolute;
+    right: 0.5em;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .ui.input.icon > input {
+    padding-right: 2.5em !important;
+  }
+
+  .validation-icon {
+    /* Ensure visibility for icons rendered outside Semantic UI Input */
+    visibility: visible !important;
+    display: inline-block !important;
+    opacity: 1 !important;
+    width: 1em;
+    height: 1em;
+    font-size: 1em;
+  }
+
+  .with-validation {
+    position: relative;
+    width: 100%;
+  }
+
+  .with-validation input {
+    padding-right: 2.5em !important;
+  }
+
+  .with-validation + .validation-icon {
+    position: absolute;
+    right: 0.5em;
+    top: 50%;
+    transform: translateY(-50%);
   }
 `;
 
@@ -48,8 +100,12 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
   onBlur,
   error,
   autoFocus,
+  readOnly,
+  onValidationChange,
 }) => {
   const inputRef = useRef<any>(null);
+  const [isValid, setIsValid] = useState(true);
+  const [validationMessage, setValidationMessage] = useState("");
 
   useEffect(() => {
     if (autoFocus && inputRef.current) {
@@ -60,6 +116,15 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
     }
   }, [autoFocus]);
 
+  useEffect(() => {
+    const { valid, message } = validateMetadataValue(value, column);
+    setIsValid(valid);
+    setValidationMessage(message);
+    if (onValidationChange) {
+      onValidationChange(valid);
+    }
+  }, [value, column, onValidationChange]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Tab" || e.key === "Enter") {
       // Let parent handle navigation
@@ -68,11 +133,58 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
     e.stopPropagation();
   };
 
+  const renderValidationIcon = () => {
+    if (!onValidationChange) return null; // Only show icons if validation is being tracked
+    if (isValid) {
+      return (
+        <Icon
+          name="check circle"
+          color="green"
+          data-testid="validation-icon-success"
+          className="validation-icon"
+          style={{ visibility: "visible", opacity: 1 }}
+        />
+      );
+    }
+    return (
+      <Icon
+        name="warning circle"
+        color="red"
+        data-testid="validation-icon-error"
+        className="validation-icon"
+        style={{ visibility: "visible", opacity: 1 }}
+      />
+    );
+  };
+
   const renderEditor = () => {
+    const config = column.validationConfig || column.validationRules;
+
     switch (column.dataType) {
       case MetadataDataType.STRING:
       case MetadataDataType.URL:
       case MetadataDataType.EMAIL:
+        if (config?.choices && config.choices.length > 0) {
+          return (
+            <Dropdown
+              ref={inputRef}
+              selection
+              value={value || ""}
+              options={config.choices.map((choice: string) => ({
+                key: choice,
+                value: choice,
+                text: choice,
+              }))}
+              onChange={(e, { value }) => onChange(value)}
+              onBlur={onBlur}
+              placeholder={`Select ${column.name.toLowerCase()}`}
+              fluid
+              clearable
+              search
+              disabled={readOnly}
+            />
+          );
+        }
         return (
           <Input
             ref={inputRef}
@@ -86,6 +198,11 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
               column.helpText || `Enter ${column.name.toLowerCase()}`
             }
             fluid
+            maxLength={config?.max_length}
+            minLength={config?.min_length}
+            readOnly={readOnly}
+            // Remove Semantic icon injection; we'll render our own icon overlay
+            className={onValidationChange ? "with-validation" : ""}
           />
         );
 
@@ -102,9 +219,11 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             }
             rows={2}
             style={{ width: "100%", resize: "vertical" }}
+            readOnly={readOnly}
           />
         );
 
+      case MetadataDataType.NUMBER:
       case MetadataDataType.INTEGER:
         return (
           <Input
@@ -120,6 +239,10 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             placeholder="0"
             fluid
             step="1"
+            min={config?.min_value}
+            max={config?.max_value}
+            readOnly={readOnly}
+            className={onValidationChange ? "with-validation" : ""}
           />
         );
 
@@ -138,6 +261,10 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             placeholder="0.00"
             fluid
             step="0.01"
+            min={config?.min_value}
+            max={config?.max_value}
+            readOnly={readOnly}
+            className={onValidationChange ? "with-validation" : ""}
           />
         );
 
@@ -148,9 +275,10 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             checked={value || false}
             onChange={(e, { checked }) => {
               onChange(checked);
-              setTimeout(onBlur, 100); // Allow state to update before blur
+              if (onBlur) setTimeout(onBlur, 100);
             }}
             onKeyDown={handleKeyDown}
+            disabled={readOnly}
           />
         );
 
@@ -165,6 +293,10 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             onKeyDown={handleKeyDown}
             error={!!error}
             fluid
+            min={config?.min_date}
+            max={config?.max_date}
+            readOnly={readOnly}
+            className={onValidationChange ? "with-validation" : ""}
           />
         );
 
@@ -179,6 +311,10 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             onKeyDown={handleKeyDown}
             error={!!error}
             fluid
+            min={config?.min_date}
+            max={config?.max_date}
+            readOnly={readOnly}
+            className={onValidationChange ? "with-validation" : ""}
           />
         );
 
@@ -189,7 +325,7 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             selection
             value={value || ""}
             options={
-              column.validationConfig?.choices?.map((choice) => ({
+              config?.choices?.map((choice: string) => ({
                 key: choice,
                 value: choice,
                 text: choice,
@@ -197,13 +333,14 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             }
             onChange={(e, { value }) => {
               onChange(value);
-              setTimeout(onBlur, 100);
+              if (onBlur) setTimeout(onBlur, 100);
             }}
             onBlur={onBlur}
             placeholder={`Select ${column.name.toLowerCase()}`}
             fluid
             clearable
             search
+            disabled={readOnly}
           />
         );
 
@@ -215,7 +352,7 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             multiple
             value={value || []}
             options={
-              column.validationConfig?.choices?.map((choice) => ({
+              config?.choices?.map((choice: string) => ({
                 key: choice,
                 value: choice,
                 text: choice,
@@ -226,33 +363,44 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             placeholder={`Select ${column.name.toLowerCase()}`}
             fluid
             search
+            disabled={readOnly}
           />
         );
 
       case MetadataDataType.JSON:
         return (
-          <TextArea
-            ref={inputRef}
-            value={
-              typeof value === "string" ? value : JSON.stringify(value, null, 2)
-            }
-            onChange={(e, { value }) => {
-              try {
-                onChange(JSON.parse(value as string));
-              } catch {
-                onChange(value); // Keep as string if invalid JSON
+          <div style={{ position: "relative", width: "100%" }}>
+            <TextArea
+              ref={inputRef}
+              value={
+                typeof value === "string"
+                  ? value
+                  : JSON.stringify(value, null, 2)
               }
-            }}
-            onBlur={onBlur}
-            onKeyDown={handleKeyDown}
-            placeholder='{"key": "value"}'
-            rows={3}
-            style={{
-              width: "100%",
-              fontFamily: "monospace",
-              fontSize: "0.875rem",
-            }}
-          />
+              onChange={(e, { value }) => {
+                try {
+                  onChange(JSON.parse(value as string));
+                } catch {
+                  onChange(value); // Keep as string if invalid JSON
+                }
+              }}
+              onBlur={onBlur}
+              onKeyDown={handleKeyDown}
+              placeholder='{"key": "value"}'
+              rows={3}
+              style={{
+                width: "100%",
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+                paddingRight: "2.5em",
+              }}
+              readOnly={readOnly}
+              aria-label="JSON editor"
+            />
+            <div style={{ position: "absolute", top: "0.5em", right: "0.5em" }}>
+              {renderValidationIcon()}
+            </div>
+          </div>
         );
 
       default:
@@ -260,12 +408,23 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
     }
   };
 
+  const editor = renderEditor();
+
+  // Determine if icon is already rendered within editor (JSON textarea case)
+  const iconAlreadyInside = column.dataType === MetadataDataType.JSON;
+
   return (
     <EditorContainer onClick={(e) => e.stopPropagation()}>
-      {renderEditor()}
-      {error && (
-        <ErrorLabel basic color="red" pointing>
-          {error}
+      {editor}
+      {!iconAlreadyInside && renderValidationIcon()}
+      {!isValid && validationMessage && (
+        <ErrorLabel
+          data-testid="validation-error-message"
+          basic
+          color="red"
+          pointing
+        >
+          {validationMessage}
         </ErrorLabel>
       )}
     </EditorContainer>

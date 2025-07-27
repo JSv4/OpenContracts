@@ -159,7 +159,6 @@ export const CorpusMetadataSettings: React.FC<{ corpusId: string }> = ({ corpusI
   // Component will include:
   // 1. Header with "Add Metadata Field" button
   // 2. Table/List of existing metadata columns
-  // 3. Drag handles for reordering
   // 4. Edit/Delete actions per column
   // 5. Modal for creating/editing columns
 };
@@ -346,7 +345,6 @@ Update the document search bar in `Corpuses.tsx` to include metadata filters:
 ### Phase 2: Schema Management (Week 2)
 - Add/edit/delete metadata columns
 - Validation configuration UI
-- Column reordering
 
 ### Phase 3: Inline Editing (Week 3-4)
 - Grid view implementation

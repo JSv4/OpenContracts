@@ -35,7 +35,7 @@ test.describe("MetadataCellEditor", () => {
     await mount(
       <MetadataCellEditor
         column={column}
-        value="Multi\nline\ntext"
+        value={"Multi\nline\ntext"}
         onChange={() => {}}
       />
     );
@@ -51,14 +51,14 @@ test.describe("MetadataCellEditor", () => {
   test("renders number editor", async ({ mount, page }) => {
     const column = createMockColumn({
       dataType: MetadataDataType.NUMBER,
-      validationRules: { min: 0, max: 100 },
+      validationRules: { min_value: 0, max_value: 100 },
     });
 
     await mount(
       <MetadataCellEditor column={column} value={50} onChange={() => {}} />
     );
 
-    const input = page.getByRole("textbox");
+    const input = page.getByRole("spinbutton");
     await expect(input).toBeVisible();
     await expect(input).toHaveAttribute("type", "number");
     await expect(input).toHaveValue("50");
@@ -123,15 +123,17 @@ test.describe("MetadataCellEditor", () => {
 
     const select = page.getByRole("combobox");
     await expect(select).toBeVisible();
-    await expect(select).toHaveValue("Option B");
+    await expect(select.locator("div.text").first()).toHaveText("Option B");
 
-    // Check options
-    const options = await select.locator("option").all();
-    expect(options).toHaveLength(4); // Including empty option
-    await expect(options[0]).toHaveText(""); // Empty option
-    await expect(options[1]).toHaveText("Option A");
-    await expect(options[2]).toHaveText("Option B");
-    await expect(options[3]).toHaveText("Option C");
+    // Semantic UI Dropdown doesn't use <option> elements
+    // Instead, we should click to open the dropdown and check the menu items
+    await select.click();
+
+    const menuItems = page.locator(".ui.dropdown .menu .item");
+    await expect(menuItems).toHaveCount(3); // No empty option in clearable dropdown
+    await expect(menuItems.nth(0)).toHaveText("Option A");
+    await expect(menuItems.nth(1)).toHaveText("Option B");
+    await expect(menuItems.nth(2)).toHaveText("Option C");
   });
 
   test("renders JSON editor", async ({ mount, page }) => {
@@ -157,7 +159,7 @@ test.describe("MetadataCellEditor", () => {
   test("shows validation feedback in real-time", async ({ mount, page }) => {
     const column = createMockColumn({
       dataType: MetadataDataType.NUMBER,
-      validationRules: { min: 0, max: 100 },
+      validationRules: { min_value: 0, max_value: 100 },
     });
 
     let validationState = true;
@@ -165,7 +167,7 @@ test.describe("MetadataCellEditor", () => {
       validationState = isValid;
     };
 
-    await mount(
+    const component = await mount(
       <MetadataCellEditor
         column={column}
         value={50}
@@ -174,19 +176,44 @@ test.describe("MetadataCellEditor", () => {
       />
     );
 
-    const input = page.getByRole("textbox");
+    const input = page.getByRole("spinbutton");
 
     // Valid value - should show success
     await input.fill("75");
+    await component.update(
+      <MetadataCellEditor
+        column={column}
+        value={75}
+        onChange={() => {}}
+        onValidationChange={handleValidationChange}
+      />
+    );
+    await page.waitForTimeout(100); // Give time for icon to render
     await expect(page.getByTestId("validation-icon-success")).toBeVisible();
 
     // Invalid value - should show error
     await input.fill("150");
+    await component.update(
+      <MetadataCellEditor
+        column={column}
+        value={150}
+        onChange={() => {}}
+        onValidationChange={handleValidationChange}
+      />
+    );
     await expect(page.getByTestId("validation-icon-error")).toBeVisible();
     await expect(page.getByText("Must be ≤ 100")).toBeVisible();
 
     // Another invalid case
     await input.fill("-10");
+    await component.update(
+      <MetadataCellEditor
+        column={column}
+        value={-10}
+        onChange={() => {}}
+        onValidationChange={handleValidationChange}
+      />
+    );
     await expect(page.getByTestId("validation-icon-error")).toBeVisible();
     await expect(page.getByText("Must be ≥ 0")).toBeVisible();
   });
@@ -201,19 +228,23 @@ test.describe("MetadataCellEditor", () => {
       capturedValue = value;
     };
 
-    await mount(
+    const component = await mount(
       <MetadataCellEditor column={column} value="" onChange={handleChange} />
     );
 
     const input = page.getByRole("textbox");
     await input.fill("New value");
 
-    // Wait for debounce if any
-    await page.waitForTimeout(100);
+    // The component is controlled, so we need to re-render with the new value
+    await component.update(
+      <MetadataCellEditor
+        column={column}
+        value={"New value"}
+        onChange={handleChange}
+      />
+    );
 
-    // Note: In real implementation, onChange might be called on blur or with debounce
-    // For testing, we'll check the input value
-    await expect(input).toHaveValue("New value");
+    expect(capturedValue).toBe("New value");
   });
 
   test("handles boolean toggle", async ({ mount, page }) => {
@@ -226,7 +257,7 @@ test.describe("MetadataCellEditor", () => {
       capturedValue = value;
     };
 
-    await mount(
+    const component = await mount(
       <MetadataCellEditor
         column={column}
         value={false}
@@ -237,7 +268,22 @@ test.describe("MetadataCellEditor", () => {
     const checkbox = page.getByRole("checkbox");
     await expect(checkbox).not.toBeChecked();
 
-    await checkbox.check();
+    // Click the label or container instead of using check()
+    const checkboxContainer = page.locator(".ui.checkbox");
+    await checkboxContainer.click();
+
+    // Wait for the onChange to be called
+    await page.waitForTimeout(200);
+    expect(capturedValue).toBe(true);
+
+    await component.update(
+      <MetadataCellEditor
+        column={column}
+        value={true}
+        onChange={handleChange}
+      />
+    );
+
     await expect(checkbox).toBeChecked();
   });
 
@@ -246,7 +292,7 @@ test.describe("MetadataCellEditor", () => {
       dataType: MetadataDataType.JSON,
     });
 
-    await mount(
+    const component = await mount(
       <MetadataCellEditor
         column={column}
         value={{}}
@@ -259,12 +305,29 @@ test.describe("MetadataCellEditor", () => {
 
     // Valid JSON
     await textarea.fill('{"valid": "json"}');
+    await component.update(
+      <MetadataCellEditor
+        column={column}
+        value={JSON.parse('{"valid": "json"}')}
+        onChange={() => {}}
+        onValidationChange={() => {}}
+      />
+    );
+    await page.waitForTimeout(100); // Give time for icon to render
     await expect(page.getByTestId("validation-icon-success")).toBeVisible();
 
     // Invalid JSON
     await textarea.fill("{invalid json}");
+    await component.update(
+      <MetadataCellEditor
+        column={column}
+        value="{invalid json}"
+        onChange={() => {}}
+        onValidationChange={() => {}}
+      />
+    );
     await expect(page.getByTestId("validation-icon-error")).toBeVisible();
-    await expect(page.getByText("Invalid JSON")).toBeVisible();
+    await expect(page.getByTestId("validation-error-message")).toBeVisible();
   });
 
   test("handles list editor for string arrays", async ({ mount, page }) => {

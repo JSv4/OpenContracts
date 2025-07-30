@@ -8,19 +8,34 @@ import {
 // Factory for creating mock metadata columns
 export const createMockColumn = (
   overrides?: Partial<MetadataColumn>
-): MetadataColumn => ({
-  id: `col-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-  name: "Test Column",
-  dataType: MetadataDataType.STRING,
-  extractIsList: false,
-  isManualEntry: true,
-  validationRules: {},
-  validationConfig: {},
-  orderIndex: 0,
-  displayOrder: 0,
-  __typename: "ColumnType",
-  ...overrides,
-});
+): MetadataColumn => {
+  // If validationRules is provided but not validationConfig, copy it
+  const validationData =
+    overrides?.validationRules || overrides?.validationConfig || {};
+
+  return {
+    id: `col-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    name: "Test Column",
+    dataType: MetadataDataType.STRING,
+    extractIsList: false,
+    isManualEntry: true,
+    validationRules: validationData,
+    validationConfig: validationData,
+    orderIndex: 0,
+    displayOrder: 0,
+    __typename: "ColumnType",
+    ...overrides,
+    // Ensure both fields have the same data if only one was provided
+    validationRules:
+      overrides?.validationRules ||
+      overrides?.validationConfig ||
+      validationData,
+    validationConfig:
+      overrides?.validationConfig ||
+      overrides?.validationRules ||
+      validationData,
+  };
+};
 
 // Factory for creating mock datacells
 export const createMockDatacell = (

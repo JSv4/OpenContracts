@@ -477,7 +477,7 @@ export const DocumentMetadataGrid: React.FC<DocumentMetadataGridProps> = ({
 
   return (
     <GridContainer>
-      <GridWrapper role="grid">
+      <GridWrapper id="document-metadata-grid-wrapper">
         <StyledTable celled compact>
           <Table.Header>
             <Table.Row>
@@ -514,7 +514,7 @@ export const DocumentMetadataGrid: React.FC<DocumentMetadataGridProps> = ({
                   const isSaving = savingFields.has(cellKey);
 
                   return (
-                    <Table.Cell key={column.id}>
+                    <Table.Cell key={column.id} className="metadata-grid-cell">
                       {isEditing ? (
                         <MetadataCellEditor
                           column={column}

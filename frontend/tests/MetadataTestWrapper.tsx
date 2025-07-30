@@ -6,6 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import { relayStylePagination } from "@apollo/client/utilities";
 import { authStatusVar } from "../src/graphql/cache";
 import "semantic-ui-css/semantic.min.css";
+import "react-toastify/dist/ReactToastify.css";
 
 interface MetadataTestWrapperProps {
   children: React.ReactNode;

@@ -40,46 +40,23 @@ const EditorContainer = styled.div`
     font-size: 0.875rem;
   }
 
-  .ui.input.icon > i.icon {
-    opacity: 1 !important;
-    /* Ensure icon is rendered and considered visible by Playwright */
-    visibility: visible !important;
-    display: inline-block !important;
-    pointer-events: none;
+  /* Direct child validation icon positioning */
+  > .validation-icon {
     position: absolute;
     right: 0.5em;
     top: 50%;
     transform: translateY(-50%);
-  }
-
-  .ui.input.icon > input {
-    padding-right: 2.5em !important;
-  }
-
-  .validation-icon {
-    /* Ensure visibility for icons rendered outside Semantic UI Input */
+    z-index: 10;
+    pointer-events: none;
+    /* Ensure visibility for Playwright */
     visibility: visible !important;
     display: inline-block !important;
     opacity: 1 !important;
-    width: 1em;
-    height: 1em;
-    font-size: 1em;
   }
 
-  .with-validation {
-    position: relative;
-    width: 100%;
-  }
-
+  /* When we have an input with validation */
   .with-validation input {
     padding-right: 2.5em !important;
-  }
-
-  .with-validation + .validation-icon {
-    position: absolute;
-    right: 0.5em;
-    top: 50%;
-    transform: translateY(-50%);
   }
 `;
 
@@ -195,25 +172,49 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
       case MetadataDataType.URL:
       case MetadataDataType.EMAIL:
         if (config?.choices && config.choices.length > 0) {
-          return (
-            <Dropdown
-              ref={inputRef}
-              selection
-              value={value || ""}
-              options={config.choices.map((choice: string) => ({
-                key: choice,
-                value: choice,
-                text: choice,
-              }))}
-              onChange={(e, { value }) => onChange(value)}
-              onBlur={onBlur}
-              placeholder={`Select ${column.name.toLowerCase()}`}
-              fluid
-              clearable
-              search
-              disabled={readOnly}
-            />
-          );
+          if (column.extractIsList) {
+            // Multi-select for list fields
+            return (
+              <Dropdown
+                ref={inputRef}
+                selection
+                multiple
+                value={value || []}
+                options={config.choices.map((choice: string) => ({
+                  key: choice,
+                  value: choice,
+                  text: choice,
+                }))}
+                onChange={(e, { value }) => onChange(value)}
+                onBlur={onBlur}
+                placeholder={`Select ${column.name.toLowerCase()}`}
+                fluid
+                search
+                disabled={readOnly}
+              />
+            );
+          } else {
+            // Single select for non-list fields
+            return (
+              <Dropdown
+                ref={inputRef}
+                selection
+                value={value || ""}
+                options={config.choices.map((choice: string) => ({
+                  key: choice,
+                  value: choice,
+                  text: choice,
+                }))}
+                onChange={(e, { value }) => onChange(value)}
+                onBlur={onBlur}
+                placeholder={`Select ${column.name.toLowerCase()}`}
+                fluid
+                clearable
+                search
+                disabled={readOnly}
+              />
+            );
+          }
         }
         return (
           <Input
@@ -228,11 +229,12 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
               column.helpText || `Enter ${column.name.toLowerCase()}`
             }
             fluid
-            maxLength={config?.max_length}
-            minLength={config?.min_length}
             readOnly={readOnly}
             // Remove Semantic icon injection; we'll render our own icon overlay
             className={onValidationChange ? "with-validation" : ""}
+            input={{
+              maxLength: config?.max_length,
+            }}
           />
         );
 
@@ -268,11 +270,13 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             error={!!error}
             placeholder="0"
             fluid
-            step="1"
-            min={config?.min_value}
-            max={config?.max_value}
             readOnly={readOnly}
             className={onValidationChange ? "with-validation" : ""}
+            input={{
+              step: "1",
+              min: config?.min_value,
+              max: config?.max_value,
+            }}
           />
         );
 
@@ -290,11 +294,13 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             error={!!error}
             placeholder="0.00"
             fluid
-            step="0.01"
-            min={config?.min_value}
-            max={config?.max_value}
             readOnly={readOnly}
             className={onValidationChange ? "with-validation" : ""}
+            input={{
+              step: "0.01",
+              min: config?.min_value,
+              max: config?.max_value,
+            }}
           />
         );
 
@@ -323,10 +329,12 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             onKeyDown={handleKeyDown}
             error={!!error}
             fluid
-            min={config?.min_date}
-            max={config?.max_date}
             readOnly={readOnly}
             className={onValidationChange ? "with-validation" : ""}
+            input={{
+              min: config?.min_date,
+              max: config?.max_date,
+            }}
           />
         );
 
@@ -341,10 +349,12 @@ export const MetadataCellEditor: React.FC<MetadataCellEditorProps> = ({
             onKeyDown={handleKeyDown}
             error={!!error}
             fluid
-            min={config?.min_date}
-            max={config?.max_date}
             readOnly={readOnly}
             className={onValidationChange ? "with-validation" : ""}
+            input={{
+              min: config?.min_date,
+              max: config?.max_date,
+            }}
           />
         );
 

@@ -295,7 +295,7 @@ test.describe("CorpusMetadataSettings", () => {
             min_value: 0,
             max_value: 1000000,
           },
-          defaultValue: 0,
+          defaultValue: null,
         },
       },
       result: {

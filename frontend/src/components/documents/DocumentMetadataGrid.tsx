@@ -38,14 +38,18 @@ import {
   formatMetadataValue,
   getDefaultValueForDataType,
 } from "../../types/metadata";
-import { DocumentType } from "../../types/graphql-api";
+import { DocumentType, PageInfo } from "../../types/graphql-api";
 import { MetadataCellEditor } from "../metadata/editors/MetadataCellEditor";
+import { FetchMoreOnVisible } from "../widgets/infinite_scroll/FetchMoreOnVisible";
 
 interface DocumentMetadataGridProps {
   corpusId: string;
   documents: DocumentType[];
   loading?: boolean;
   onDocumentClick?: (document: DocumentType) => void;
+  pageInfo?: PageInfo;
+  fetchMore?: (args?: any) => void | any;
+  hasMore?: boolean;
 }
 
 const GridContainer = styled.div`
@@ -171,6 +175,20 @@ const ErrorTooltip = styled.div`
   max-width: 200px;
 `;
 
+const PaginationFooter = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+`;
+
+const PaginationInfo = styled.div`
+  color: #64748b;
+  font-size: 0.875rem;
+`;
+
 interface CellKey {
   documentId: string;
   columnId: string;
@@ -181,6 +199,9 @@ export const DocumentMetadataGrid: React.FC<DocumentMetadataGridProps> = ({
   documents,
   loading: documentsLoading,
   onDocumentClick,
+  pageInfo,
+  fetchMore,
+  hasMore,
 }) => {
   const [editingCell, setEditingCell] = useState<CellKey | null>(null);
   const [cellValues, setCellValues] = useState<Record<string, any>>({});
@@ -585,6 +606,31 @@ export const DocumentMetadataGrid: React.FC<DocumentMetadataGridProps> = ({
             ))}
           </Table.Body>
         </StyledTable>
+        {hasMore && fetchMore && (
+          <PaginationFooter>
+            <PaginationInfo>
+              Showing {documents.length} of many documents
+            </PaginationInfo>
+            <Button
+              primary
+              size="small"
+              onClick={() => {
+                if (!documentsLoading && pageInfo?.hasNextPage && fetchMore) {
+                  fetchMore({
+                    variables: {
+                      limit: 20,
+                      cursor: pageInfo.endCursor,
+                    },
+                  });
+                }
+              }}
+              disabled={documentsLoading}
+              loading={documentsLoading}
+            >
+              Load More Documents
+            </Button>
+          </PaginationFooter>
+        )}
       </GridWrapper>
     </GridContainer>
   );

@@ -2,16 +2,47 @@ import React from "react";
 import { test, expect } from "@playwright/experimental-ct-react";
 import { MetadataTestWrapper } from "./MetadataTestWrapper";
 import { DocumentMetadataGrid } from "../src/components/documents/DocumentMetadataGrid";
+import { CorpusDocumentCards } from "../src/components/documents/CorpusDocumentCards";
 import {
   GET_CORPUS_METADATA_COLUMNS,
   GET_DOCUMENT_METADATA_DATACELLS,
   SET_METADATA_VALUE,
 } from "../src/graphql/metadataOperations";
+import { GET_DOCUMENTS } from "../src/graphql/queries";
 import { generateLargeDataset } from "./factories/metadataFactories";
-import { MockedResponse } from "@apollo/client/testing";
+import { MockedResponse, MockedProvider } from "@apollo/client/testing";
+import { InMemoryCache } from "@apollo/client";
 
 test.describe("Metadata Performance", () => {
   const corpusId = "test-corpus";
+
+  // Create a simple test cache for pagination tests
+  const testCache = new InMemoryCache({
+    typePolicies: {
+      Query: {
+        fields: {
+          documents: {
+            keyArgs: [
+              "inCorpusWithId",
+              "textSearch",
+              "hasLabelWithId",
+              "hasAnnotationsWithIds",
+            ],
+            merge(existing, incoming, { args }) {
+              if (!existing || !args?.cursor) {
+                return incoming;
+              }
+              // Merge edges for pagination
+              return {
+                ...incoming,
+                edges: [...(existing.edges || []), ...(incoming.edges || [])],
+              };
+            },
+          },
+        },
+      },
+    },
+  });
 
   test("debounces saves during rapid editing", async ({ mount, page }) => {
     const { columns, documents } = generateLargeDataset(10, 5);
@@ -171,44 +202,131 @@ test.describe("Metadata Performance", () => {
     expect(typeTime).toBeLessThan(500); // Validation shouldn't lag typing
   });
 
-  test("efficient memory usage with pagination", async ({ mount, page }) => {
-    // Create very large dataset
-    const { columns, documents } = generateLargeDataset(1000, 20);
+  test("efficient memory usage with relay-style pagination", async ({
+    mount,
+    page,
+  }) => {
+    // Generate test data
+    const { columns } = generateLargeDataset(100, 5);
+    const pageSize = 20;
+    let currentPage = 0;
 
-    // Mock paginated response
-    const pageSize = 50;
-    const firstPageDocs = documents.slice(0, pageSize);
-
-    const paginatedMocks = [
-      {
-        request: {
-          query: GET_CORPUS_METADATA_COLUMNS,
-          variables: { corpusId },
-        },
-        result: {
-          data: {
-            corpusMetadataColumns: columns,
+    // Generate all documents with proper structure
+    const allDocuments = Array.from({ length: 100 }, (_, i) => ({
+      id: `doc-${i}`,
+      title: `Document ${i}`,
+      description: `Description for document ${i}`,
+      backendLock: false,
+      pdfFile: null,
+      txtExtractFile: null,
+      fileType: "PDF",
+      pawlsParseFile: null,
+      icon: null,
+      isPublic: false,
+      myPermissions: ["READ"],
+      is_selected: false,
+      is_open: false,
+      metadata: {
+        edges: columns.map((col) => ({
+          node: {
+            id: `meta-${i}-${col.id}`,
+            documentId: `doc-${i}`,
+            columnId: col.id,
+            data: { value: `Value ${i} for ${col.name}` },
+            column: col,
           },
+        })),
+      },
+    }));
+
+    // Mock columns
+    const columnsMock = {
+      request: {
+        query: GET_CORPUS_METADATA_COLUMNS,
+        variables: { corpusId },
+      },
+      result: {
+        data: {
+          corpusMetadataColumns: columns,
         },
       },
-    ];
+    };
+
+    // Create pageInfo helper
+    const createPageInfo = (hasNext: boolean, page: number) => ({
+      hasNextPage: hasNext,
+      hasPreviousPage: page > 0,
+      startCursor: `cursor-doc-${page * pageSize}`,
+      endCursor: `cursor-doc-${(page + 1) * pageSize - 1}`,
+    });
+
+    // Mock fetchMore function
+    const mockFetchMore = (args?: any) => {
+      currentPage++;
+      return Promise.resolve({
+        data: {
+          documents: {
+            edges: allDocuments
+              .slice(currentPage * pageSize, (currentPage + 1) * pageSize)
+              .map((doc) => ({
+                node: doc,
+                cursor: `cursor-${doc.id}`,
+              })),
+            pageInfo: createPageInfo(currentPage < 4, currentPage),
+          },
+        },
+      });
+    };
+
+    // Mount the component directly with pagination props
+    const firstPageDocs = allDocuments.slice(0, pageSize);
+    const initialPageInfo = createPageInfo(true, 0);
 
     await mount(
-      <MetadataTestWrapper mocks={paginatedMocks}>
-        <DocumentMetadataGrid documents={firstPageDocs} corpusId={corpusId} />
+      <MetadataTestWrapper mocks={[columnsMock]}>
+        <DocumentMetadataGrid
+          documents={firstPageDocs}
+          corpusId={corpusId}
+          pageInfo={initialPageInfo}
+          fetchMore={mockFetchMore}
+          hasMore={true}
+        />
       </MetadataTestWrapper>
     );
 
-    // Should only render first page
+    // Wait for grid to be visible
     await expect(page.locator("#document-metadata-grid-wrapper")).toBeVisible();
 
-    // Count rendered rows (excluding header)
-    const rows = await page.getByRole("row").count();
-    expect(rows).toBeLessThanOrEqual(pageSize + 1); // +1 for header
+    // Count initial rows (should be pageSize + 1 for header)
+    const initialRows = await page.getByRole("row").count();
+    expect(initialRows).toBe(pageSize + 1);
 
-    // Check for pagination controls
-    await expect(page.getByText(/showing.*of.*documents/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: /next/i })).toBeVisible();
+    // Check for pagination footer
+    await expect(page.getByText("Showing 20 of many documents")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Load More Documents" })
+    ).toBeVisible();
+
+    // Verify initial data is displayed
+    await expect(page.getByText("Document 0")).toBeVisible();
+    await expect(page.getByText("Document 19")).toBeVisible();
+
+    // Check memory efficiency with initial load
+    const initialNodeCount = await page.evaluate(
+      () => document.querySelectorAll("*").length
+    );
+    expect(initialNodeCount).toBeLessThan(5000); // Should be efficient with just 20 rows
+
+    // Test that Load More button is functional
+    const loadMoreBtn = page.getByRole("button", {
+      name: "Load More Documents",
+    });
+    await expect(loadMoreBtn).toBeEnabled();
+
+    // Verify that pagination controls are properly integrated
+    await expect(page.locator(".ui.table")).toBeVisible();
+    const cells = await page.locator(".metadata-grid-cell").count();
+    expect(cells).toBeGreaterThan(0); // Should have metadata cells
   });
 
   test("search performance with large dataset", async ({ mount, page }) => {

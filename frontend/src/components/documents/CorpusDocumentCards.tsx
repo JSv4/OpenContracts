@@ -265,6 +265,9 @@ export const CorpusDocumentCards = ({
           documents={document_items}
           loading={documents_loading}
           onDocumentClick={onOpen}
+          pageInfo={documents_response?.documents.pageInfo}
+          fetchMore={fetchMoreDocuments}
+          hasMore={documents_response?.documents.pageInfo?.hasNextPage ?? false}
         />
       )}
     </div>

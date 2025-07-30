@@ -444,14 +444,6 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
             <Label.Group size="mini">{doc_labels}</Label.Group>
           </Card.Content>
         ) : null}
-        <Card.Content extra>
-          <Statistic.Group size="mini" widths={3}>
-            <MyPermissionsIndicator
-              myPermissions={myPermissions}
-              isPublic={isPublic}
-            />
-          </Statistic.Group>
-        </Card.Content>
       </StyledCard>
 
       {contextMenuState.open && contextMenuState.id === id && (

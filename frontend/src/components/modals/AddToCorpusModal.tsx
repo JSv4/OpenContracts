@@ -261,6 +261,17 @@ export const AddToCorpusModal: React.FC<AddToCorpusModalProps> = ({
               ? `No corpuses found matching "${searchTerm}". Try a different search term.`
               : "You don't have any corpuses with edit permissions. Create a corpus first to add documents to it."}
           </p>
+          {!searchTerm && (
+            <Button
+              primary
+              onClick={() => {
+                // Navigate to corpus creation page
+                window.location.href = "/corpuses/create";
+              }}
+            >
+              Create New Corpus
+            </Button>
+          )}
         </Message>
       );
     }

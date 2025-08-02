@@ -176,6 +176,7 @@ export const UnifiedLabelSelector: React.FC<UnifiedLabelSelectorProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleSelectorClick}
+      data-testid="annotation-tools"
     >
       <motion.div
         className="selector-button"

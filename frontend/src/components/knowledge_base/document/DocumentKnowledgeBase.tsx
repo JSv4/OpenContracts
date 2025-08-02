@@ -1520,6 +1520,24 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         </div>
       </HeaderContainer>
 
+      {/* Error message for GraphQL failures */}
+      {queryError && (
+        <Message negative>
+          <Message.Header>Error loading document</Message.Header>
+          <p>{queryError.message}</p>
+        </Message>
+      )}
+
+      {/* Corpus info display */}
+      {showCorpusInfo && corpusData?.corpus && (
+        <Message info>
+          <Message.Header>Corpus: {corpusData.corpus.title}</Message.Header>
+          {corpusData.corpus.description && (
+            <p>{corpusData.corpus.description}</p>
+          )}
+        </Message>
+      )}
+
       {/* Success message if just added to corpus */}
       {showSuccessMessage && (
         <Message success onDismiss={() => {}}>
@@ -1528,7 +1546,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       )}
 
       {/* Floating ribbon for corpus-less mode */}
-      {!hasCorpus && (
+      {!hasCorpus && !readOnly && (
         <FloatingCorpusRibbon
           data-testid="add-to-corpus-ribbon"
           onClick={() => setShowAddToCorpusModal(true)}

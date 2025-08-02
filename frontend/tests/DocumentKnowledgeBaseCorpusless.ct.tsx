@@ -38,33 +38,30 @@ const mockDocument = {
 // Mock data for document with corpus
 const mockDocumentWithCorpus = {
   ...mockDocument,
-  annotations: {
-    edges: [
-      {
-        node: {
-          id: "annotation-1",
-          page: 1,
-          rawText: "Test annotation",
-          annotationLabel: {
-            id: "label-1",
-            text: "Test Label",
-            color: "blue",
-          },
-          myPermissions: ["read", "write", "delete"],
-          creator: {
-            id: "user-123",
-            email: "test@example.com",
-          },
-        },
+  allAnnotations: [
+    {
+      id: "annotation-1",
+      page: 1,
+      rawText: "Test annotation",
+      annotationLabel: {
+        id: "label-1",
+        text: "Test Label",
+        color: "blue",
+        icon: "tag",
+        description: "Test label description",
+        labelType: "TokenLabel",
       },
-    ],
-  },
-  structuralAnnotations: {
-    edges: [],
-  },
-  docAnnotations: {
-    edges: [],
-  },
+      annotationType: "TokenAnnotation",
+      json: "{}",
+      myPermissions: ["read", "write", "delete"],
+      userFeedback: {
+        edges: [],
+        totalCount: 0,
+      },
+    },
+  ],
+  allStructuralAnnotations: [],
+  allRelationships: [],
 };
 
 // Mock corpus data
@@ -575,11 +572,18 @@ test.describe("DocumentKnowledgeBase - Corpus-less Mode", () => {
   }) => {
     const emptyCorpusesMock: MockedResponse = {
       request: {
-        query: GET_MY_CORPUSES,
+        query: GET_EDITABLE_CORPUSES,
+        variables: { textSearch: "" },
       },
       result: {
         data: {
           corpuses: {
+            pageInfo: {
+              hasNextPage: false,
+              hasPreviousPage: false,
+              startCursor: null,
+              endCursor: null,
+            },
             edges: [],
           },
         },

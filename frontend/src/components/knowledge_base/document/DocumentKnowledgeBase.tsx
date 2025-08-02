@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@apollo/client";
-import { Button, Header, Modal, Loader } from "semantic-ui-react";
+import { Button, Header, Modal, Loader, Message } from "semantic-ui-react";
 import {
   MessageSquare,
   FileText,
@@ -15,7 +15,11 @@ import {
   GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
   GetDocumentKnowledgeAndAnnotationsInput,
   GetDocumentKnowledgeAndAnnotationsOutput,
+  GET_DOCUMENT_ONLY,
+  GetDocumentOnlyInput,
+  GetDocumentOnlyOutput,
 } from "../../../graphql/queries";
+import { useFeatureAvailability } from "../../../hooks/useFeatureAvailability";
 import { getDocumentRawText, getPawlsLayer } from "../../annotator/api/rest";
 import { CorpusType, LabelType } from "../../../types/graphql-api";
 import { AnimatePresence } from "framer-motion";
@@ -121,13 +125,15 @@ import { FloatingDocumentInput } from "./FloatingDocumentInput";
 import { FloatingAnalysesPanel } from "./FloatingAnalysesPanel";
 import { FloatingExtractsPanel } from "./FloatingExtractsPanel";
 import UnifiedKnowledgeLayer from "./layers/UnifiedKnowledgeLayer";
+import { AddToCorpusModal } from "../../modals/AddToCorpusModal";
+import { FeatureUnavailable } from "../../common/FeatureUnavailable";
 
 // Setting worker path to worker bundle.
 GlobalWorkerOptions.workerSrc = workerSrc;
 
 interface DocumentKnowledgeBaseProps {
   documentId: string;
-  corpusId: string;
+  corpusId?: string; // Now optional
   /**
    * Optional list of annotation IDs that should be selected when the modal opens.
    * When provided the component will seed `selectedAnnotationsAtom`, triggering
@@ -139,6 +145,14 @@ interface DocumentKnowledgeBaseProps {
    * When true, disables all editing capabilities and shows only view-only features.
    */
   readOnly?: boolean;
+  /**
+   * Show information about corpus assignment state
+   */
+  showCorpusInfo?: boolean;
+  /**
+   * Optional success message to display after corpus assignment
+   */
+  showSuccessMessage?: string;
 }
 
 const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
@@ -147,9 +161,13 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   initialAnnotationIds,
   onClose,
   readOnly = false,
+  showCorpusInfo,
+  showSuccessMessage,
 }) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
+  const { isFeatureAvailable, getFeatureStatus, hasCorpus } =
+    useFeatureAvailability(corpusId);
 
   const { setProgress, zoomLevel, setShiftDown, setZoomLevel } = useUISettings({
     width,
@@ -243,7 +261,19 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   const { setPdfDoc } = usePdfDoc();
 
   // Call the hook ONCE here
-  const createAnnotationHandler = useCreateAnnotation();
+  const originalCreateAnnotationHandler = useCreateAnnotation();
+
+  // Conditional annotation handlers based on corpus availability
+  const createAnnotationHandler = React.useCallback(
+    async (annotation: any) => {
+      if (!corpusId) {
+        toast.info("Add document to corpus to create annotations");
+        return;
+      }
+      return originalCreateAnnotationHandler(annotation);
+    },
+    [corpusId, originalCreateAnnotationHandler]
+  );
 
   const [markdownContent, setMarkdownContent] = useState<string | null>(null);
   const [markdownError, setMarkdownError] = useState<boolean>(false);
@@ -559,13 +589,15 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     [activeLayer, zoomLevel, setZoomLevel, showZoomFeedback]
   );
 
-  // Fetch combined knowledge & annotation data
+  // Fetch document data - either with corpus context or without
   const authReady = useAuthReady();
+
+  // Query for document with corpus
   const {
-    data: combinedData,
-    loading,
-    error: queryError,
-    refetch,
+    data: corpusData,
+    loading: corpusLoading,
+    error: corpusError,
+    refetch: refetchWithCorpus,
   } = useQuery<
     GetDocumentKnowledgeAndAnnotationsOutput,
     GetDocumentKnowledgeAndAnnotationsInput
@@ -573,7 +605,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     skip: !authReady || !documentId || !corpusId,
     variables: {
       documentId,
-      corpusId,
+      corpusId: corpusId!,
       analysisId: undefined,
     },
     onCompleted: (data) => {
@@ -738,25 +770,187 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     nextFetchPolicy: "no-cache",
   });
 
+  // Query for document without corpus
+  const {
+    data: documentOnlyData,
+    loading: documentLoading,
+    error: documentError,
+    refetch: refetchDocumentOnly,
+  } = useQuery<GetDocumentOnlyOutput, GetDocumentOnlyInput>(GET_DOCUMENT_ONLY, {
+    skip: !authReady || !documentId || Boolean(corpusId),
+    variables: {
+      documentId,
+    },
+    onCompleted: (data) => {
+      if (!data?.document) {
+        console.error("onCompleted: No document data received.");
+        setViewState(ViewState.ERROR);
+        toast.error("Failed to load document details.");
+        return;
+      }
+      setDocumentType(data.document.fileType ?? "");
+      let processedDocData = {
+        ...data.document,
+        myPermissions: getPermissions(data.document.myPermissions) ?? [],
+      };
+      setDocument(processedDocData);
+      setPermissions(data.document.myPermissions ?? []);
+
+      // Load PDF/TXT content
+      if (
+        data.document.fileType === "application/pdf" &&
+        data.document.pdfFile
+      ) {
+        setViewState(ViewState.LOADING);
+        const loadingTask: PDFDocumentLoadingTask = getDocument(
+          data.document.pdfFile
+        );
+        loadingTask.onProgress = (p: { loaded: number; total: number }) => {
+          setProgress(Math.round((p.loaded / p.total) * 100));
+        };
+
+        const pawlsPath = data.document.pawlsParseFile || "";
+
+        Promise.all([loadingTask.promise, getPawlsLayer(pawlsPath)])
+          .then(([pdfDocProxy, pawlsData]) => {
+            if (!pawlsData) {
+              console.error(
+                "onCompleted: PAWLS data received is null or undefined!"
+              );
+            }
+
+            if (!pdfDocProxy) {
+              throw new Error("PDF document proxy is null or undefined.");
+            }
+            setPdfDoc(pdfDocProxy);
+
+            const loadPagesPromises: Promise<PDFPageInfo>[] = [];
+            for (let i = 1; i <= pdfDocProxy.numPages; i++) {
+              const pageNum = i;
+              loadPagesPromises.push(
+                pdfDocProxy.getPage(pageNum).then((p) => {
+                  let pageTokens: Token[] = [];
+                  const pageIndex = p.pageNumber - 1;
+
+                  if (
+                    !pawlsData ||
+                    !Array.isArray(pawlsData) ||
+                    pageIndex >= pawlsData.length
+                  ) {
+                    console.warn(
+                      `Page ${pageNum}: PAWLS data index out of bounds. Index: ${pageIndex}, Length: ${pawlsData.length}`
+                    );
+                    pageTokens = [];
+                  } else {
+                    const pageData = pawlsData[pageIndex];
+
+                    if (!pageData) {
+                      pageTokens = [];
+                    } else if (typeof pageData.tokens === "undefined") {
+                      pageTokens = [];
+                    } else if (!Array.isArray(pageData.tokens)) {
+                      console.error(
+                        `Page ${pageNum}: CRITICAL - pageData.tokens is not an array at index ${pageIndex}! Type: ${typeof pageData.tokens}`
+                      );
+                      pageTokens = [];
+                    } else {
+                      pageTokens = pageData.tokens;
+                    }
+                  }
+                  return new PDFPageInfo(p, pageTokens, zoomLevel);
+                }) as unknown as Promise<PDFPageInfo>
+              );
+            }
+            return Promise.all(loadPagesPromises);
+          })
+          .then((loadedPages) => {
+            setPages(loadedPages);
+            const { doc_text, string_index_token_map } =
+              createTokenStringSearch(loadedPages);
+            setPageTextMaps({
+              ...string_index_token_map,
+              ...pageTextMaps,
+            });
+            setDocText(doc_text);
+            setViewState(ViewState.LOADED);
+          })
+          .catch((err) => {
+            console.error("Error during PDF/PAWLS loading Promise.all:", err);
+            setViewState(ViewState.ERROR);
+            toast.error(
+              `Error loading PDF details: ${
+                err instanceof Error ? err.message : String(err)
+              }`
+            );
+          });
+      } else if (
+        (data.document.fileType === "application/txt" ||
+          data.document.fileType === "text/plain") &&
+        data.document.txtExtractFile
+      ) {
+        console.log("onCompleted: Loading TXT", data.document.txtExtractFile);
+        setViewState(ViewState.LOADING);
+        getDocumentRawText(data.document.txtExtractFile)
+          .then((txt) => {
+            setDocText(txt);
+            setViewState(ViewState.LOADED);
+          })
+          .catch((err) => {
+            setViewState(ViewState.ERROR);
+            toast.error(
+              `Error loading text content: ${
+                err instanceof Error ? err.message : String(err)
+              }`
+            );
+          });
+      } else {
+        console.warn(
+          "onCompleted: Unsupported file type or missing file path.",
+          data.document.fileType
+        );
+        setViewState(ViewState.ERROR);
+      }
+
+      // Keep global navigation vars in sync
+      openedDocument(data.document as any);
+      // Clear annotations when no corpus
+      setPdfAnnotations(new PdfAnnotations([], [], [], true));
+      setStructuralAnnotations([]);
+    },
+    onError: (error) => {
+      console.error("GraphQL Query Error fetching document data:", error);
+      toast.error(`Failed to load document details: ${error.message}`);
+      setViewState(ViewState.ERROR);
+    },
+    fetchPolicy: "network-only",
+    nextFetchPolicy: "no-cache",
+  });
+
+  // Combine query results
+  const loading = corpusLoading || documentLoading;
+  const queryError = corpusError || documentError;
+  const combinedData = corpusId ? corpusData : documentOnlyData;
+  const refetch = corpusId ? refetchWithCorpus : refetchDocumentOnly;
+
   useEffect(() => {
-    if (!loading) {
-      refetch({
+    if (!loading && corpusId) {
+      refetchWithCorpus({
         documentId,
         corpusId,
         analysisId: selectedAnalysis?.id,
       });
     }
-  }, [selectedAnalysis, corpusId, refetch, loading, documentId]);
+  }, [selectedAnalysis, corpusId, refetchWithCorpus, loading, documentId]);
 
   useEffect(() => {
-    if (!loading) {
-      refetch({
+    if (!loading && corpusId) {
+      refetchWithCorpus({
         documentId,
         corpusId,
         analysisId: selectedExtract?.id,
       });
     }
-  }, [selectedExtract, corpusId, refetch, loading, documentId]);
+  }, [selectedExtract, corpusId, refetchWithCorpus, loading, documentId]);
 
   const metadata = combinedData?.document ?? {
     title: "Loading...",
@@ -765,8 +959,12 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     created: new Date().toISOString(),
   };
 
-  const notes = combinedData?.document?.allNotes ?? [];
-  const docRelationships = combinedData?.document?.allDocRelationships ?? [];
+  const notes = corpusId
+    ? corpusData?.document?.allNotes ?? []
+    : documentOnlyData?.document?.allNotes ?? [];
+  const docRelationships = corpusId
+    ? corpusData?.document?.allDocRelationships ?? []
+    : [];
 
   // Resize handlers
   const handleResizeStart = (e: React.MouseEvent) => {
@@ -990,17 +1188,25 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {controlBar}
-        <ChatTray
-          setShowLoad={setShowLoad}
-          showLoad={showLoad}
-          documentId={documentId}
-          onMessageSelect={() => {
-            setActiveLayer("document");
-          }}
-          corpusId={corpusId}
-          initialMessage={pendingChatMessage}
-          readOnly={readOnly}
-        />
+        {corpusId ? (
+          <ChatTray
+            setShowLoad={setShowLoad}
+            showLoad={showLoad}
+            documentId={documentId}
+            onMessageSelect={() => {
+              setActiveLayer("document");
+            }}
+            corpusId={corpusId}
+            initialMessage={pendingChatMessage}
+            readOnly={readOnly}
+          />
+        ) : (
+          <FeatureUnavailable
+            feature="CHAT"
+            documentId={documentId}
+            onAddToCorpus={() => setShowAddToCorpusModal(true)}
+          />
+        )}
       </div>
     );
   })();
@@ -1012,7 +1218,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       <PDFContainer id="pdf-container" ref={containerRefCallback}>
         {viewState === ViewState.LOADED ? (
           <PDF
-            read_only={readOnly}
+            read_only={readOnly || !corpusId}
             containerWidth={containerWidth}
             createAnnotationHandler={createAnnotationHandler}
           />
@@ -1034,7 +1240,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     viewerContent = (
       <PDFContainer id="pdf-container" ref={containerRefCallback}>
         {viewState === ViewState.LOADED ? (
-          <TxtAnnotatorWrapper readOnly={readOnly} allowInput={!readOnly} />
+          <TxtAnnotatorWrapper
+            readOnly={readOnly || !corpusId}
+            allowInput={!readOnly && Boolean(corpusId)}
+          />
         ) : viewState === ViewState.LOADING ? (
           <Loader active inline="centered" content="Loading Text..." />
         ) : (
@@ -1072,7 +1281,7 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
   // Decide which content is in the center based on activeLayer
   const mainLayerContent =
-    activeLayer === "knowledge" ? (
+    activeLayer === "knowledge" && corpusId ? (
       <UnifiedKnowledgeLayer
         documentId={documentId}
         corpusId={corpusId}
@@ -1173,9 +1382,116 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     transition: opacity 0.2s ease-in-out;
   `;
 
+  const FloatingCorpusRibbon = styled.div`
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    min-width: 160px;
+    height: 44px;
+    background: linear-gradient(135deg, #5b8fff 0%, #4274e4 100%);
+    border-radius: 22px;
+    box-shadow: 0 4px 16px rgba(66, 116, 228, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 1005;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: visible;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(66, 116, 228, 0.4),
+        0 3px 6px rgba(0, 0, 0, 0.15);
+      background: linear-gradient(135deg, #6b95ff 0%, #5284f4 100%);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(66, 116, 228, 0.3),
+        0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(
+        135deg,
+        #7ba7ff 0%,
+        #5b8fff 50%,
+        #4274e4 100%
+      );
+      border-radius: 24px;
+      opacity: 0;
+      z-index: -1;
+      transition: opacity 0.3s ease;
+    }
+
+    &:hover::before {
+      opacity: 0.3;
+    }
+
+    @media (max-width: 768px) {
+      top: auto;
+      bottom: 80px;
+      right: 20px;
+      min-width: 140px;
+      height: 40px;
+      font-size: 13px;
+    }
+  `;
+
+  const RibbonContent = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+
+    svg {
+      margin-right: 8px;
+      font-size: 18px;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+    }
+
+    span {
+      position: relative;
+
+      &::after {
+        content: "";
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.8);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+        border-radius: 1px;
+      }
+    }
+
+    ${FloatingCorpusRibbon}:hover & span::after {
+      transform: scaleX(1);
+    }
+  `;
+
   const [selectedSummaryContent, setSelectedSummaryContent] = useState<
     string | null
   >(null);
+
+  const [showAddToCorpusModal, setShowAddToCorpusModal] = useState(false);
 
   return (
     <FullScreenModal
@@ -1204,49 +1520,72 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         </div>
       </HeaderContainer>
 
+      {/* Success message if just added to corpus */}
+      {showSuccessMessage && (
+        <Message success onDismiss={() => {}}>
+          <Message.Header>{showSuccessMessage}</Message.Header>
+        </Message>
+      )}
+
+      {/* Floating ribbon for corpus-less mode */}
+      {!hasCorpus && (
+        <FloatingCorpusRibbon
+          data-testid="add-to-corpus-ribbon"
+          onClick={() => setShowAddToCorpusModal(true)}
+          title="Add this document to a corpus to unlock collaborative features"
+        >
+          <RibbonContent>
+            <Icon name="plus circle" />
+            <span>Add to Corpus</span>
+          </RibbonContent>
+        </FloatingCorpusRibbon>
+      )}
+
       <ContentArea id="content-area">
         <MainContentArea id="main-content-area">
           {mainLayerContent}
           <UnifiedLabelSelector
             sidebarWidth="0px"
-            activeSpanLabel={activeSpanLabel ?? null}
-            setActiveLabel={setActiveSpanLabel}
+            activeSpanLabel={corpusId ? activeSpanLabel ?? null : null}
+            setActiveLabel={corpusId ? setActiveSpanLabel : () => {}}
             showRightPanel={showRightPanel}
             panelOffset={floatingControlsState.offset}
-            hideControls={!floatingControlsState.visible}
-            readOnly={readOnly}
+            hideControls={!floatingControlsState.visible || !corpusId}
+            readOnly={readOnly || !corpusId}
           />
 
-          {/* Floating Summary Preview - always visible, acts as picture-in-picture for knowledge layer */}
-          <FloatingSummaryPreview
-            documentId={documentId}
-            corpusId={corpusId}
-            documentTitle={metadata.title || "Untitled Document"}
-            isVisible={true}
-            isInKnowledgeLayer={activeLayer === "knowledge"}
-            readOnly={readOnly}
-            onSwitchToKnowledge={(content?: string) => {
-              setActiveLayer("knowledge");
-              setShowRightPanel(false);
-              if (content) {
-                setSelectedSummaryContent(content);
-              } else {
+          {/* Floating Summary Preview - only visible when corpus is available */}
+          {corpusId && (
+            <FloatingSummaryPreview
+              documentId={documentId}
+              corpusId={corpusId}
+              documentTitle={metadata.title || "Untitled Document"}
+              isVisible={true}
+              isInKnowledgeLayer={activeLayer === "knowledge"}
+              readOnly={readOnly}
+              onSwitchToKnowledge={(content?: string) => {
+                setActiveLayer("knowledge");
+                setShowRightPanel(false);
+                if (content) {
+                  setSelectedSummaryContent(content);
+                } else {
+                  setSelectedSummaryContent(null);
+                }
+                setChatSourceState((prev) => ({
+                  ...prev,
+                  selectedMessageId: null,
+                  selectedSourceIndex: null,
+                }));
+              }}
+              onBackToDocument={() => {
+                setActiveLayer("document");
                 setSelectedSummaryContent(null);
-              }
-              setChatSourceState((prev) => ({
-                ...prev,
-                selectedMessageId: null,
-                selectedSourceIndex: null,
-              }));
-            }}
-            onBackToDocument={() => {
-              setActiveLayer("document");
-              setSelectedSummaryContent(null);
-              // When going back to document, show chat panel by default
-              setShowRightPanel(true);
-              setSidebarViewMode("chat");
-            }}
-          />
+                // When going back to document, show chat panel by default
+                setShowRightPanel(true);
+                setSidebarViewMode("chat");
+              }}
+            />
+          )}
 
           {/* Zoom Controls - only in document layer */}
           {activeLayer === "document" && (
@@ -1277,13 +1616,23 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
               visible={activeLayer === "document"}
               readOnly={readOnly}
               onChatSubmit={(message) => {
-                setPendingChatMessage(message);
-                setSidebarViewMode("chat");
-                setShowRightPanel(true);
+                if (!corpusId) {
+                  toast.info("Add document to corpus to enable AI chat");
+                  setShowAddToCorpusModal(true);
+                } else {
+                  setPendingChatMessage(message);
+                  setSidebarViewMode("chat");
+                  setShowRightPanel(true);
+                }
               }}
               onToggleChat={() => {
-                setSidebarViewMode("chat");
-                setShowRightPanel(true);
+                if (!corpusId) {
+                  toast.info("Add document to corpus to enable AI chat");
+                  setShowAddToCorpusModal(true);
+                } else {
+                  setSidebarViewMode("chat");
+                  setShowRightPanel(true);
+                }
               }}
             />
           </FloatingInputWrapper>
@@ -1293,39 +1642,57 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             visible={
               activeLayer === "document" && floatingControlsState.visible
             }
-            onAnalysesClick={() => setShowAnalysesPanel(!showAnalysesPanel)}
-            onExtractsClick={() => setShowExtractsPanel(!showExtractsPanel)}
+            onAnalysesClick={() => {
+              if (!corpusId) {
+                toast.info("Add document to corpus to run analyses");
+                setShowAddToCorpusModal(true);
+              } else {
+                setShowAnalysesPanel(!showAnalysesPanel);
+              }
+            }}
+            onExtractsClick={() => {
+              if (!corpusId) {
+                toast.info("Add document to corpus for data extraction");
+                setShowAddToCorpusModal(true);
+              } else {
+                setShowExtractsPanel(!showExtractsPanel);
+              }
+            }}
             analysesOpen={showAnalysesPanel}
             extractsOpen={showExtractsPanel}
             panelOffset={floatingControlsState.offset}
             readOnly={readOnly}
           />
 
-          {/* Floating Analyses Panel */}
-          <FloatingAnalysesPanel
-            visible={
-              showAnalysesPanel &&
-              activeLayer === "document" &&
-              floatingControlsState.visible
-            }
-            analyses={analyses}
-            onClose={() => setShowAnalysesPanel(false)}
-            panelOffset={floatingControlsState.offset}
-            readOnly={readOnly}
-          />
+          {/* Floating Analyses Panel - only show with corpus */}
+          {corpusId && (
+            <FloatingAnalysesPanel
+              visible={
+                showAnalysesPanel &&
+                activeLayer === "document" &&
+                floatingControlsState.visible
+              }
+              analyses={analyses}
+              onClose={() => setShowAnalysesPanel(false)}
+              panelOffset={floatingControlsState.offset}
+              readOnly={readOnly}
+            />
+          )}
 
-          {/* Floating Extracts Panel */}
-          <FloatingExtractsPanel
-            visible={
-              showExtractsPanel &&
-              activeLayer === "document" &&
-              floatingControlsState.visible
-            }
-            extracts={extracts}
-            onClose={() => setShowExtractsPanel(false)}
-            panelOffset={floatingControlsState.offset}
-            readOnly={readOnly}
-          />
+          {/* Floating Extracts Panel - only show with corpus */}
+          {corpusId && (
+            <FloatingExtractsPanel
+              visible={
+                showExtractsPanel &&
+                activeLayer === "document" &&
+                floatingControlsState.visible
+              }
+              extracts={extracts}
+              onClose={() => setShowExtractsPanel(false)}
+              panelOffset={floatingControlsState.offset}
+              readOnly={readOnly}
+            />
+          )}
 
           {/* Right Panel, if needed */}
           <AnimatePresence>
@@ -1530,6 +1897,16 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
           }}
         />
       )}
+
+      <AddToCorpusModal
+        documentId={documentId}
+        open={showAddToCorpusModal}
+        onClose={() => setShowAddToCorpusModal(false)}
+        onSuccess={(newCorpusId) => {
+          // Reload with corpus context
+          window.location.href = `/corpus/${newCorpusId}/document/${documentId}`;
+        }}
+      />
     </FullScreenModal>
   );
 };

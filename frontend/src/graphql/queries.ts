@@ -2283,6 +2283,134 @@ export const GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS = gql`
 `;
 
 /**
+ * Query to get document data without corpus context
+ * Used when viewing documents that haven't been assigned to a corpus
+ */
+export interface GetDocumentOnlyInput {
+  documentId: string;
+}
+
+export interface GetDocumentOnlyOutput {
+  document: RawDocumentType & {
+    allNotesWithoutCorpus?: Array<{
+      id: string;
+      title: string;
+      content: string;
+      creator: {
+        email: string;
+      };
+      created: string;
+    }>;
+    corpuses?: Array<{
+      id: string;
+      title: string;
+    }>;
+  };
+}
+
+export const GET_DOCUMENT_ONLY = gql`
+  query GetDocumentOnly($documentId: String!) {
+    document(id: $documentId) {
+      id
+      title
+      fileType
+      creator {
+        email
+      }
+      created
+      pdfFile
+      txtExtractFile
+      pawlsParseFile
+      myPermissions
+      # Document-level notes (no corpus required)
+      allNotes {
+        id
+        title
+        content
+        creator {
+          email
+        }
+        created
+      }
+      # Check if document is in any corpus (for UI hints)
+      corpuses {
+        edges {
+          node {
+            id
+            title
+          }
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Mutation to add a document to a corpus
+ */
+export interface AddDocumentToCorpusInput {
+  documentId: string;
+  corpusId: string;
+}
+
+export interface AddDocumentToCorpusOutput {
+  addDocumentToCorpus: {
+    success: boolean;
+    message: string;
+    corpus: {
+      id: string;
+      title: string;
+    };
+  };
+}
+
+export const ADD_DOCUMENT_TO_CORPUS = gql`
+  mutation AddDocumentToCorpus($documentId: ID!, $corpusId: ID!) {
+    addDocumentToCorpus(documentId: $documentId, corpusId: $corpusId) {
+      success
+      message
+      corpus {
+        id
+        title
+      }
+    }
+  }
+`;
+
+/**
+ * Query to get user's corpuses for the Add to Corpus modal
+ */
+export interface GetMyCorpusesOutput {
+  myCorpuses: {
+    edges: Array<{
+      node: {
+        id: string;
+        title: string;
+        documentCount: number;
+        myPermissions: string[];
+      };
+    }>;
+  };
+}
+
+export const GET_MY_CORPUSES = gql`
+  query GetMyCorpuses {
+    corpuses(isPublic: false, myPermissions: ["UPDATE"]) {
+      edges {
+        node {
+          id
+          title
+          documents {
+            totalCount
+          }
+          myPermissions
+        }
+      }
+    }
+  }
+`;
+
+/**
  * Interfaces and query for GET_CHAT_MESSAGES
  * to fetch messages once a conversation is selected.
  */

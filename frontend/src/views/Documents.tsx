@@ -41,7 +41,7 @@ import { ActionDropdownItem, LooseObject } from "../components/types";
 import { CardLayout } from "../components/layout/CardLayout";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
 import { DocumentType, LabelType } from "../types/graphql-api";
-import { AddToCorpusModal } from "../components/widgets/modals/AddToCorpusModal";
+import { AddToCorpusModal } from "../components/modals/AddToCorpusModal";
 import { ConfirmModal } from "../components/widgets/modals/ConfirmModal";
 import { CreateAndSearchBar } from "../components/layout/CreateAndSearchBar";
 import {
@@ -313,10 +313,15 @@ export const Documents = () => {
           <BulkUploadModal />
           <AddToCorpusModal
             open={show_add_docs_to_corpus_modal}
-            toggleModal={() =>
-              showAddDocsToCorpusModal(!show_add_docs_to_corpus_modal)
-            }
+            onClose={() => showAddDocsToCorpusModal(false)}
+            onSuccess={(corpusId) => {
+              toast.success("Documents added to corpus successfully!");
+              selectedDocumentIds([]);
+            }}
             documents={document_items}
+            selectedDocumentIds={selected_document_ids}
+            multiStep={true}
+            title="Add Documents to Corpus"
           />
           <ConfirmModal
             message={`Are you sure you want to delete these documents?`}

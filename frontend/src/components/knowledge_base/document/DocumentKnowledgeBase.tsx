@@ -1317,6 +1317,18 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     }
   }, []);
 
+  // Auto-show right panel with feed view when annotations are available
+  useEffect(() => {
+    if (
+      corpusId &&
+      combinedData?.document?.allAnnotations &&
+      combinedData.document.allAnnotations.length > 0
+    ) {
+      setShowRightPanel(true);
+      setSidebarViewMode("feed");
+    }
+  }, [corpusId, combinedData?.document?.allAnnotations, setSidebarViewMode]);
+
   /* ------------------------------------------------------------------ */
   /* Seed selection atom once if the caller provided initial ids         */
   useEffect(() => {
@@ -1520,411 +1532,419 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
         </div>
       </HeaderContainer>
 
-      {/* Error message for GraphQL failures */}
-      {queryError && (
-        <Message negative>
-          <Message.Header>Error loading document</Message.Header>
-          <p>{queryError.message}</p>
-        </Message>
-      )}
-
-      {/* Corpus info display */}
-      {showCorpusInfo && corpusData?.corpus && (
-        <Message info>
-          <Message.Header>Corpus: {corpusData.corpus.title}</Message.Header>
-          {corpusData.corpus.description && (
-            <p>{corpusData.corpus.description}</p>
+      {/* Error message for GraphQL failures - show prominently and prevent other content */}
+      {queryError ? (
+        <ContentArea id="content-area">
+          <div style={{ padding: "2rem", textAlign: "center" }}>
+            <Message negative size="large">
+              <Message.Header>Error loading document</Message.Header>
+              <p>{queryError.message}</p>
+            </Message>
+          </div>
+        </ContentArea>
+      ) : (
+        <>
+          {/* Corpus info display */}
+          {showCorpusInfo && corpusData?.corpus && (
+            <Message info>
+              <Message.Header>Corpus: {corpusData.corpus.title}</Message.Header>
+              {corpusData.corpus.description && (
+                <p>{corpusData.corpus.description}</p>
+              )}
+            </Message>
           )}
-        </Message>
-      )}
 
-      {/* Success message if just added to corpus */}
-      {showSuccessMessage && (
-        <Message success onDismiss={() => {}}>
-          <Message.Header>{showSuccessMessage}</Message.Header>
-        </Message>
-      )}
+          {/* Success message if just added to corpus */}
+          {showSuccessMessage && (
+            <Message success onDismiss={() => {}}>
+              <Message.Header>{showSuccessMessage}</Message.Header>
+            </Message>
+          )}
 
-      {/* Floating ribbon for corpus-less mode */}
-      {!hasCorpus && !readOnly && (
-        <FloatingCorpusRibbon
-          data-testid="add-to-corpus-ribbon"
-          onClick={() => setShowAddToCorpusModal(true)}
-          title="Add this document to a corpus to unlock collaborative features"
-        >
-          <RibbonContent>
-            <Icon name="plus circle" />
-            <span>Add to Corpus</span>
-          </RibbonContent>
-        </FloatingCorpusRibbon>
-      )}
+          {/* Floating ribbon for corpus-less mode */}
+          {!hasCorpus && !readOnly && (
+            <FloatingCorpusRibbon
+              data-testid="add-to-corpus-ribbon"
+              onClick={() => setShowAddToCorpusModal(true)}
+              title="Add this document to a corpus to unlock collaborative features"
+            >
+              <RibbonContent>
+                <Icon name="plus circle" />
+                <span>Add to Corpus</span>
+              </RibbonContent>
+            </FloatingCorpusRibbon>
+          )}
 
-      <ContentArea id="content-area">
-        <MainContentArea id="main-content-area">
-          {mainLayerContent}
-          <UnifiedLabelSelector
-            sidebarWidth="0px"
-            activeSpanLabel={corpusId ? activeSpanLabel ?? null : null}
-            setActiveLabel={corpusId ? setActiveSpanLabel : () => {}}
-            showRightPanel={showRightPanel}
-            panelOffset={floatingControlsState.offset}
-            hideControls={!floatingControlsState.visible || !corpusId}
-            readOnly={readOnly || !corpusId}
-          />
+          <ContentArea id="content-area">
+            <MainContentArea id="main-content-area">
+              {mainLayerContent}
+              <UnifiedLabelSelector
+                sidebarWidth="0px"
+                activeSpanLabel={corpusId ? activeSpanLabel ?? null : null}
+                setActiveLabel={corpusId ? setActiveSpanLabel : () => {}}
+                showRightPanel={showRightPanel}
+                panelOffset={floatingControlsState.offset}
+                hideControls={!floatingControlsState.visible || !corpusId}
+                readOnly={readOnly || !corpusId}
+              />
 
-          {/* Floating Summary Preview - only visible when corpus is available */}
-          {corpusId && (
-            <FloatingSummaryPreview
-              documentId={documentId}
-              corpusId={corpusId}
-              documentTitle={metadata.title || "Untitled Document"}
-              isVisible={true}
-              isInKnowledgeLayer={activeLayer === "knowledge"}
-              readOnly={readOnly}
-              onSwitchToKnowledge={(content?: string) => {
-                setActiveLayer("knowledge");
-                setShowRightPanel(false);
-                if (content) {
-                  setSelectedSummaryContent(content);
-                } else {
-                  setSelectedSummaryContent(null);
+              {/* Floating Summary Preview - only visible when corpus is available */}
+              {corpusId && (
+                <FloatingSummaryPreview
+                  documentId={documentId}
+                  corpusId={corpusId}
+                  documentTitle={metadata.title || "Untitled Document"}
+                  isVisible={true}
+                  isInKnowledgeLayer={activeLayer === "knowledge"}
+                  readOnly={readOnly}
+                  onSwitchToKnowledge={(content?: string) => {
+                    setActiveLayer("knowledge");
+                    setShowRightPanel(false);
+                    if (content) {
+                      setSelectedSummaryContent(content);
+                    } else {
+                      setSelectedSummaryContent(null);
+                    }
+                    setChatSourceState((prev) => ({
+                      ...prev,
+                      selectedMessageId: null,
+                      selectedSourceIndex: null,
+                    }));
+                  }}
+                  onBackToDocument={() => {
+                    setActiveLayer("document");
+                    setSelectedSummaryContent(null);
+                    // When going back to document, show chat panel by default
+                    setShowRightPanel(true);
+                    setSidebarViewMode("chat");
+                  }}
+                />
+              )}
+
+              {/* Zoom Controls - only in document layer */}
+              {activeLayer === "document" && (
+                <ZoomControls
+                  zoomLevel={zoomLevel}
+                  onZoomIn={() => {
+                    setZoomLevel(Math.min(zoomLevel + 0.1, 4));
+                    showZoomFeedback();
+                  }}
+                  onZoomOut={() => {
+                    setZoomLevel(Math.max(zoomLevel - 0.1, 0.5));
+                    showZoomFeedback();
+                  }}
+                />
+              )}
+
+              {/* Zoom Indicator - shows current zoom level when zooming */}
+              {showZoomIndicator && activeLayer === "document" && (
+                <ZoomIndicator data-testid="zoom-indicator">
+                  {Math.round(zoomLevel * 100)}%
+                </ZoomIndicator>
+              )}
+
+              {/* Unified Search/Chat Input - only in document layer */}
+              <FloatingInputWrapper $panelOffset={floatingControlsState.offset}>
+                <FloatingDocumentInput
+                  fixed={false}
+                  visible={activeLayer === "document"}
+                  readOnly={readOnly}
+                  onChatSubmit={(message) => {
+                    if (!corpusId) {
+                      toast.info("Add document to corpus to enable AI chat");
+                      setShowAddToCorpusModal(true);
+                    } else {
+                      setPendingChatMessage(message);
+                      setSidebarViewMode("chat");
+                      setShowRightPanel(true);
+                    }
+                  }}
+                  onToggleChat={() => {
+                    if (!corpusId) {
+                      toast.info("Add document to corpus to enable AI chat");
+                      setShowAddToCorpusModal(true);
+                    } else {
+                      setSidebarViewMode("chat");
+                      setShowRightPanel(true);
+                    }
+                  }}
+                />
+              </FloatingInputWrapper>
+
+              {/* Floating Document Controls - only in document layer */}
+              <FloatingDocumentControls
+                visible={
+                  activeLayer === "document" && floatingControlsState.visible
                 }
-                setChatSourceState((prev) => ({
-                  ...prev,
-                  selectedMessageId: null,
-                  selectedSourceIndex: null,
-                }));
-              }}
-              onBackToDocument={() => {
-                setActiveLayer("document");
-                setSelectedSummaryContent(null);
-                // When going back to document, show chat panel by default
-                setShowRightPanel(true);
-                setSidebarViewMode("chat");
-              }}
-            />
-          )}
-
-          {/* Zoom Controls - only in document layer */}
-          {activeLayer === "document" && (
-            <ZoomControls
-              zoomLevel={zoomLevel}
-              onZoomIn={() => {
-                setZoomLevel(Math.min(zoomLevel + 0.1, 4));
-                showZoomFeedback();
-              }}
-              onZoomOut={() => {
-                setZoomLevel(Math.max(zoomLevel - 0.1, 0.5));
-                showZoomFeedback();
-              }}
-            />
-          )}
-
-          {/* Zoom Indicator - shows current zoom level when zooming */}
-          {showZoomIndicator && activeLayer === "document" && (
-            <ZoomIndicator data-testid="zoom-indicator">
-              {Math.round(zoomLevel * 100)}%
-            </ZoomIndicator>
-          )}
-
-          {/* Unified Search/Chat Input - only in document layer */}
-          <FloatingInputWrapper $panelOffset={floatingControlsState.offset}>
-            <FloatingDocumentInput
-              fixed={false}
-              visible={activeLayer === "document"}
-              readOnly={readOnly}
-              onChatSubmit={(message) => {
-                if (!corpusId) {
-                  toast.info("Add document to corpus to enable AI chat");
-                  setShowAddToCorpusModal(true);
-                } else {
-                  setPendingChatMessage(message);
-                  setSidebarViewMode("chat");
-                  setShowRightPanel(true);
-                }
-              }}
-              onToggleChat={() => {
-                if (!corpusId) {
-                  toast.info("Add document to corpus to enable AI chat");
-                  setShowAddToCorpusModal(true);
-                } else {
-                  setSidebarViewMode("chat");
-                  setShowRightPanel(true);
-                }
-              }}
-            />
-          </FloatingInputWrapper>
-
-          {/* Floating Document Controls - only in document layer */}
-          <FloatingDocumentControls
-            visible={
-              activeLayer === "document" && floatingControlsState.visible
-            }
-            onAnalysesClick={() => {
-              if (!corpusId) {
-                toast.info("Add document to corpus to run analyses");
-                setShowAddToCorpusModal(true);
-              } else {
-                setShowAnalysesPanel(!showAnalysesPanel);
-              }
-            }}
-            onExtractsClick={() => {
-              if (!corpusId) {
-                toast.info("Add document to corpus for data extraction");
-                setShowAddToCorpusModal(true);
-              } else {
-                setShowExtractsPanel(!showExtractsPanel);
-              }
-            }}
-            analysesOpen={showAnalysesPanel}
-            extractsOpen={showExtractsPanel}
-            panelOffset={floatingControlsState.offset}
-            readOnly={readOnly}
-          />
-
-          {/* Floating Analyses Panel - only show with corpus */}
-          {corpusId && (
-            <FloatingAnalysesPanel
-              visible={
-                showAnalysesPanel &&
-                activeLayer === "document" &&
-                floatingControlsState.visible
-              }
-              analyses={analyses}
-              onClose={() => setShowAnalysesPanel(false)}
-              panelOffset={floatingControlsState.offset}
-              readOnly={readOnly}
-            />
-          )}
-
-          {/* Floating Extracts Panel - only show with corpus */}
-          {corpusId && (
-            <FloatingExtractsPanel
-              visible={
-                showExtractsPanel &&
-                activeLayer === "document" &&
-                floatingControlsState.visible
-              }
-              extracts={extracts}
-              onClose={() => setShowExtractsPanel(false)}
-              panelOffset={floatingControlsState.offset}
-              readOnly={readOnly}
-            />
-          )}
-
-          {/* Right Panel, if needed */}
-          <AnimatePresence>
-            {showRightPanel && (
-              <SlidingPanel
-                id="sliding-panel"
-                panelWidth={getPanelWidthPercentage()}
-                onMouseEnter={handlePanelMouseEnter}
-                initial={{ x: "100%", opacity: 0 }}
-                animate={{ x: "0%", opacity: 1 }}
-                exit={{ x: "100%", opacity: 0 }}
-                transition={{
-                  x: { type: "spring", damping: 30, stiffness: 300 },
-                  opacity: { duration: 0.2, ease: "easeOut" },
+                onAnalysesClick={() => {
+                  if (!corpusId) {
+                    toast.info("Add document to corpus to run analyses");
+                    setShowAddToCorpusModal(true);
+                  } else {
+                    setShowAnalysesPanel(!showAnalysesPanel);
+                  }
                 }}
-              >
-                <ResizeHandle
-                  id="resize-handle"
-                  onMouseDown={handleResizeStart}
-                  $isDragging={isDragging}
-                  whileHover={{ scale: 1.02 }}
-                >
-                  <ResizeHandleControl
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowWidthMenu(!showWidthMenu);
+                onExtractsClick={() => {
+                  if (!corpusId) {
+                    toast.info("Add document to corpus for data extraction");
+                    setShowAddToCorpusModal(true);
+                  } else {
+                    setShowExtractsPanel(!showExtractsPanel);
+                  }
+                }}
+                analysesOpen={showAnalysesPanel}
+                extractsOpen={showExtractsPanel}
+                panelOffset={floatingControlsState.offset}
+                readOnly={readOnly}
+              />
+
+              {/* Floating Analyses Panel - only show with corpus */}
+              {corpusId && (
+                <FloatingAnalysesPanel
+                  visible={
+                    showAnalysesPanel &&
+                    activeLayer === "document" &&
+                    floatingControlsState.visible
+                  }
+                  analyses={analyses}
+                  onClose={() => setShowAnalysesPanel(false)}
+                  panelOffset={floatingControlsState.offset}
+                  readOnly={readOnly}
+                />
+              )}
+
+              {/* Floating Extracts Panel - only show with corpus */}
+              {corpusId && (
+                <FloatingExtractsPanel
+                  visible={
+                    showExtractsPanel &&
+                    activeLayer === "document" &&
+                    floatingControlsState.visible
+                  }
+                  extracts={extracts}
+                  onClose={() => setShowExtractsPanel(false)}
+                  panelOffset={floatingControlsState.offset}
+                  readOnly={readOnly}
+                />
+              )}
+
+              {/* Right Panel, if needed */}
+              <AnimatePresence>
+                {showRightPanel && (
+                  <SlidingPanel
+                    id="sliding-panel"
+                    panelWidth={getPanelWidthPercentage()}
+                    onMouseEnter={handlePanelMouseEnter}
+                    initial={{ x: "100%", opacity: 0 }}
+                    animate={{ x: "0%", opacity: 1 }}
+                    exit={{ x: "100%", opacity: 0 }}
+                    transition={{
+                      x: { type: "spring", damping: 30, stiffness: 300 },
+                      opacity: { duration: 0.2, ease: "easeOut" },
                     }}
+                  >
+                    <ResizeHandle
+                      id="resize-handle"
+                      onMouseDown={handleResizeStart}
+                      $isDragging={isDragging}
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <ResizeHandleControl
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowWidthMenu(!showWidthMenu);
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Settings className="settings-icon" />
+                      </ResizeHandleControl>
+                    </ResizeHandle>
+
+                    <AnimatePresence>
+                      {showWidthMenu && (
+                        <WidthControlMenu
+                          initial={{ opacity: 0, scale: 0.8, x: -20 }}
+                          animate={{ opacity: 1, scale: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.8, x: -20 }}
+                          transition={{
+                            duration: 0.2,
+                            ease: [0.4, 0, 0.2, 1],
+                          }}
+                          data-width-menu
+                        >
+                          <WidthMenuItem
+                            id="compact-width-menu-item"
+                            $isActive={mode === "quarter"}
+                            onClick={() => {
+                              setMode("quarter");
+                              setShowWidthMenu(false);
+                            }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Compact
+                            <span className="percentage">25%</span>
+                          </WidthMenuItem>
+                          <WidthMenuItem
+                            $isActive={mode === "half"}
+                            onClick={() => {
+                              setMode("half");
+                              setShowWidthMenu(false);
+                            }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Standard
+                            <span className="percentage">50%</span>
+                          </WidthMenuItem>
+                          <WidthMenuItem
+                            id="wide-width-menu-item"
+                            $isActive={mode === "full"}
+                            onClick={() => {
+                              setMode("full");
+                              setShowWidthMenu(false);
+                            }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Wide
+                            <span className="percentage">90%</span>
+                          </WidthMenuItem>
+                        </WidthControlMenu>
+                      )}
+                    </AnimatePresence>
+
+                    <ControlButtonGroupLeft>
+                      <ControlButtonWrapper>
+                        <ControlButton
+                          onClick={() => {
+                            setShowRightPanel(false);
+                          }}
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <div className="energy-core" />
+                          <div className="arrow-wrapper">
+                            <ArrowLeft strokeWidth={3} />
+                          </div>
+                        </ControlButton>
+                      </ControlButtonWrapper>
+                    </ControlButtonGroupLeft>
+                    {rightPanelContent}
+                  </SlidingPanel>
+                )}
+              </AnimatePresence>
+
+              {/* Chat indicator when panel is closed */}
+              <AnimatePresence>
+                {!showRightPanel && (
+                  <ChatIndicator
+                    onClick={() => {
+                      setSidebarViewMode("chat");
+                      setShowRightPanel(true);
+                    }}
+                    initial={{ x: 100, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: 100, opacity: 0 }}
+                    transition={{ type: "spring", damping: 20, stiffness: 300 }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <Settings className="settings-icon" />
-                  </ResizeHandleControl>
-                </ResizeHandle>
+                    <MessageSquare />
+                  </ChatIndicator>
+                )}
+              </AnimatePresence>
+            </MainContentArea>
+          </ContentArea>
 
-                <AnimatePresence>
-                  {showWidthMenu && (
-                    <WidthControlMenu
-                      initial={{ opacity: 0, scale: 0.8, x: -20 }}
-                      animate={{ opacity: 1, scale: 1, x: 0 }}
-                      exit={{ opacity: 0, scale: 0.8, x: -20 }}
-                      transition={{
-                        duration: 0.2,
-                        ease: [0.4, 0, 0.2, 1],
-                      }}
-                      data-width-menu
-                    >
-                      <WidthMenuItem
-                        id="compact-width-menu-item"
-                        $isActive={mode === "quarter"}
-                        onClick={() => {
-                          setMode("quarter");
-                          setShowWidthMenu(false);
-                        }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        Compact
-                        <span className="percentage">25%</span>
-                      </WidthMenuItem>
-                      <WidthMenuItem
-                        $isActive={mode === "half"}
-                        onClick={() => {
-                          setMode("half");
-                          setShowWidthMenu(false);
-                        }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        Standard
-                        <span className="percentage">50%</span>
-                      </WidthMenuItem>
-                      <WidthMenuItem
-                        id="wide-width-menu-item"
-                        $isActive={mode === "full"}
-                        onClick={() => {
-                          setMode("full");
-                          setShowWidthMenu(false);
-                        }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        Wide
-                        <span className="percentage">90%</span>
-                      </WidthMenuItem>
-                    </WidthControlMenu>
-                  )}
-                </AnimatePresence>
-
-                <ControlButtonGroupLeft>
-                  <ControlButtonWrapper>
-                    <ControlButton
-                      onClick={() => {
-                        setShowRightPanel(false);
-                      }}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <div className="energy-core" />
-                      <div className="arrow-wrapper">
-                        <ArrowLeft strokeWidth={3} />
-                      </div>
-                    </ControlButton>
-                  </ControlButtonWrapper>
-                </ControlButtonGroupLeft>
-                {rightPanelContent}
-              </SlidingPanel>
-            )}
-          </AnimatePresence>
-
-          {/* Chat indicator when panel is closed */}
-          <AnimatePresence>
-            {!showRightPanel && (
-              <ChatIndicator
-                onClick={() => {
-                  setSidebarViewMode("chat");
-                  setShowRightPanel(true);
-                }}
-                initial={{ x: 100, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 100, opacity: 0 }}
-                transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <MessageSquare />
-              </ChatIndicator>
-            )}
-          </AnimatePresence>
-        </MainContentArea>
-      </ContentArea>
-
-      <Modal
-        open={showGraph}
-        onClose={() => setShowGraph(false)}
-        size="large"
-        basic
-      >
-        <Modal.Content>
-          {/* Graph or relationship visualization */}
-        </Modal.Content>
-        <Modal.Actions>
-          <ControlButton onClick={() => setShowGraph(false)}>
-            <X size={16} />
-          </ControlButton>
-        </Modal.Actions>
-      </Modal>
-
-      <NoteModal
-        id={`note-modal_${selectedNote?.id}`}
-        closeIcon
-        open={!!selectedNote}
-        onClose={() => setSelectedNote(null)}
-        size="large"
-      >
-        {selectedNote && (
-          <>
-            <Modal.Header>{selectedNote.title || "Untitled Note"}</Modal.Header>
+          <Modal
+            open={showGraph}
+            onClose={() => setShowGraph(false)}
+            size="large"
+            basic
+          >
             <Modal.Content>
-              <SafeMarkdown>{selectedNote.content}</SafeMarkdown>
+              {/* Graph or relationship visualization */}
             </Modal.Content>
             <Modal.Actions>
-              {!readOnly && (
-                <Button
-                  primary
-                  onClick={() => {
-                    setEditingNoteId(selectedNote.id);
-                    setSelectedNote(null);
-                  }}
-                >
-                  <Icon name="edit" />
-                  Edit Note
-                </Button>
-              )}
-              <Button onClick={() => setSelectedNote(null)}>Close</Button>
+              <ControlButton onClick={() => setShowGraph(false)}>
+                <X size={16} />
+              </ControlButton>
             </Modal.Actions>
-            <div className="meta">
-              Added by {selectedNote.creator.email} on{" "}
-              {new Date(selectedNote.created).toLocaleString()}
-            </div>
-          </>
-        )}
-      </NoteModal>
+          </Modal>
 
-      {!readOnly && editingNoteId && (
-        <NoteEditor
-          noteId={editingNoteId}
-          isOpen={true}
-          onClose={() => setEditingNoteId(null)}
-          onUpdate={() => {
-            // Refetch the document data to get updated notes
-            refetch();
-          }}
-        />
+          <NoteModal
+            id={`note-modal_${selectedNote?.id}`}
+            closeIcon
+            open={!!selectedNote}
+            onClose={() => setSelectedNote(null)}
+            size="large"
+          >
+            {selectedNote && (
+              <>
+                <Modal.Header>
+                  {selectedNote.title || "Untitled Note"}
+                </Modal.Header>
+                <Modal.Content>
+                  <SafeMarkdown>{selectedNote.content}</SafeMarkdown>
+                </Modal.Content>
+                <Modal.Actions>
+                  {!readOnly && (
+                    <Button
+                      primary
+                      onClick={() => {
+                        setEditingNoteId(selectedNote.id);
+                        setSelectedNote(null);
+                      }}
+                    >
+                      <Icon name="edit" />
+                      Edit Note
+                    </Button>
+                  )}
+                  <Button onClick={() => setSelectedNote(null)}>Close</Button>
+                </Modal.Actions>
+                <div className="meta">
+                  Added by {selectedNote.creator.email} on{" "}
+                  {new Date(selectedNote.created).toLocaleString()}
+                </div>
+              </>
+            )}
+          </NoteModal>
+
+          {!readOnly && editingNoteId && (
+            <NoteEditor
+              noteId={editingNoteId}
+              isOpen={true}
+              onClose={() => setEditingNoteId(null)}
+              onUpdate={() => {
+                // Refetch the document data to get updated notes
+                refetch();
+              }}
+            />
+          )}
+
+          {!readOnly && (
+            <NewNoteModal
+              isOpen={showNewNoteModal}
+              onClose={() => setShowNewNoteModal(false)}
+              documentId={documentId}
+              corpusId={corpusId}
+              onCreated={() => {
+                // Refetch the document data to get the new note
+                refetch();
+              }}
+            />
+          )}
+
+          <AddToCorpusModal
+            documentId={documentId}
+            open={showAddToCorpusModal}
+            onClose={() => setShowAddToCorpusModal(false)}
+            onSuccess={(newCorpusId) => {
+              // Reload with corpus context
+              window.location.href = `/corpus/${newCorpusId}/document/${documentId}`;
+            }}
+          />
+        </>
       )}
-
-      {!readOnly && (
-        <NewNoteModal
-          isOpen={showNewNoteModal}
-          onClose={() => setShowNewNoteModal(false)}
-          documentId={documentId}
-          corpusId={corpusId}
-          onCreated={() => {
-            // Refetch the document data to get the new note
-            refetch();
-          }}
-        />
-      )}
-
-      <AddToCorpusModal
-        documentId={documentId}
-        open={showAddToCorpusModal}
-        onClose={() => setShowAddToCorpusModal(false)}
-        onSuccess={(newCorpusId) => {
-          // Reload with corpus context
-          window.location.href = `/corpus/${newCorpusId}/document/${documentId}`;
-        }}
-      />
     </FullScreenModal>
   );
 };

@@ -106,9 +106,14 @@ export const DocumentKnowledgeBaseCorpuslessTestWrapper: React.FC<
 
       if (mock) {
         setTimeout(() => {
-          console.log(`[GraphQL Response] ${operationName}`, mock.result);
-          observer.next(mock.result as any);
-          observer.complete();
+          if (mock.error) {
+            console.log(`[GraphQL Error] ${operationName}`, mock.error);
+            observer.error(mock.error);
+          } else {
+            console.log(`[GraphQL Response] ${operationName}`, mock.result);
+            observer.next(mock.result as any);
+            observer.complete();
+          }
         }, 10);
       } else {
         console.error(`[GraphQL] No mock found for ${operationName}`);

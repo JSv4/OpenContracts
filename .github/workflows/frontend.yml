@@ -85,8 +85,6 @@ jobs:
         run: yarn install --frozen-lockfile
       - name: Run Unit Tests
         run: yarn run test:unit
-      - name: Run Metadata Unit Tests
-        run: yarn run test:unit src/types/metadata.test.ts src/utils/metadataUtils.test.ts
 
   docker-build:
     name: Build Docker Image

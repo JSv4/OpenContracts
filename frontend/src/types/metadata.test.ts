@@ -17,12 +17,12 @@ describe("validateMetadataValue", () => {
       orderIndex: 0,
     };
 
-    expect(validateMetadataValue("test", column)).toBe(true);
+    expect(validateMetadataValue("test", column).valid).toBe(true);
     expect(
-      validateMetadataValue("very long string that exceeds limit", column)
+      validateMetadataValue("very long string that exceeds limit", column).valid
     ).toBe(false);
-    expect(validateMetadataValue("", column)).toBe(true); // Empty is valid
-    expect(validateMetadataValue(null, column)).toBe(true); // Null is valid
+    expect(validateMetadataValue("", column).valid).toBe(true); // Empty is valid
+    expect(validateMetadataValue(null, column).valid).toBe(true); // Null is valid
   });
 
   test("validates string with choices", () => {
@@ -36,10 +36,10 @@ describe("validateMetadataValue", () => {
       orderIndex: 0,
     };
 
-    expect(validateMetadataValue("Active", column)).toBe(true);
-    expect(validateMetadataValue("Pending", column)).toBe(true);
-    expect(validateMetadataValue("Invalid", column)).toBe(false);
-    expect(validateMetadataValue("", column)).toBe(true); // Empty is valid
+    expect(validateMetadataValue("Active", column).valid).toBe(true);
+    expect(validateMetadataValue("Pending", column).valid).toBe(true);
+    expect(validateMetadataValue("Invalid", column).valid).toBe(false);
+    expect(validateMetadataValue("", column).valid).toBe(true); // Empty is valid
   });
 
   test("validates number types with constraints", () => {
@@ -49,17 +49,17 @@ describe("validateMetadataValue", () => {
       dataType: MetadataDataType.NUMBER,
       extractIsList: false,
       isManualEntry: true,
-      validationRules: { min: 0, max: 100 },
+      validationRules: { min_value: 0, max_value: 100 },
       orderIndex: 0,
     };
 
-    expect(validateMetadataValue(50, column)).toBe(true);
-    expect(validateMetadataValue(0, column)).toBe(true);
-    expect(validateMetadataValue(100, column)).toBe(true);
-    expect(validateMetadataValue(150, column)).toBe(false);
-    expect(validateMetadataValue(-10, column)).toBe(false);
-    expect(validateMetadataValue("not a number", column)).toBe(false);
-    expect(validateMetadataValue(null, column)).toBe(true);
+    expect(validateMetadataValue(50, column).valid).toBe(true);
+    expect(validateMetadataValue(0, column).valid).toBe(true);
+    expect(validateMetadataValue(100, column).valid).toBe(true);
+    expect(validateMetadataValue(150, column).valid).toBe(false);
+    expect(validateMetadataValue(-10, column).valid).toBe(false);
+    expect(validateMetadataValue("not a number", column).valid).toBe(false);
+    expect(validateMetadataValue(null, column).valid).toBe(true);
   });
 
   test("validates date formats", () => {
@@ -73,11 +73,11 @@ describe("validateMetadataValue", () => {
       orderIndex: 0,
     };
 
-    expect(validateMetadataValue("2024-01-01", column)).toBe(true);
-    expect(validateMetadataValue("2024-12-31", column)).toBe(true);
-    expect(validateMetadataValue("invalid date", column)).toBe(false);
-    expect(validateMetadataValue("2024/01/01", column)).toBe(false); // Wrong format
-    expect(validateMetadataValue("", column)).toBe(true);
+    expect(validateMetadataValue("2024-01-01", column).valid).toBe(true);
+    expect(validateMetadataValue("2024-12-31", column).valid).toBe(true);
+    expect(validateMetadataValue("invalid date", column).valid).toBe(false);
+    expect(validateMetadataValue("2024/01/01", column).valid).toBe(false); // Wrong format
+    expect(validateMetadataValue("", column).valid).toBe(true);
   });
 
   test("validates date with min/max constraints", () => {
@@ -94,9 +94,9 @@ describe("validateMetadataValue", () => {
       orderIndex: 0,
     };
 
-    expect(validateMetadataValue("2024-06-15", column)).toBe(true);
-    expect(validateMetadataValue("2023-12-31", column)).toBe(false);
-    expect(validateMetadataValue("2025-01-01", column)).toBe(false);
+    expect(validateMetadataValue("2024-06-15", column).valid).toBe(true);
+    expect(validateMetadataValue("2023-12-31", column).valid).toBe(false);
+    expect(validateMetadataValue("2025-01-01", column).valid).toBe(false);
   });
 
   test("validates boolean types", () => {
@@ -110,11 +110,11 @@ describe("validateMetadataValue", () => {
       orderIndex: 0,
     };
 
-    expect(validateMetadataValue(true, column)).toBe(true);
-    expect(validateMetadataValue(false, column)).toBe(true);
-    expect(validateMetadataValue("true", column)).toBe(false); // String not valid
-    expect(validateMetadataValue(1, column)).toBe(false); // Number not valid
-    expect(validateMetadataValue(null, column)).toBe(true);
+    expect(validateMetadataValue(true, column).valid).toBe(true);
+    expect(validateMetadataValue(false, column).valid).toBe(true);
+    expect(validateMetadataValue("true", column).valid).toBe(false); // String not valid
+    expect(validateMetadataValue(1, column).valid).toBe(false); // Number not valid
+    expect(validateMetadataValue(null, column).valid).toBe(true);
   });
 
   test("validates JSON types", () => {
@@ -128,10 +128,10 @@ describe("validateMetadataValue", () => {
       orderIndex: 0,
     };
 
-    expect(validateMetadataValue({ key: "value" }, column)).toBe(true);
-    expect(validateMetadataValue([1, 2, 3], column)).toBe(true);
-    expect(validateMetadataValue("not json", column)).toBe(false);
-    expect(validateMetadataValue(null, column)).toBe(true);
+    expect(validateMetadataValue({ key: "value" }, column).valid).toBe(true);
+    expect(validateMetadataValue([1, 2, 3], column).valid).toBe(true);
+    expect(validateMetadataValue("not json", column).valid).toBe(false);
+    expect(validateMetadataValue(null, column).valid).toBe(true);
   });
 
   test("validates list constraints", () => {
@@ -148,12 +148,14 @@ describe("validateMetadataValue", () => {
       orderIndex: 0,
     };
 
-    expect(validateMetadataValue(["A", "B"], column)).toBe(true);
-    expect(validateMetadataValue(["A", "B", "C"], column)).toBe(true);
-    expect(validateMetadataValue(["A", "B", "C", "A"], column)).toBe(false); // Too many
-    expect(validateMetadataValue(["D"], column)).toBe(false); // Invalid choice
-    expect(validateMetadataValue([], column)).toBe(true); // Empty list is valid
-    expect(validateMetadataValue(["A", "D"], column)).toBe(false); // Contains invalid
+    expect(validateMetadataValue(["A", "B"], column).valid).toBe(true);
+    expect(validateMetadataValue(["A", "B", "C"], column).valid).toBe(true);
+    expect(validateMetadataValue(["A", "B", "C", "A"], column).valid).toBe(
+      false
+    ); // Too many
+    expect(validateMetadataValue(["D"], column).valid).toBe(false); // Invalid choice
+    expect(validateMetadataValue([], column).valid).toBe(true); // Empty list is valid
+    expect(validateMetadataValue(["A", "D"], column).valid).toBe(false); // Contains invalid
   });
 
   test("validates list of numbers", () => {
@@ -164,17 +166,19 @@ describe("validateMetadataValue", () => {
       extractIsList: true,
       isManualEntry: true,
       validationRules: {
-        min: 0,
-        max: 100,
+        min_value: 0,
+        max_value: 100,
         max_items: 5,
       },
       orderIndex: 0,
     };
 
-    expect(validateMetadataValue([10, 20, 30], column)).toBe(true);
-    expect(validateMetadataValue([0, 50, 100], column)).toBe(true);
-    expect(validateMetadataValue([10, 20, 150], column)).toBe(false); // One exceeds max
-    expect(validateMetadataValue([10, 20, 30, 40, 50, 60], column)).toBe(false); // Too many items
+    expect(validateMetadataValue([10, 20, 30], column).valid).toBe(true);
+    expect(validateMetadataValue([0, 50, 100], column).valid).toBe(true);
+    expect(validateMetadataValue([10, 20, 150], column).valid).toBe(false); // One exceeds max
+    expect(validateMetadataValue([10, 20, 30, 40, 50, 60], column).valid).toBe(
+      false
+    ); // Too many items
   });
 
   test("handles edge cases", () => {
@@ -188,8 +192,8 @@ describe("validateMetadataValue", () => {
       orderIndex: 0,
     };
 
-    expect(validateMetadataValue(undefined, column)).toBe(true);
-    expect(validateMetadataValue(null, column)).toBe(true);
-    expect(validateMetadataValue("", column)).toBe(true);
+    expect(validateMetadataValue(undefined, column).valid).toBe(true);
+    expect(validateMetadataValue(null, column).valid).toBe(true);
+    expect(validateMetadataValue("", column).valid).toBe(true);
   });
 });

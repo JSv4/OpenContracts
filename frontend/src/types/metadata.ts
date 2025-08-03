@@ -98,6 +98,8 @@ export const validateMetadataValue = (
 ): ValidationResult => {
   const rules = column.validationConfig || column.validationRules;
 
+  console.log(`[validateMetadataValue] - rules: ${rules}`);
+
   // Empty values are valid unless required
   if (value === null || value === undefined || value === "") {
     const valid = !rules?.required;
@@ -106,6 +108,8 @@ export const validateMetadataValue = (
       message: valid ? "" : `${column.name} is required.`,
     };
   }
+
+  console.log(`[validateMetadataValue] - column: ${column}`);
 
   // Handle list validation
   if (column.extractIsList) {
@@ -138,6 +142,10 @@ const validateSingleValue = (
   dataType: MetadataDataType,
   rules: any
 ): ValidationResult => {
+  console.log(
+    `[validateSingleValue] - value ${value} / dataType ${dataType} / rules ${rules}`
+  );
+
   if (value === null || value === undefined)
     return { valid: true, message: "" };
 
@@ -183,20 +191,30 @@ const validateSingleValue = (
       if (typeof value !== "string") {
         return { valid: false, message: "Must be a date string." };
       }
-      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) {
+      if (!RegExp(/^\d{4}-\d{2}-\d{2}$/).test(value)) {
         return { valid: false, message: "Invalid date format (YYYY-MM-DD)." };
       }
-      if (rules?.min_date && value < rules.min_date) {
-        return {
-          valid: false,
-          message: `Date must be after ${rules.min_date}`,
-        };
+      if (rules?.min_date) {
+        var min_date = new Date(rules.min_date);
+        console.log(`Min_date, ${min_date}`);
+        var date_value = new Date(value);
+        console.log(`Date value: ${date_value}`);
+        if (date_value < min_date) {
+          return {
+            valid: false,
+            message: `Date must be after ${rules.min_date}`,
+          };
+        }
       }
-      if (rules?.max_date && value < rules.max_date) {
-        return {
-          valid: false,
-          message: `Date must be before ${rules.max_date}`,
-        };
+      if (rules?.max_date) {
+        var max_date = new Date(rules.max_date);
+        var date_value = new Date(value);
+        if (date_value > max_date) {
+          return {
+            valid: false,
+            message: `Date must be before ${rules.max_date}`,
+          };
+        }
       }
       return { valid: true, message: "" };
 

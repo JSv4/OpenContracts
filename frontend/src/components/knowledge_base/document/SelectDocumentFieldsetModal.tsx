@@ -363,11 +363,11 @@ export const SelectDocumentFieldsetModal: FC<
           corpusId,
         },
       });
-      if (res.data?.startDocumentExtract.ok) {
+      if (res.data?.startExtractForDoc.ok) {
         toast.success("Document extract started successfully");
         onClose();
       } else {
-        const msg = res.data?.startDocumentExtract.message || "Unknown error";
+        const msg = res.data?.startExtractForDoc.message || "Unknown error";
         toast.error(`Failed to start document extract: ${msg}`);
       }
     } catch (error) {

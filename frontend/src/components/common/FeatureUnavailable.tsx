@@ -54,7 +54,8 @@ export const FeatureUnavailable: React.FC<FeatureUnavailableProps> = ({
 
   if (status.available) return null;
 
-  const hasEditableCorpuses = (userCorpuses?.corpuses?.edges?.length || 0) > 0;
+  const hasEditableCorpuses =
+    (userCorpuses?.myCorpuses?.edges?.length || 0) > 0;
 
   return (
     <Container className={className}>

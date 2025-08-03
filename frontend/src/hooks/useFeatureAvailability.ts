@@ -13,7 +13,10 @@ export const useFeatureAvailability = (corpusId?: string) => {
     return {
       available,
       config,
-      message: !available ? config.disabledMessage : undefined,
+      message:
+        !available && "disabledMessage" in config
+          ? config.disabledMessage
+          : undefined,
     };
   };
 

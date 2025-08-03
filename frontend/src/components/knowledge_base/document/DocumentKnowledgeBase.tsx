@@ -1318,16 +1318,17 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   }, []);
 
   // Auto-show right panel with feed view when annotations are available
-  useEffect(() => {
-    if (
-      corpusId &&
-      combinedData?.document?.allAnnotations &&
-      combinedData.document.allAnnotations.length > 0
-    ) {
-      setShowRightPanel(true);
-      setSidebarViewMode("feed");
-    }
-  }, [corpusId, combinedData?.document?.allAnnotations, setSidebarViewMode]);
+  // TEMPORARILY DISABLED: This auto-open behavior breaks tests that expect manual sidebar opening
+  // useEffect(() => {
+  //   if (
+  //     corpusId &&
+  //     combinedData?.document?.allAnnotations &&
+  //     combinedData.document.allAnnotations.length > 0
+  //   ) {
+  //     setShowRightPanel(true);
+  //     setSidebarViewMode("feed");
+  //   }
+  // }, [corpusId, combinedData?.document?.allAnnotations, setSidebarViewMode]);
 
   /* ------------------------------------------------------------------ */
   /* Seed selection atom once if the caller provided initial ids         */

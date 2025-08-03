@@ -484,6 +484,21 @@ test.describe("DocumentKnowledgeBase - Corpus-less Mode", () => {
       />
     );
 
+    // Open the sidebar to see annotations
+    const chatIndicator = page
+      .locator("button")
+      .filter({
+        has: page.locator('svg[class*="lucide-message-square"]'),
+      })
+      .last();
+    await expect(chatIndicator).toBeVisible();
+    await chatIndicator.click();
+
+    // Switch to feed mode to see annotations
+    const feedToggle = page.getByTestId("view-mode-feed");
+    await expect(feedToggle).toBeVisible();
+    await feedToggle.click();
+
     // Check that annotations are displayed
     await expect(page.locator("text=Test annotation")).toBeVisible();
   });

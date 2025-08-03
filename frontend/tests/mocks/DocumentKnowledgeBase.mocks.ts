@@ -333,6 +333,24 @@ export const mockCorpusData = {
   },
 };
 
+// Mock summary versions for document summary testing
+const mockSummaryVersions = [
+  {
+    id: "rev-1",
+    version: 1,
+    created: "2025-01-24T14:00:00Z",
+    snapshot: "# Mock Summary Title\n\nMock summary details.",
+    diff: "",
+    author: {
+      id: "user-1",
+      username: "testuser",
+      email: "test@example.com",
+      __typename: "UserType",
+    },
+    __typename: "DocumentSummaryRevision",
+  },
+];
+
 // Define mocks needed by the tests
 export const graphqlMocks: ReadonlyArray<MockedResponse> = [
   // ... (keep all existing mocks as they are) ...
@@ -413,6 +431,44 @@ export const graphqlMocks: ReadonlyArray<MockedResponse> = [
         documentId: TXT_DOC_ID,
         corpusId: CORPUS_ID,
         analysisId: undefined,
+      },
+    },
+    result: {
+      data: {
+        document: {
+          ...mockTxtDocument,
+          allNotes: [mockNote1, mockNote2],
+        },
+        corpus: mockCorpusData,
+      },
+    },
+  },
+  // 2b) TXT knowledge+annotations query without analysisId (Apollo strips undefined)
+  {
+    request: {
+      query: GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
+      variables: {
+        documentId: TXT_DOC_ID,
+        corpusId: CORPUS_ID,
+      },
+    },
+    result: {
+      data: {
+        document: {
+          ...mockTxtDocument,
+          allNotes: [mockNote1, mockNote2],
+        },
+        corpus: mockCorpusData,
+      },
+    },
+  },
+  // 2c) TXT knowledge+annotations query AGAIN for refetch
+  {
+    request: {
+      query: GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
+      variables: {
+        documentId: TXT_DOC_ID,
+        corpusId: CORPUS_ID,
       },
     },
     result: {

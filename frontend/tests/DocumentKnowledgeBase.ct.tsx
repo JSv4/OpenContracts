@@ -473,7 +473,7 @@ test("PDF container renders with virtualized pages", async ({
 test("renders TXT document with chat panel open", async ({ mount, page }) => {
   await mount(
     <DocumentKnowledgeBaseTestWrapper
-      mocks={[...graphqlMocks, ...createSummaryMocks(PDF_DOC_ID, CORPUS_ID)]}
+      mocks={[...graphqlMocks, ...createSummaryMocks(TXT_DOC_ID, CORPUS_ID)]}
       documentId={TXT_DOC_ID}
       corpusId={CORPUS_ID}
     />

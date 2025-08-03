@@ -27,8 +27,12 @@ test.describe("CorpusRequiredEmptyState", () => {
       )
     ).toBeVisible();
 
-    // Check icon is displayed
-    await expect(page.locator(".icon.folder.open.outline")).toBeVisible();
+    // Check icon is displayed (checking parent wrapper since icon has aria-hidden)
+    const iconWrapper = page
+      .locator("div")
+      .filter({ has: page.locator(".icon.folder.open.outline") })
+      .first();
+    await expect(iconWrapper).toBeVisible();
   });
 
   test("should call onAddToCorpus when button clicked", async ({

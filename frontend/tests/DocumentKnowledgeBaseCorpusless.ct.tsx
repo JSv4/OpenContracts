@@ -7,6 +7,7 @@ import {
   GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS,
   GET_MY_CORPUSES,
   ADD_DOCUMENT_TO_CORPUS,
+  GET_CONVERSATIONS,
 } from "../src/graphql/queries";
 import { LINK_DOCUMENTS_TO_CORPUS } from "../src/graphql/mutations";
 import { gql } from "@apollo/client";
@@ -247,6 +248,34 @@ const linkDocumentsToCorpusMock: MockedResponse = {
   },
 };
 
+const getConversationsMock: MockedResponse = {
+  request: {
+    query: GET_CONVERSATIONS,
+    variables: {
+      documentId: "doc-123",
+      limit: undefined,
+      cursor: undefined,
+      title_Contains: undefined,
+      createdAt_Gte: undefined,
+      createdAt_Lte: undefined,
+    },
+  },
+  result: {
+    data: {
+      conversations: {
+        __typename: "ConversationTypeConnection",
+        edges: [],
+        pageInfo: {
+          hasNextPage: false,
+          hasPreviousPage: false,
+          startCursor: null,
+          endCursor: null,
+        },
+      },
+    },
+  },
+};
+
 const LONG_TIMEOUT = 60_000;
 
 test.use({ viewport: { width: 1280, height: 720 } });
@@ -478,29 +507,42 @@ test.describe("DocumentKnowledgeBase - Corpus-less Mode", () => {
   }) => {
     await mount(
       <DocumentKnowledgeBaseCorpuslessTestWrapper
-        mocks={[documentWithCorpusMock]}
+        mocks={[documentWithCorpusMock, getConversationsMock]}
         documentId="doc-123"
         corpusId="corpus-1"
       />
     );
 
-    // Open the sidebar to see annotations
+    // Wait for document to load
+    await expect(page.locator("text=Test Document")).toBeVisible({
+      timeout: LONG_TIMEOUT,
+    });
+
+    // Click the chat indicator button (MessageSquare icon) to open sidebar
     const chatIndicator = page
       .locator("button")
       .filter({
         has: page.locator('svg[class*="lucide-message-square"]'),
       })
       .last();
-    await expect(chatIndicator).toBeVisible();
+    await expect(chatIndicator).toBeVisible({ timeout: LONG_TIMEOUT });
     await chatIndicator.click();
 
-    // Switch to feed mode to see annotations
+    // Wait for the right panel to appear and animation to complete
+    await page.waitForTimeout(1000);
+
+    // Now look for the feed toggle in the sidebar control bar
     const feedToggle = page.getByTestId("view-mode-feed");
-    await expect(feedToggle).toBeVisible();
+    await expect(feedToggle).toBeVisible({ timeout: LONG_TIMEOUT });
     await feedToggle.click();
 
-    // Check that annotations are displayed
-    await expect(page.locator("text=Test annotation")).toBeVisible();
+    // Wait a moment for the feed to render
+    await page.waitForTimeout(500);
+
+    // Check that annotations are displayed in the feed
+    await expect(page.locator("text=Test annotation")).toBeVisible({
+      timeout: LONG_TIMEOUT,
+    });
   });
 
   test("should show feature unavailable states", async ({ mount, page }) => {

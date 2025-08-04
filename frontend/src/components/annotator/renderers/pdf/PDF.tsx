@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { PDFPage } from "./PDFPage";
 import {
   usePages,
@@ -11,7 +11,7 @@ import {
   useTextSearchState,
   pendingScrollChatSourceKeyAtom,
 } from "../../context/DocumentAtom";
-import { ServerTokenAnnotation, BoundingBox } from "../../types/annotations";
+import { ServerTokenAnnotation } from "../../types/annotations";
 import { useAtomValue, useSetAtom } from "jotai";
 import {
   useZoomLevel,

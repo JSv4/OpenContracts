@@ -3,4 +3,4 @@ description: How to run frontend component tests
 globs: frontend/tests/**
 alwaysApply: false
 ---
-Use yarn to run playwright tests with command `yarn run test:ct --reporter=list`. Using the list reported prevents the html results from rendering and hanging your tool. Obv you can use -g flag or specify test(s) names when running tests using this command syntax - no need to run the ENTIRE suite unless you have to. 
+Use yarn to run playwright tests with command `yarn run test:ct --reporter=list`. Using the list reported prevents the html results from rendering and hanging your tool. Obv you can use -g flag or specify test(s) names when running tests using this command syntax - no need to run the ENTIRE suite unless you have to.

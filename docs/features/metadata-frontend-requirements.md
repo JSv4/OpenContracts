@@ -58,7 +58,7 @@ This eliminates duplication and provides consistent data handling throughout the
 
 #### Field Input Components by Data Type
 - **STRING**: Text input with length validation
-- **TEXT**: Textarea with length validation  
+- **TEXT**: Textarea with length validation
 - **BOOLEAN**: Toggle switch reflecting boolean validation
 - **INTEGER**: Number input with range validation
 - **FLOAT**: Number input with decimal and range validation
@@ -87,7 +87,7 @@ This eliminates duplication and provides consistent data handling throughout the
 - Filter documents by metadata datacell values
 - Support for:
   - Exact match (string, choice)
-  - Range queries (numeric, date) 
+  - Range queries (numeric, date)
   - Boolean filters
   - Multi-value filters (multi-choice)
   - Null/not-null filters (where datacell exists/doesn't exist)
@@ -141,7 +141,7 @@ updateMetadataColumn(
   displayOrder: Int
 )
 
-# Value Management  
+# Value Management
 setMetadataValue(
   documentId: ID!
   corpusId: ID!
@@ -180,7 +180,7 @@ type ColumnType {
   helpText: String
   displayOrder: Int
   isManualEntry: Boolean!
-  
+
   # Extraction-specific fields (null for metadata columns)
   query: String
   matchText: String
@@ -213,10 +213,10 @@ type DatacellType {
 interface MetadataState {
   // Schema state
   columns: Column[];
-  
-  // Values state  
+
+  // Values state
   datacells: Record<string, Datacell>; // keyed by columnId
-  
+
   // UI state
   validation: Record<string, ValidationError>;
   isDirty: boolean;
@@ -242,9 +242,9 @@ interface Datacell {
   creator: string;
 }
 
-type MetadataDataType = 
+type MetadataDataType =
   | 'STRING' | 'TEXT' | 'BOOLEAN' | 'INTEGER' | 'FLOAT'
-  | 'DATE' | 'DATETIME' | 'URL' | 'EMAIL' 
+  | 'DATE' | 'DATETIME' | 'URL' | 'EMAIL'
   | 'CHOICE' | 'MULTI_CHOICE' | 'JSON';
 ```
 
@@ -292,12 +292,12 @@ const setMetadataValue = useMutation(SET_METADATA_VALUE, {
 ```typescript
 const validateDatacellValue = (value: any, column: Column): ValidationError | null => {
   const { dataType, validationConfig } = column;
-  
+
   // Required field check
   if (validationConfig.required && (value === null || value === undefined || value === '')) {
     return { message: `${column.name} is required` };
   }
-  
+
   // Type-specific validation (mirrors backend validation)
   switch (dataType) {
     case 'STRING':
@@ -370,7 +370,7 @@ query GetCorpusMetadata($corpusId: ID!) {
   corpus(id: $corpusId) {
     metadataColumns {
       id
-      name  
+      name
       dataType
       validationConfig
       defaultValue
@@ -398,7 +398,7 @@ query GetDocumentMetadata($documentId: ID!) {
 
 ### Caching Strategy
 - Cache column schemas at corpus level
-- Cache datacells at document level  
+- Cache datacells at document level
 - Invalidate cache on schema changes
 - Use Apollo Client field policies for efficient merging
 
@@ -410,7 +410,7 @@ const batchUpdateMetadata = async (updates: DatacellUpdate[]) => {
     mutation: SET_METADATA_VALUE,
     variables: update
   }));
-  
+
   await Promise.all(mutations.map(m => apolloClient.mutate(m)));
 };
 ```

@@ -88,7 +88,7 @@ export const MetadataDebugComponent = ({ columns }: { columns: any[] }) => {
 ```typescript
 describe("validateMetadataValue", () => {
   test("validates string types correctly", () => {
-    const column = { 
+    const column = {
       dataType: MetadataDataType.STRING,
       validationRules: { max_length: 10 }
     };
@@ -147,7 +147,7 @@ describe("convertMetadataValue", () => {
 import { test, expect } from "@playwright/experimental-ct-react";
 import { MetadataTestWrapper } from "./MetadataTestWrapper";
 import { CorpusMetadataSettings } from "../src/components/corpuses/CorpusMetadataSettings";
-import { 
+import {
   GET_CORPUS_METADATA_COLUMNS,
   CREATE_METADATA_COLUMN,
   UPDATE_METADATA_COLUMN,
@@ -165,7 +165,7 @@ test.describe("CorpusMetadataSettings", () => {
       orderIndex: 0,
     },
     {
-      id: "col2", 
+      id: "col2",
       name: "Contract Value",
       dataType: "NUMBER",
       extractIsList: false,
@@ -242,15 +242,15 @@ test.describe("CorpusMetadataSettings", () => {
 
     // Click add button
     await page.getByRole("button", { name: /add field/i }).click();
-    
+
     // Fill form
     await page.getByLabel("Field Name").fill("Status");
     await page.getByLabel("Data Type").click();
     await page.getByText("Text (Single Line)").click();
-    
+
     // Save
     await page.getByRole("button", { name: /save/i }).click();
-    
+
     // Verify new column appears
     await expect(page.getByText("Status")).toBeVisible();
   });
@@ -321,7 +321,7 @@ test.describe("DocumentMetadataGrid", () => {
   test("renders grid with metadata values", async ({ mount, page }) => {
     await mount(
       <MetadataTestWrapper mocks={[...]}>
-        <DocumentMetadataGrid 
+        <DocumentMetadataGrid
           documents={mockDocuments}
           columns={mockColumns}
           corpusId="test-corpus"
@@ -368,18 +368,18 @@ test.describe("DocumentMetadataGrid", () => {
     // Edit number field
     const numberCell = page.getByRole("cell", { name: "0" });
     await numberCell.click();
-    
+
     const input = page.getByRole("textbox");
     await input.fill("invalid");
     await page.keyboard.press("Enter");
 
     // Should show error
     await expect(page.getByText("Must be a valid number")).toBeVisible();
-    
+
     // Fix value
     await input.fill("100");
     await page.keyboard.press("Enter");
-    
+
     // Error should be gone
     await expect(page.getByText("Must be a valid number")).not.toBeVisible();
   });
@@ -406,15 +406,15 @@ test.describe("DocumentMetadataGrid", () => {
     // Edit cell
     const cell = page.getByRole("cell", { name: "2024-01-01" });
     await cell.click();
-    
+
     const input = page.getByRole("textbox");
-    
+
     // Type multiple characters quickly
     await input.fill("2024-02-01");
-    
+
     // Wait for debounce
     await page.waitForTimeout(600);
-    
+
     // Should only save once
     expect(saveCount).toBe(1);
   });
@@ -486,7 +486,7 @@ test.describe("MetadataCellEditor", () => {
     );
 
     const input = page.getByRole("textbox");
-    
+
     // Valid value
     await input.fill("50");
     await expect(page.getByTestId("validation-icon-success")).toBeVisible();
@@ -511,7 +511,7 @@ test.describe("Metadata Workflow Integration", () => {
 
     // Navigate to settings
     await page.getByRole("tab", { name: "Settings" }).click();
-    
+
     // Add metadata field
     await page.getByRole("button", { name: /add field/i }).click();
     await page.getByLabel("Field Name").fill("Project Name");
@@ -519,10 +519,10 @@ test.describe("Metadata Workflow Integration", () => {
 
     // Navigate to documents
     await page.getByRole("tab", { name: "Documents" }).click();
-    
+
     // Switch to grid view
     await page.getByRole("button", { name: /grid view/i }).click();
-    
+
     // Enter metadata value
     const cell = page.getByRole("cell").filter({ hasText: "" }).first();
     await cell.click();
@@ -540,11 +540,11 @@ test.describe("Metadata Workflow Integration", () => {
     // Apply metadata filter
     await page.getByRole("button", { name: /filter/i }).click();
     await page.getByLabel("Status").selectOption("Active");
-    
+
     // Verify filtered results
     const documentCards = page.locator('[data-testid="document-card"]');
     await expect(documentCards).toHaveCount(3); // Only active documents
-    
+
     // Clear filter
     await page.getByRole("button", { name: /clear filters/i }).click();
     await expect(documentCards).toHaveCount(5); // All documents
@@ -635,7 +635,7 @@ test.describe("Metadata Performance", () => {
     );
 
     const startTime = Date.now();
-    
+
     // Should render within 2 seconds
     await expect(page.getByRole("grid")).toBeVisible();
     const renderTime = Date.now() - startTime;
@@ -742,21 +742,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          
+
       - name: Install dependencies
         run: cd frontend && yarn install
-        
+
       - name: Run unit tests
         run: cd frontend && yarn test:unit src/types/metadata.test.ts
-        
+
       - name: Run component tests
         run: cd frontend && yarn test:ct tests/*Metadata*.ct.tsx
-        
+
       - name: Generate coverage report
         run: cd frontend && yarn test:coverage --testPathPattern=metadata
 ```

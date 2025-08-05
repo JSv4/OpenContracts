@@ -548,8 +548,8 @@ class Annotation(BaseOCModel, HasEmbeddingMixin):
                 and isinstance(self.json["end"], int)
             ):
                 raise ValueError(
-                                            "SPAN_LABEL annotations must store SpanAnnotationJson with 'start' and 'end' ints."
-                    )
+                    "SPAN_LABEL annotations must store SpanAnnotationJson with 'start' and 'end' ints."
+                )
 
         # Other annotation types are free-form – no validation.
 

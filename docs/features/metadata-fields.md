@@ -40,7 +40,7 @@ OpenContracts uses the same `Fieldset` model for both metadata schemas and extra
 - **Columns**: All columns have `is_manual_entry=True` and `data_type` values
 - **Lifecycle**: Tied to the corpus lifecycle, deleted when corpus is deleted
 
-### Extraction Fieldsets  
+### Extraction Fieldsets
 - **Relationship**: No direct corpus relationship, used via Extract objects
 - **Creation**: Created manually or via extraction workflows
 - **Naming**: User-defined or auto-generated based on extraction name
@@ -140,7 +140,7 @@ class Column(models.Model):
     help_text = models.TextField(null=True, blank=True)  # User guidance
     display_order = models.IntegerField()           # Display ordering
     fieldset = models.ForeignKey(Fieldset)          # Parent fieldset
-    
+
     # Legacy extraction fields (null for metadata columns)
     query = models.TextField(null=True, blank=True)
     match_text = models.TextField(null=True, blank=True)
@@ -157,7 +157,7 @@ class Datacell(models.Model):
     column = models.ForeignKey(Column)              # Field definition
     extract = models.ForeignKey(Extract, null=True, blank=True) # Null for metadata, set for extracted data
     creator = models.ForeignKey(User)               # Who created it
-    
+
     # Additional fields
     data_definition = models.TextField()            # Description of the data
     started = models.DateTimeField(null=True, blank=True)     # Processing timestamps

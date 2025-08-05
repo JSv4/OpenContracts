@@ -306,9 +306,6 @@ class LabelTypeEnum(graphene.Enum):
     SPAN_LABEL = "SPAN_LABEL"
 
 
-
-
-
 class AnnotationSummaryType(graphene.ObjectType):
     id: graphene.String()  # type: ignore
     label = graphene.String()
@@ -985,7 +982,7 @@ class AnalysisType(AnnotatePermissionsForReadMixin, DjangoObjectType):
 class ColumnType(AnnotatePermissionsForReadMixin, DjangoObjectType):
     validation_config = GenericScalar()
     default_value = GenericScalar()
-    
+
     class Meta:
         model = Column
         interfaces = [relay.Node]

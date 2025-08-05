@@ -4,7 +4,7 @@ This document provides practical examples of using the unified metadata fields A
 
 **Important Note on Field Naming**: OpenContracts uses Graphene Django which automatically converts Python `snake_case` field names to GraphQL `camelCase`. Throughout this document:
 - `data_type` (model field) appears as `dataType` (GraphQL field)
-- `validation_config` (model field) appears as `validationConfig` (GraphQL field)  
+- `validation_config` (model field) appears as `validationConfig` (GraphQL field)
 - `is_manual_entry` (model field) appears as `isManualEntry` (GraphQL field)
 - `default_value` (model field) appears as `defaultValue` (GraphQL field)
 
@@ -22,7 +22,7 @@ This unified approach eliminates code duplication and provides consistent handli
 ### Key Concepts
 
 - **Corpus-Level Schema**: Metadata columns are defined at the corpus level, not in labelsets
-- **Manual Entry Flag**: Columns have an `isManualEntry` flag to distinguish metadata from extracted data  
+- **Manual Entry Flag**: Columns have an `isManualEntry` flag to distinguish metadata from extracted data
 - **Unified Permissions**: Metadata access is controlled by corpus permissions
 - **Data Types**: Support for STRING, TEXT, BOOLEAN, INTEGER, FLOAT, DATE, DATETIME, URL, EMAIL, CHOICE, MULTI_CHOICE, and JSON
 
@@ -303,7 +303,7 @@ mutation SetContractDates {
     ok
     obj { id }
   }
-  
+
   endDate: setMetadataValue(
     documentId: "RG9jdW1lbnRUeXBlOjQ1Ng==",
     columnId: "Q29sdW1uVHlwZToxMDU=",
@@ -632,13 +632,13 @@ mutation BulkUpdateStatus {
     columnId: "Q29sdW1uVHlwZToxMDg=",
     value: "Expired"
   ) { ok }
-  
+
   doc2: setMetadataValue(
     documentId: "RG9jdW1lbnRUeXBlOjQ1Nw==",
     columnId: "Q29sdW1uVHlwZToxMDg=",
     value: "Expired"
   ) { ok }
-  
+
   doc3: setMetadataValue(
     documentId: "RG9jdW1lbnRUeXBlOjQ1OA==",
     columnId: "Q29sdW1uVHlwZToxMDg=",
@@ -829,9 +829,9 @@ class OpenContractsMetadataClient:
             'Authorization': f'Bearer {auth_token}',
             'Content-Type': 'application/json'
         }
-    
-    def create_metadata_column(self, corpus_id: str, name: str, data_type: str, 
-                             validation_config: Optional[Dict] = None, 
+
+    def create_metadata_column(self, corpus_id: str, name: str, data_type: str,
+                             validation_config: Optional[Dict] = None,
                              help_text: Optional[str] = None) -> Dict:
         """Create a new metadata column in a corpus."""
         query = """
@@ -860,26 +860,26 @@ class OpenContractsMetadataClient:
             }
         }
         """
-        
+
         variables = {
             'corpusId': corpus_id,
             'name': name,
             'dataType': data_type
         }
-        
+
         if validation_config:
             variables['validationConfig'] = validation_config
         if help_text:
             variables['helpText'] = help_text
-        
+
         response = requests.post(
             self.api_url,
             headers=self.headers,
             json={'query': query, 'variables': variables}
         )
-        
+
         return response.json()
-    
+
     def set_metadata_value(self, document_id: str, corpus_id: str, column_id: str, value: Any) -> Dict:
         """Set a metadata value for a document."""
         query = """
@@ -894,7 +894,7 @@ class OpenContractsMetadataClient:
             }
         }
         """
-        
+
         response = requests.post(
             self.api_url,
             headers=self.headers,
@@ -908,9 +908,9 @@ class OpenContractsMetadataClient:
                 }
             }
         )
-        
+
         return response.json()
-    
+
     def get_corpus_metadata_schema(self, corpus_id: str) -> List[Dict]:
         """Get all metadata columns for a corpus."""
         query = """
@@ -926,7 +926,7 @@ class OpenContractsMetadataClient:
             }
         }
         """
-        
+
         response = requests.post(
             self.api_url,
             headers=self.headers,
@@ -935,10 +935,10 @@ class OpenContractsMetadataClient:
                 'variables': {'corpusId': corpus_id}
             }
         )
-        
+
         result = response.json()
         return result.get('data', {}).get('corpusMetadataColumns', [])
-    
+
     def get_document_metadata(self, document_id: str, corpus_id: str) -> List[Dict]:
         """Get all metadata values for a document."""
         query = """
@@ -955,7 +955,7 @@ class OpenContractsMetadataClient:
             }
         }
         """
-        
+
         response = requests.post(
             self.api_url,
             headers=self.headers,
@@ -967,14 +967,14 @@ class OpenContractsMetadataClient:
                 }
             }
         )
-        
+
         result = response.json()
         return result.get('data', {}).get('documentMetadataDatacells', [])
-    
+
     def bulk_set_metadata_values(self, updates: List[Dict]) -> Dict:
         """Set metadata values for multiple documents."""
         operations = []
-        
+
         for i, update in enumerate(updates):
             operations.append(f"""
                 update{i}: setMetadataValue(
@@ -986,15 +986,15 @@ class OpenContractsMetadataClient:
                     message
                 }}
             """)
-        
+
         query = f"mutation BulkUpdate {{ {' '.join(operations)} }}"
-        
+
         response = requests.post(
             self.api_url,
             headers=self.headers,
             json={'query': query}
         )
-        
+
         return response.json()
 
 # Usage example
@@ -1003,7 +1003,7 @@ if __name__ == "__main__":
         api_url="https://your-opencontracts-instance.com/graphql/",
         auth_token="your-auth-token"
     )
-    
+
     # Create a contract type field
     result = client.create_metadata_column(
         corpus_id="Q29ycHVzVHlwZTo3ODk=",
@@ -1016,11 +1016,11 @@ if __name__ == "__main__":
         },
         help_text="Type of vendor contract"
     )
-    
+
     if result.get('data', {}).get('createMetadataColumn', {}).get('ok'):
         column_id = result['data']['createMetadataColumn']['obj']['id']
         print(f"Created column with ID: {column_id}")
-        
+
         # Set a value for this field
         value_result = client.set_metadata_value(
             document_id="RG9jdW1lbnRUeXBlOjQ1Ng==",
@@ -1028,7 +1028,7 @@ if __name__ == "__main__":
             column_id=column_id,
             value="Service Agreement"
         )
-        
+
         if value_result.get('data', {}).get('setMetadataValue', {}).get('ok'):
             print("Successfully set metadata value")
         else:

@@ -58,7 +58,6 @@ import { EditExtractModal } from "./components/widgets/modals/EditExtractModal";
 import { SelectAnalyzerOrFieldsetModal } from "./components/widgets/modals/SelectCorpusAnalyzerOrFieldsetAnalyzer";
 import { DocumentUploadModal } from "./components/widgets/modals/DocumentUploadModal";
 import { FileUploadPackageProps } from "./components/widgets/modals/DocumentUploadModal";
-import { DocumentViewer } from "./components/documents/Viewer";
 import { DocumentKBRoute } from "./components/routes/DocumentKBRoute";
 import { useRouteStateSync } from "./hooks/RouteStateSync";
 
@@ -258,26 +257,14 @@ export const App = () => {
       ) : (
         <></>
       )}
-      {knowledge_base_modal.isOpen &&
-        knowledge_base_modal.documentId &&
-        knowledge_base_modal.corpusId && (
-          <DocumentKnowledgeBase
-            documentId={knowledge_base_modal.documentId}
-            corpusId={knowledge_base_modal.corpusId}
-            initialAnnotationIds={
-              knowledge_base_modal.annotationIds ?? undefined
-            }
-            onClose={handleKnowledgeBaseModalClose}
-          />
-        )}
-      {knowledge_base_modal.isOpen &&
-        knowledge_base_modal.documentId &&
-        !knowledge_base_modal.corpusId && (
-          <DocumentViewer
-            documentId={knowledge_base_modal.documentId}
-            onClose={handleKnowledgeBaseModalClose}
-          />
-        )}
+      {knowledge_base_modal.isOpen && knowledge_base_modal.documentId && (
+        <DocumentKnowledgeBase
+          documentId={knowledge_base_modal.documentId}
+          corpusId={knowledge_base_modal.corpusId ?? undefined}
+          initialAnnotationIds={knowledge_base_modal.annotationIds ?? undefined}
+          onClose={handleKnowledgeBaseModalClose}
+        />
+      )}
       {show_cookie_modal ? <CookieConsentDialog /> : <></>}
       <ThemeProvider>
         <div

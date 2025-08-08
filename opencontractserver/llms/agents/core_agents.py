@@ -973,7 +973,11 @@ class CoreDocumentAgentFactory:
         if corpus is None:
             corpus_obj = None
         else:
-            corpus_obj = corpus if isinstance(corpus, Corpus) else await Corpus.objects.aget(id=corpus)
+            corpus_obj = (
+                corpus
+                if isinstance(corpus, Corpus)
+                else await Corpus.objects.aget(id=corpus)
+            )
 
         # ------------------------------------------------------------------
         # Basic permission check – anonymous sessions cannot access private docs

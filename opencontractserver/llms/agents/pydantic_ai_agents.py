@@ -1410,7 +1410,9 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
         )
         logger.debug(f"Config (type {type(config)}): {config}")
         # Provide explicit corpus (may be None for standalone) so the factory can pick the proper embedder
-        context = await CoreDocumentAgentFactory.create_context(document, corpus, config)
+        context = await CoreDocumentAgentFactory.create_context(
+            document, corpus, config
+        )
 
         # Use the CoreConversationManager factory method
         conversation_manager = await CoreConversationManager.create_for_document(
@@ -1771,9 +1773,9 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
         # Build the list conditionally to avoid corpus-required tools in standalone mode.
         effective_tools: list[Callable] = [
             default_vs_tool,
-            load_summary_tool,          # corpus-agnostic
-            get_summary_length_tool,    # corpus-agnostic
-            load_text_tool,             # corpus-agnostic
+            load_summary_tool,  # corpus-agnostic
+            get_summary_length_tool,  # corpus-agnostic
+            load_text_tool,  # corpus-agnostic
         ]
 
         if context.corpus is not None:

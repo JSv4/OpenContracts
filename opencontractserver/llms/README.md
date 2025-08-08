@@ -4,7 +4,6 @@ OpenContract's API for creating document and corpus agents.
 
 ## Philosophy
 
-- **Simplicity**: Beautiful, intuitive APIs that make complex operations feel natural
 - **Framework Agnostic**: Support multiple LLM frameworks (LlamaIndex, PydanticAI) through unified interfaces
 - **Rich Responses**: Every interaction returns structured data with sources, metadata, and conversation tracking
 - **Conversation Management**: Persistent conversations with automatic message storage and retrieval
@@ -110,7 +109,7 @@ insights = await agents.get_structured_response_from_corpus(
 
 Agents are the primary interface for interacting with documents and corpora. They provide:
 
-- **Document Agents**: Work with individual documents (always within the context of a corpus).
+- **Document Agents**: Work with individual documents (corpus optional; pass None for standalone documents).
 - **Corpus Agents**: Work with collections of documents.
 - **Framework Flexibility**: Choose between LlamaIndex, PydanticAI, or future frameworks.
 - **Conversation Persistence**: Automatic conversation management and message storage.
@@ -142,7 +141,7 @@ agent = await agents.for_corpus(
 )
 
 # With custom configuration
-# The '''corpus''' parameter is required for document agents.
+# The '''corpus''' parameter is optional for document agents (use None for standalone).
 agent = await agents.for_document(
     document=123, # Use actual document ID or object
     corpus=1,     # Use actual corpus ID or object
@@ -385,7 +384,7 @@ The framework provides sophisticated conversation management through the `CoreCo
 
 ```python
 # Create agent with persistent conversation
-# The '''corpus''' parameter is required for document agents.
+# The '''corpus''' parameter is optional for document agents (use None for standalone).
 agent = await agents.for_document(
     document=123, # Use actual document ID or object
     corpus=1,     # Use actual corpus ID or object
@@ -407,8 +406,8 @@ print(f"Conversation has {conversation_info['message_count']} messages")
 
 ```python
 # Anonymous sessions - context maintained in memory only
-# The '''corpus''' parameter is required for document agents.
-agent = await agents.for_document(document=123, corpus=1)  # No user_id, use actual document/corpus IDs
+# The '''corpus''' parameter is optional; standalone works for anonymous too.
+agent = await agents.for_document(document=123, corpus=None)  # No user_id
 response1 = await agent.chat("What is this document about?")
 response2 = await agent.chat("Can you elaborate on section 2?")  # Context maintained in memory
 
@@ -450,7 +449,7 @@ from opencontractserver.llms.tools.core_tools import (
 )
 
 # Use built-in tools by name (async versions preferred when available)
-# The '''corpus''' parameter is required for document agents.
+# The '''corpus''' parameter is optional for document agents (use None for standalone).
 agent = await agents.for_document(
     document=123, # Use actual document ID or object
     corpus=1,     # Use actual corpus ID or object
@@ -479,10 +478,10 @@ risk_tool = CoreTool.from_function(
     description="Analyze contract risk factors"
 )
 
-# The '''corpus''' parameter is required for document agents.
+# The '''corpus''' parameter is optional for document agents (use None for standalone).
 agent = await agents.for_document(
     document=123, # Use actual document ID or object
-    corpus=1,     # Use actual corpus ID or object
+    corpus=None,
     tools=[risk_tool]
 )
 ```
@@ -565,17 +564,17 @@ The framework automatically converts tools to the appropriate format:
 # PydanticAI: CoreTool → PydanticAIToolWrapper
 
 # Tools work seamlessly across frameworks
-# The '''corpus''' parameter is required for document agents.
+# The '''corpus''' parameter is optional for document agents.
 llama_agent = await agents.for_document(
     document=123, # Use actual document ID or object
-    corpus=1,     # Use actual corpus ID or object
+    corpus=None,  # Or pass a corpus ID/object when available
     framework=AgentFramework.LLAMA_INDEX,
     tools=["load_md_summary"]
 )
 
 pydantic_agent = await agents.for_document(
     document=123, # Use actual document ID or object
-    corpus=1,     # Use actual corpus ID or object
+    corpus=None,  # Or pass a corpus ID/object when available
     framework=AgentFramework.PYDANTIC_AI,
     tools=["load_md_summary"]  # Same tool, different framework
 )
@@ -1154,8 +1153,8 @@ config = AgentConfig(
 # - For structured_response: Default includes verification steps to prevent hallucination
 # - Any custom system_prompt completely replaces these defaults
 
-# The '''corpus''' parameter is required for document agents.
-agent = await agents.for_document(document=123, corpus=1, config=config) # Use actual document/corpus IDs
+# The '''corpus''' parameter is optional for document agents (use None for standalone).
+agent = await agents.for_document(document=123, corpus=None, config=config) # Or pass a corpus ID/object when available
 ```
 
 ### Conversation Patterns
@@ -1164,7 +1163,7 @@ agent = await agents.for_document(document=123, corpus=1, config=config) # Use a
 
 ```python
 # Persistent conversation for complex analysis
-# The '''corpus''' parameter is required for document agents.
+# The '''corpus''' parameter is optional for document agents (use None for standalone).
 agent = await agents.for_document(
     document=123, # Use actual document ID or object
     corpus=1,     # Use actual corpus ID or object
@@ -1198,7 +1197,7 @@ response3 = await agent.chat("How do these risks compare?")
 
 ```python
 # Resume a previous conversation
-# The '''corpus''' parameter is required for document agents.
+# The '''corpus''' parameter is optional for document agents (use None for standalone).
 agent = await agents.for_document(
     document=123, # Use actual document ID or object
     corpus=1,     # Use actual corpus ID or object
@@ -1819,6 +1818,39 @@ async for event in agent.stream("Complex legal analysis"):
 ---
 
 This framework represents the evolution of OpenContracts' LLM capabilities, providing a foundation for sophisticated document analysis while maintaining simplicity and elegance in its API design.
+
+---
+
+### Standalone Document Agents (corpus=None)
+
+Document agents now support a corpus-less mode by passing `corpus=None`.
+
+- **When to use**: Analyze a single document outside any corpus context, or when a corpus has not (yet) been created.
+- **Tool availability**: Tools marked with `requires_corpus=True` are automatically filtered out. Core tools like `load_document_md_summary`, `get_md_summary_token_length`, `load_document_txt_extract`, and vector search remain available.
+- **Embedder selection**: If the document already has structural annotation embeddings, the framework prefers that embedder. Otherwise, it falls back to `settings.DEFAULT_EMBEDDER`.
+- **Vector search**: Uses a document-level vector store (no `corpus_id` required) as long as an `embedder_path` is known.
+- **Conversations**:
+  - Authenticated users get normal conversation persistence and can resume later (via `conversation_id`).
+  - Anonymous users create ephemeral sessions (no database writes, `get_conversation_id()` returns `None`).
+
+Example:
+
+```python
+from opencontractserver.llms import agents
+
+# Standalone document chat (no corpus) – corpus-dependent tools are filtered automatically
+agent = await agents.for_document(document=123, corpus=None)
+
+async for ev in agent.stream("Summarize the main points"):
+    if ev.type == "content":
+        print(ev.content, end="")
+    elif ev.type == "final":
+        print("\nDone. Sources:", len(ev.sources))
+```
+
+Notes:
+- `get_document_summary` automatically falls back to loading the document’s markdown summary when no corpus is present.
+- You can still supply custom tools; anything tagged `requires_corpus=True` is omitted gracefully.
 
 ---
 

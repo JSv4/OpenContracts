@@ -385,14 +385,12 @@ test("minimizes when minimize button is clicked", async ({ mount, page }) => {
   await expect(minimizeButton).toBeVisible();
   await minimizeButton.click();
 
-  // Wait for animation to complete
-  await page.waitForTimeout(500);
+  // Wait for collapsed state to re-appear (Summary toggle button visible)
+  const summaryToggle = page.getByTestId("summary-toggle-button");
+  await expect(summaryToggle).toBeVisible();
 
-  // Should be collapsed again - the h3 title should not be visible
-  await expect(
-    page.locator('h3:has-text("Document Summary")')
-  ).not.toBeVisible();
-  await expect(summaryButton).toBeVisible();
+  // Title should be removed from DOM after collapse
+  await expect(page.locator('h3:has-text("Document Summary")')).toHaveCount(0);
 });
 
 test("renders in knowledge layer mode with back button", async ({

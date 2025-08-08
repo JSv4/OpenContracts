@@ -427,13 +427,26 @@ test.describe("DocumentKnowledgeBase - Corpus-less Mode", () => {
   }) => {
     await mount(
       <DocumentKnowledgeBaseCorpuslessTestWrapper
-        mocks={[documentOnlyMock]}
+        mocks={[documentOnlyMock, getConversationsMock]}
         documentId="doc-123"
       />
     );
 
-    // Chat feature is now enabled without corpus (no history for anonymous)
-    await expect(page.locator("#chat-container")).toBeVisible();
+    // Open the chat sidebar via the ChatIndicator
+    const chatIndicator = page
+      .locator("button")
+      .filter({ has: page.locator('svg[class*="lucide-message-square"]') })
+      .last();
+    await expect(chatIndicator).toBeVisible({ timeout: LONG_TIMEOUT });
+    await chatIndicator.click();
+
+    // Sidebar should open and chat container should be visible
+    await expect(page.locator("#sliding-panel")).toBeVisible({
+      timeout: LONG_TIMEOUT,
+    });
+    await expect(page.locator("#chat-container")).toBeVisible({
+      timeout: LONG_TIMEOUT,
+    });
 
     // Annotation tools should not be visible
     await expect(

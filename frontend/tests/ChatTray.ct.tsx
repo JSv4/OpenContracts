@@ -225,7 +225,7 @@ test("displays conversation list on initial load", async ({ mount, page }) => {
 
   await mountChatTray(mount, mocks);
 
-  // Wait for conversations to load
+  // Wait for conversations to load (authenticated mode via ChatTrayTestWrapper)
   await expect(page.locator("#conversation-grid")).toBeVisible({
     timeout: TIMEOUTS.MEDIUM,
   });

@@ -35,7 +35,6 @@ Currently, DocumentKnowledgeBase assumes documents are already in a corpus. This
 - **Add to Corpus** action (if user has corpus creation permissions)
 
 ### Corpus-Required Features
-- Chat/Conversations (WebSocket requires corpus context)
 - Annotations (require corpus labelsets)
 - Document summaries (designed for multi-perspective analysis)
 - Analyses (corpus-scoped processing)
@@ -208,16 +207,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       {/* Always show document viewer */}
       <DocumentViewer ... />
       
-      {/* Conditionally show chat */}
-      {isFeatureAvailable('CHAT') ? (
-        <ChatTray corpusId={corpusId!} ... />
-      ) : (
-        <FeatureUnavailable 
-          feature="CHAT" 
-          documentId={documentId}
-          onAddToCorpus={() => setShowAddToCorpus(true)}
-        />
-      )}
+      {/* Chat is available with or without corpus; history is only shown for authenticated users */}
+      <ChatTray documentId={documentId} corpusId={corpusId} />
       
       {/* Notes work with or without corpus */}
       <NotesPanel corpusId={corpusId} ... />

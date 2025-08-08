@@ -134,6 +134,15 @@ Enable viewing documents without corpus membership while providing clear paths t
 - [ ] Update GraphQL schema
 
 ### Testing Tasks (Mid-Level Dev - 2-3 days)
+#### Task 18: Re-enable Chat in Corpus-less Mode (Frontend)
+**Priority**: High  
+**Complexity**: Medium
+- [x] Update websocket builders to use `/ws/standalone/document/<DOC_GID>/query/` when `corpusId` is not provided
+- [x] Render `ChatTray` without corpus; skip conversation query for anonymous users
+- [x] Allow WebSocket to open without token for public docs (no history)
+- [x] Default to new chat mode for anonymous users
+- [x] Keep annotations/analyses/extracts gated by corpus
+
 
 #### Task 15: Write Unit Tests
 **Priority**: High  

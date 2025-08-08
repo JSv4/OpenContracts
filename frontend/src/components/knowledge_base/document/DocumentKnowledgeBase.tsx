@@ -1188,25 +1188,17 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {controlBar}
-        {corpusId ? (
-          <ChatTray
-            setShowLoad={setShowLoad}
-            showLoad={showLoad}
-            documentId={documentId}
-            onMessageSelect={() => {
-              setActiveLayer("document");
-            }}
-            corpusId={corpusId}
-            initialMessage={pendingChatMessage}
-            readOnly={readOnly}
-          />
-        ) : (
-          <FeatureUnavailable
-            feature="CHAT"
-            documentId={documentId}
-            onAddToCorpus={() => setShowAddToCorpusModal(true)}
-          />
-        )}
+        <ChatTray
+          setShowLoad={setShowLoad}
+          showLoad={showLoad}
+          documentId={documentId}
+          onMessageSelect={() => {
+            setActiveLayer("document");
+          }}
+          corpusId={corpusId}
+          initialMessage={pendingChatMessage}
+          readOnly={readOnly}
+        />
       </div>
     );
   })();
@@ -1651,23 +1643,13 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
                   visible={activeLayer === "document"}
                   readOnly={readOnly}
                   onChatSubmit={(message) => {
-                    if (!corpusId) {
-                      toast.info("Add document to corpus to enable AI chat");
-                      setShowAddToCorpusModal(true);
-                    } else {
-                      setPendingChatMessage(message);
-                      setSidebarViewMode("chat");
-                      setShowRightPanel(true);
-                    }
+                    setPendingChatMessage(message);
+                    setSidebarViewMode("chat");
+                    setShowRightPanel(true);
                   }}
                   onToggleChat={() => {
-                    if (!corpusId) {
-                      toast.info("Add document to corpus to enable AI chat");
-                      setShowAddToCorpusModal(true);
-                    } else {
-                      setSidebarViewMode("chat");
-                      setShowRightPanel(true);
-                    }
+                    setSidebarViewMode("chat");
+                    setShowRightPanel(true);
                   }}
                 />
               </FloatingInputWrapper>

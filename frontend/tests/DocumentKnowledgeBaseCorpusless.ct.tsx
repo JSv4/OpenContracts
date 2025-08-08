@@ -326,6 +326,81 @@ async function registerRestMocks(page: Page): Promise<void> {
 
 test.beforeEach(async ({ page }) => {
   await registerRestMocks(page);
+  // Stub WebSocket to avoid real network and to support chat in corpus-less mode
+  await page.evaluate(() => {
+    const activeInstances = new Set();
+
+    class StubSocket {
+      url: string;
+      readyState: number;
+      onopen?: (event: any) => void;
+      onmessage?: (event: any) => void;
+      onclose?: (event: any) => void;
+      private _disconnectTimeout?: any;
+
+      constructor(url: string) {
+        this.url = url;
+        this.readyState = 1; // OPEN
+        activeInstances.add(this);
+        setTimeout(() => this.onopen && this.onopen({}), 0);
+        this._disconnectTimeout = setTimeout(() => {
+          if (this.readyState !== 3) {
+            this.readyState = 3; // CLOSED
+            this.onclose && this.onclose({});
+            activeInstances.delete(this);
+          }
+        }, 30000);
+      }
+
+      send(data: any) {
+        const emit = (payload: any) =>
+          this.onmessage && this.onmessage({ data: JSON.stringify(payload) });
+        try {
+          const msg = JSON.parse(data);
+          if (msg.query) {
+            const id = Date.now().toString();
+            emit({
+              type: "ASYNC_START",
+              content: "",
+              data: { message_id: id },
+            });
+            emit({
+              type: "ASYNC_CONTENT",
+              content: "Received: ",
+              data: { message_id: id },
+            });
+            emit({
+              type: "ASYNC_CONTENT",
+              content: msg.query,
+              data: { message_id: id },
+            });
+            emit({
+              type: "ASYNC_FINISH",
+              content: `Received: ${msg.query}`,
+              data: { message_id: id },
+            });
+          }
+        } catch {}
+      }
+
+      close() {
+        if (this._disconnectTimeout) clearTimeout(this._disconnectTimeout);
+        if (this.readyState !== 3) {
+          this.readyState = 3;
+          this.onclose && this.onclose({});
+          activeInstances.delete(this);
+        }
+      }
+
+      addEventListener() {}
+      removeEventListener() {}
+    }
+
+    // @ts-ignore
+    window.WebSocket = StubSocket;
+    // @ts-ignore
+    window.WebSocketInstances = activeInstances;
+  });
 });
 
 test.describe("DocumentKnowledgeBase - Corpus-less Mode", () => {
@@ -346,7 +421,10 @@ test.describe("DocumentKnowledgeBase - Corpus-less Mode", () => {
     ).toBeVisible();
   });
 
-  test("should hide corpus-required features", async ({ mount, page }) => {
+  test("should hide corpus-required features but enable chat", async ({
+    mount,
+    page,
+  }) => {
     await mount(
       <DocumentKnowledgeBaseCorpuslessTestWrapper
         mocks={[documentOnlyMock]}
@@ -354,10 +432,8 @@ test.describe("DocumentKnowledgeBase - Corpus-less Mode", () => {
       />
     );
 
-    // Chat feature should not be visible
-    await expect(
-      page.locator("[data-testid='chat-container']")
-    ).not.toBeVisible();
+    // Chat feature is now enabled without corpus (no history for anonymous)
+    await expect(page.locator("#chat-container")).toBeVisible();
 
     // Annotation tools should not be visible
     await expect(

@@ -110,9 +110,89 @@ class Query(graphene.ObjectType):
 
     # USER RESOLVERS #####################################
     me = graphene.Field(UserType)
+    # Slug-based resolvers
+    user_by_slug = graphene.Field(UserType, slug=graphene.String(required=True))
+    corpus_by_slugs = graphene.Field(
+        CorpusType,
+        user_slug=graphene.String(required=True),
+        corpus_slug=graphene.String(required=True),
+    )
+    document_by_slugs = graphene.Field(
+        DocumentType,
+        user_slug=graphene.String(required=True),
+        document_slug=graphene.String(required=True),
+    )
+    document_in_corpus_by_slugs = graphene.Field(
+        DocumentType,
+        user_slug=graphene.String(required=True),
+        corpus_slug=graphene.String(required=True),
+        document_slug=graphene.String(required=True),
+    )
 
     def resolve_me(self, info):
         return info.context.user
+
+    def resolve_user_by_slug(self, info, slug):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        try:
+            return User.objects.get(slug=slug)
+        except User.DoesNotExist:
+            return None
+
+    def resolve_corpus_by_slugs(self, info, user_slug, corpus_slug):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        try:
+            owner = User.objects.get(slug=user_slug)
+        except User.DoesNotExist:
+            return None
+        qs = Corpus.objects.filter(creator=owner, slug=corpus_slug)
+        qs = qs.visible_to_user(info.context.user)
+        return qs.first()
+
+    def resolve_document_by_slugs(self, info, user_slug, document_slug):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        try:
+            owner = User.objects.get(slug=user_slug)
+        except User.DoesNotExist:
+            return None
+        qs = Document.objects.filter(creator=owner, slug=document_slug)
+        qs = qs.visible_to_user(info.context.user)
+        return qs.first()
+
+    def resolve_document_in_corpus_by_slugs(
+        self, info, user_slug, corpus_slug, document_slug
+    ):
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        try:
+            owner = User.objects.get(slug=user_slug)
+        except User.DoesNotExist:
+            return None
+        corpus = (
+            Corpus.objects.filter(creator=owner, slug=corpus_slug)
+            .visible_to_user(info.context.user)
+            .first()
+        )
+        if not corpus:
+            return None
+        doc = (
+            Document.objects.filter(creator=owner, slug=document_slug)
+            .visible_to_user(info.context.user)
+            .first()
+        )
+        if not doc:
+            return None
+        # Validate membership
+        if not doc.corpus_set.filter(pk=corpus.pk).exists():
+            return None
+        return doc
 
     # ANNOTATION RESOLVERS #####################################
     annotations = DjangoConnectionField(

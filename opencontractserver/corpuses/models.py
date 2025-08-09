@@ -18,6 +18,7 @@ from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.QuerySets import PermissionedTreeQuerySet
 from opencontractserver.shared.utils import calc_oc_file_path
 from opencontractserver.utils.embeddings import generate_embeddings_from_text
+from opencontractserver.shared.slug_utils import generate_unique_slug, sanitize_slug
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,15 @@ class Corpus(TreeNode):
     # Model variables
     title = django.db.models.CharField(max_length=1024, db_index=True)
     description = django.db.models.TextField(default="", blank=True)
+    slug = django.db.models.CharField(
+        max_length=128,
+        db_index=True,
+        null=True,
+        blank=True,
+        help_text=(
+            "Case-sensitive slug unique per creator. Allowed: A-Z, a-z, 0-9, hyphen (-)."
+        ),
+    )
     md_description = django.db.models.FileField(
         blank=True,
         null=True,
@@ -245,10 +255,31 @@ class Corpus(TreeNode):
         ]
         ordering = ("created",)
         base_manager_name = "objects"
+        constraints = [
+            django.db.models.UniqueConstraint(
+                fields=["creator", "slug"], name="uniq_corpus_slug_per_creator_cs"
+            )
+        ]
 
     # Override save to update modified on save
     def save(self, *args, **kwargs):
         """On save, update timestamps"""
+        # Ensure slug exists and is unique within creator scope
+        if not self.slug or not isinstance(self.slug, str) or not self.slug.strip():
+            base_value = self.title or "corpus"
+            scope = Corpus.objects.filter(creator_id=self.creator_id)
+            if self.pk:
+                scope = scope.exclude(pk=self.pk)
+            self.slug = generate_unique_slug(
+                base_value=base_value,
+                scope_qs=scope,
+                slug_field="slug",
+                max_length=128,
+                fallback_prefix="corpus",
+            )
+        else:
+            self.slug = sanitize_slug(self.slug, max_length=128)
+
         if not self.pk:
             self.created = timezone.now()
         self.modified = timezone.now()

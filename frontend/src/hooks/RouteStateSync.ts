@@ -1,11 +1,17 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import { useReactiveVar } from "@apollo/client";
+import { useLazyQuery, useReactiveVar } from "@apollo/client";
 import {
   openedCorpus,
   openedDocument,
   selectedAnnotationIds,
 } from "../graphql/cache";
+import {
+  USER_BY_SLUG,
+  CORPUS_BY_SLUGS,
+  DOCUMENT_BY_SLUGS,
+  DOCUMENT_IN_CORPUS_BY_SLUGS,
+} from "../graphql/queries";
 
 /**
  * useRouteStateSync – bidirectional synchronisation between the browser URL
@@ -25,6 +31,14 @@ export function useRouteStateSync() {
   const document = useReactiveVar(openedDocument);
 
   const updatingFromUrl = useRef(false);
+
+  // Slug resolution queries (lazy; executed only if slug-shaped routes are detected)
+  const [resolveUserBySlug] = useLazyQuery(USER_BY_SLUG);
+  const [resolveCorpusBySlugs] = useLazyQuery(CORPUS_BY_SLUGS);
+  const [resolveDocumentBySlugs] = useLazyQuery(DOCUMENT_BY_SLUGS);
+  const [resolveDocumentInCorpusBySlugs] = useLazyQuery(
+    DOCUMENT_IN_CORPUS_BY_SLUGS
+  );
 
   /*
    * ------------------------------------------------------
@@ -49,13 +63,82 @@ export function useRouteStateSync() {
     const docOnlyMatch = path.match(/^\/documents\/([^/]+)$/);
     const corpusMatch = path.match(/^\/(?:corpuses|corpus)\/([^/]+)$/);
 
+    // Reserved top-level segments to prevent misinterpreting static routes as slugs
+    const reservedFirstSegments = new Set([
+      "corpuses",
+      "corpus",
+      "documents",
+      "document",
+      "label_sets",
+      "annotations",
+      "privacy",
+      "terms_of_service",
+      "extracts",
+      "login",
+      "logout",
+      "admin",
+      "api",
+      "graphql",
+    ]);
+
+    // New slug-first routes: /:userIdent/:corpusIdent/:docIdent, /:userIdent/:corpusIdent, /:userIdent/:docIdent
+    const segments = path.split("/").filter(Boolean);
+    const firstSegment = segments[0];
+    const eligibleForSlugRouting =
+      (segments.length === 2 || segments.length === 3) &&
+      firstSegment &&
+      !reservedFirstSegments.has(firstSegment);
+
     /* Parse optional `?anns=ID1,ID2` query-string parameter
        so deep-links can pre-select annotations. */
     const searchParams = new URLSearchParams(location.search);
     const annParam = searchParams.get("ann");
     const annotationIds = annParam ? annParam.split(",").filter(Boolean) : [];
 
-    if (docMatch) {
+    if (eligibleForSlugRouting && segments.length === 3) {
+      const [userSlug, corpusSlug, documentSlug] = segments as [
+        string,
+        string,
+        string
+      ];
+      // Resolve corpus, then document within corpus
+      resolveCorpusBySlugs({ variables: { userSlug, corpusSlug } }).then(
+        (cRes) => {
+          const corpusId = cRes.data?.corpusBySlugs?.id;
+          if (corpusId) {
+            openedCorpus({ id: corpusId } as any);
+          }
+          resolveDocumentInCorpusBySlugs({
+            variables: { userSlug, corpusSlug, documentSlug },
+          }).then((dRes) => {
+            const docId = dRes.data?.documentInCorpusBySlugs?.id;
+            if (docId) openedDocument({ id: docId } as any);
+          });
+        }
+      );
+      if (annotationIds.length) selectedAnnotationIds(annotationIds);
+    } else if (eligibleForSlugRouting && segments.length === 2) {
+      const [userSlug, second] = segments as [string, string];
+      // Try as corpus route first
+      const corpusSlug = second;
+      resolveCorpusBySlugs({ variables: { userSlug, corpusSlug } }).then(
+        (cRes) => {
+          const corpusId = cRes.data?.corpusBySlugs?.id;
+          if (corpusId) {
+            openedCorpus({ id: corpusId } as any);
+            if (document) openedDocument(null);
+          } else {
+            // Fallback: treat as document-only slug under user
+            resolveDocumentBySlugs({
+              variables: { userSlug, documentSlug: second },
+            }).then((dRes) => {
+              const docId = dRes.data?.documentBySlugs?.id;
+              if (docId) openedDocument({ id: docId } as any);
+            });
+          }
+        }
+      );
+    } else if (docMatch) {
       const [, corpusId, docId] = docMatch;
       if (!corpus || corpus.id !== corpusId) {
         openedCorpus({ id: corpusId } as any); // partial – will be hydrated by query later

@@ -326,6 +326,16 @@ export const App = () => {
                   isLoading ? <div /> : <Navigate to="/corpuses" replace />
                 }
               />
+              {/* Slug-first routes */}
+              <Route
+                path="/:userIdent/:corpusIdent/:docIdent"
+                element={<DocumentKBRoute />}
+              />
+              <Route path="/:userIdent/:corpusIdent" element={<Corpuses />} />
+              <Route
+                path="/:userIdent/:docIdent"
+                element={<DocumentKBDocRoute />}
+              />
               <Route
                 path="/corpus/:corpusId/document/:documentId"
                 element={<DocumentKBRoute />}

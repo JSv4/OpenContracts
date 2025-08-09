@@ -106,6 +106,51 @@ export const GET_DOCUMENTS = gql`
   }
 `;
 
+// ---------------- Slug resolution ----------------
+export const USER_BY_SLUG = gql`
+  query ($slug: String!) {
+    userBySlug(slug: $slug) {
+      id
+      slug
+      username
+    }
+  }
+`;
+
+export const CORPUS_BY_SLUGS = gql`
+  query ($userSlug: String!, $corpusSlug: String!) {
+    corpusBySlugs(userSlug: $userSlug, corpusSlug: $corpusSlug) {
+      id
+      slug
+      title
+    }
+  }
+`;
+
+export const DOCUMENT_BY_SLUGS = gql`
+  query ($userSlug: String!, $documentSlug: String!) {
+    documentBySlugs(userSlug: $userSlug, documentSlug: $documentSlug) {
+      id
+      slug
+      title
+    }
+  }
+`;
+
+export const DOCUMENT_IN_CORPUS_BY_SLUGS = gql`
+  query ($userSlug: String!, $corpusSlug: String!, $documentSlug: String!) {
+    documentInCorpusBySlugs(
+      userSlug: $userSlug
+      corpusSlug: $corpusSlug
+      documentSlug: $documentSlug
+    ) {
+      id
+      slug
+      title
+    }
+  }
+`;
+
 export const SEARCH_DOCUMENTS = gql`
   query (
     $inCorpusWithId: String

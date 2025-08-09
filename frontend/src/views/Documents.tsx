@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
-import { useLocation } from "react-router-dom";
+import {
+  useLazyQuery,
+  useMutation,
+  useQuery,
+  useReactiveVar,
+} from "@apollo/client";
+import { useLocation, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import _ from "lodash";
 
@@ -16,6 +21,9 @@ import {
   RequestDocumentsInputs,
   RequestDocumentsOutputs,
   GET_DOCUMENTS,
+  GET_DOCUMENT_ONLY,
+  GetDocumentOnlyInput,
+  GetDocumentOnlyOutput,
 } from "../graphql/queries";
 import {
   authToken,
@@ -54,6 +62,7 @@ import { CorpusDocumentCards } from "../components/documents/CorpusDocumentCards
 import { BulkUploadModal } from "../components/widgets/modals/BulkUploadModal";
 
 export const Documents = () => {
+  const { documentId: routeDocumentId } = useParams();
   const auth_token = useReactiveVar(authToken);
   const current_user = useReactiveVar(userObj);
   const backend_user = useReactiveVar(backendUserObj);
@@ -116,22 +125,7 @@ export const Documents = () => {
     .map((edge) => (edge?.node ? edge.node : undefined))
     .filter((item): item is DocumentType => !!item);
 
-  const onSelect = (document: DocumentType) => {
-    // console.log("On selected document", document);
-    if (selected_document_ids.includes(document.id)) {
-      // console.log("Already selected... deselect")
-      const values = selected_document_ids.filter((id) => id !== document.id);
-      // console.log("Filtered values", values);
-      selectedDocumentIds(values);
-    } else {
-      selectedDocumentIds([...selected_document_ids, document.id]);
-    }
-    // console.log("selected doc ids", selected_document_ids);
-  };
-
-  const onOpen = (document: DocumentType) => {
-    openedDocument(document);
-  };
+  // Handlers are provided by `CorpusDocumentCards` which passes them down to `DocumentCards`.
 
   // If we just logged in, refetch docs in case there are documents that are not public and are only visible to current user
   useEffect(() => {
@@ -143,7 +137,6 @@ export const Documents = () => {
 
   // If we navigated here, refetch documents to ensure we have fresh docs
   useEffect(() => {
-    // console.log("DocumentItem - refetchDocuments due to location change");
     refetchDocuments();
   }, [location]);
 
@@ -212,6 +205,56 @@ export const Documents = () => {
     setSearchCache(value);
     debouncedSearch.current(value);
   };
+
+  /**
+   * URL → State hydration for openedDocument
+   * When a user lands on /documents/:documentId, fetch the document (if needed)
+   * and ensure openedDocument reflects the route selection.
+   */
+  useEffect(() => {
+    if (!routeDocumentId) {
+      // If URL no longer has a document id, clear openedDocument
+      if (openedDocument()) openedDocument(null);
+      return;
+    }
+    // If we already have the correct opened document, do nothing
+    const current = openedDocument();
+    if (current && current.id === routeDocumentId) return;
+    // Set a minimal placeholder so downstream UI updates quickly; detailed data can be hydrated elsewhere
+    openedDocument({ id: routeDocumentId } as any);
+  }, [routeDocumentId]);
+
+  /**
+   * Deep-link hydration: if the selected document id is not present in the
+   * current list results, lazily fetch it and populate openedDocument.
+   */
+  const [fetchDocumentById, { data: docByIdData, loading: docByIdLoading }] =
+    useLazyQuery<GetDocumentOnlyOutput, GetDocumentOnlyInput>(
+      GET_DOCUMENT_ONLY,
+      {
+        fetchPolicy: "network-only",
+      }
+    );
+
+  useEffect(() => {
+    if (!routeDocumentId) return;
+    const inList = document_items.some((d) => d.id === routeDocumentId);
+    if (!inList && !docByIdLoading && !docByIdData) {
+      fetchDocumentById({ variables: { documentId: routeDocumentId } });
+    }
+  }, [
+    routeDocumentId,
+    document_items,
+    docByIdLoading,
+    docByIdData,
+    fetchDocumentById,
+  ]);
+
+  useEffect(() => {
+    if (docByIdData?.document) {
+      openedDocument(docByIdData.document as any);
+    }
+  }, [docByIdData]);
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Implementing various resolvers / mutations to create action methods

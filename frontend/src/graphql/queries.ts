@@ -2282,10 +2282,14 @@ export interface GetDocumentOnlyOutput {
       };
       created: string;
     }>;
-    corpuses?: Array<{
-      id: string;
-      title: string;
-    }>;
+    corpusSet?: {
+      edges: Array<{
+        node: {
+          id: string;
+          title: string;
+        };
+      }>;
+    };
   };
 }
 
@@ -2314,7 +2318,7 @@ export const GET_DOCUMENT_ONLY = gql`
         created
       }
       # Check if document is in any corpus (for UI hints)
-      corpuses {
+      corpusSet {
         edges {
           node {
             id

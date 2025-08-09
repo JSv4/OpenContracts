@@ -324,6 +324,9 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
             if (currentCorpus) {
               navigate(`/corpus/${currentCorpus.id}/document/${item.id}`);
               if (onClick) onClick(item);
+            } else {
+              navigate(`/documents/${item.id}`);
+              if (onClick) onClick(item);
             }
           },
         },

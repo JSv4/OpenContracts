@@ -197,6 +197,8 @@ export const CorpusDocumentCards = ({
   const onOpen = (document: DocumentType) => {
     if (opened_corpus_id) {
       navigate(`/corpus/${opened_corpus_id}/document/${document.id}`);
+    } else {
+      navigate(`/documents/${document.id}`);
     }
   };
 

@@ -59,6 +59,7 @@ import { SelectAnalyzerOrFieldsetModal } from "./components/widgets/modals/Selec
 import { DocumentUploadModal } from "./components/widgets/modals/DocumentUploadModal";
 import { FileUploadPackageProps } from "./components/widgets/modals/DocumentUploadModal";
 import { DocumentKBRoute } from "./components/routes/DocumentKBRoute";
+import { DocumentKBDocRoute } from "./components/routes/DocumentKBDocRoute";
 import { useRouteStateSync } from "./hooks/RouteStateSync";
 
 export const App = () => {
@@ -338,6 +339,10 @@ export const App = () => {
                 <></>
               )}
               <Route path="/documents" element={<Documents />} />
+              <Route
+                path="/documents/:documentId"
+                element={<DocumentKBDocRoute />}
+              />
               <Route path="/label_sets" element={<Labelsets />} />
               <Route path="/annotations" element={<Annotations />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />

@@ -46,6 +46,7 @@ export function useRouteStateSync() {
 
     const path = location.pathname;
     const docMatch = path.match(/^\/corpus\/([^/]+)\/document\/([^/]+)/);
+    const docOnlyMatch = path.match(/^\/documents\/([^/]+)$/);
     const corpusMatch = path.match(/^\/(?:corpuses|corpus)\/([^/]+)$/);
 
     /* Parse optional `?anns=ID1,ID2` query-string parameter
@@ -64,6 +65,14 @@ export function useRouteStateSync() {
       }
       // When we have annotation ids in the query-string, prime the
       // selectedAnnotation reactive-var so annotator loads them.
+      if (annotationIds.length) {
+        selectedAnnotationIds(annotationIds);
+      }
+    } else if (docOnlyMatch) {
+      const [, docId] = docOnlyMatch;
+      if (!document || document.id !== docId) {
+        openedDocument({ id: docId } as any);
+      }
       if (annotationIds.length) {
         selectedAnnotationIds(annotationIds);
       }

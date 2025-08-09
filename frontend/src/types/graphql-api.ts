@@ -414,7 +414,6 @@ export type LabelSetType = Node & {
   docLabelCount?: Scalars["Int"];
   spanLabelCount?: Scalars["Int"];
   tokenLabelCount?: Scalars["Int"];
-  metadataLabelCount?: Scalars["Int"];
   creator?: UserType;
   created?: Scalars["DateTime"];
   modified?: Scalars["DateTime"];
@@ -457,7 +456,6 @@ export enum LabelType {
   RelationshipLabel = "RELATIONSHIP_LABEL",
   DocTypeLabel = "DOC_TYPE_LABEL",
   TokenLabel = "TOKEN_LABEL",
-  MetadataLabel = "METADATA_LABEL",
   SpanLabel = "SPAN_LABEL",
 }
 

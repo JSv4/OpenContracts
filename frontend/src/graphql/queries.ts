@@ -94,24 +94,6 @@ export const GET_DOCUMENTS = gql`
               }
             }
           }
-          metadata_annotations: docAnnotations(
-            annotationLabel_LabelType: METADATA_LABEL
-          ) @include(if: $includeMetadata) {
-            edges {
-              node {
-                id
-                annotationLabel {
-                  labelType
-                  text
-                }
-                rawText
-                corpus {
-                  title
-                  icon
-                }
-              }
-            }
-          }
         }
       }
       pageInfo {
@@ -193,7 +175,7 @@ export const GET_CORPUS_METADATA = gql`
         diff
         snapshot
       }
-      allAnnotationSummaries(labelTypes: [METADATA_LABEL]) {
+      allAnnotationSummaries {
         id
         rawText
         json
@@ -554,7 +536,6 @@ export const GET_CORPUSES = gql`
             docLabelCount
             spanLabelCount
             tokenLabelCount
-            metadataLabelCount
           }
         }
       }

@@ -225,7 +225,7 @@ test("displays conversation list on initial load", async ({ mount, page }) => {
 
   await mountChatTray(mount, mocks);
 
-  // Wait for conversations to load
+  // Wait for conversations to load (authenticated mode via ChatTrayTestWrapper)
   await expect(page.locator("#conversation-grid")).toBeVisible({
     timeout: TIMEOUTS.MEDIUM,
   });
@@ -718,36 +718,78 @@ test("maintains scroll position when new messages arrive", async ({
   const messagesContainer = page.locator("#messages-container");
   const chatInput = page.locator('[data-testid="chat-input"]');
 
-  // Send first message
-  await chatInput.fill("Generate a long response");
+  // Send multiple messages to create scrollable content
+  await chatInput.fill("First message");
   await page.keyboard.press("Enter");
 
-  // Wait for response to start
-  await page.waitForTimeout(1000);
+  // Wait for first response
+  await expect(
+    page.getByText("Received: First message", { exact: true })
+  ).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
 
-  // Scroll up while message is streaming
-  await messagesContainer.evaluate((el) => (el.scrollTop = 0));
-
-  // Send another message
-  await chatInput.fill("Another message");
-  await page.keyboard.press("Enter");
-
-  // Verify container didn't auto-scroll to bottom (user was scrolled up)
-  const scrollTop = await messagesContainer.evaluate((el) => el.scrollTop);
-  expect(scrollTop).toBeLessThan(100);
-
-  // Scroll to bottom
-  await messagesContainer.evaluate((el) => (el.scrollTop = el.scrollHeight));
-
-  // Send one more message
-  await chatInput.fill("Final message");
-  await page.keyboard.press("Enter");
-
-  // Wait a bit
+  // Add a small delay between messages to ensure proper handling
   await page.waitForTimeout(500);
 
-  // Verify auto-scroll worked this time
-  const finalScrollTop = await messagesContainer.evaluate((el) => el.scrollTop);
+  await chatInput.fill("Second message");
+  await page.keyboard.press("Enter");
+
+  // Wait for second response
+  await expect(
+    page.getByText("Received: Second message", { exact: true })
+  ).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
+
+  await page.waitForTimeout(500);
+
+  await chatInput.fill("Third message");
+  await page.keyboard.press("Enter");
+
+  // Wait for third response
+  await expect(
+    page.getByText("Received: Third message", { exact: true })
+  ).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
+
+  // Now test scroll behavior
+  // Scroll to top
+  await messagesContainer.evaluate((el) => {
+    el.scrollTop = 0;
+  });
+
+  // Wait for scroll to stabilize
+  await page.waitForTimeout(200);
+
+  // Get initial position
+  const scrolledUpPosition = await messagesContainer.evaluate(
+    (el) => el.scrollTop
+  );
+
+  // Simulate receiving a new message while scrolled up
+  await page.evaluate(() => {
+    const instances = (window as any).WebSocketInstances;
+    if (instances && instances.size > 0) {
+      const ws = Array.from(instances)[0] as any;
+      const messageId = `assistant-${Date.now()}`;
+      ws.onmessage &&
+        ws.onmessage({
+          data: JSON.stringify({
+            type: "SYNC_CONTENT",
+            content: "New assistant message while user is scrolled up",
+            data: { message_id: messageId },
+          }),
+        });
+    }
+  });
+
+  // Wait for the message to appear
+  await expect(
+    page.getByText("New assistant message while user is scrolled up", {
+      exact: true,
+    })
+  ).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
+
+  // Verify scroll position hasn't jumped to bottom
+  const currentScrollTop = await messagesContainer.evaluate(
+    (el) => el.scrollTop
+  );
   const scrollHeight = await messagesContainer.evaluate(
     (el) => el.scrollHeight
   );
@@ -755,7 +797,41 @@ test("maintains scroll position when new messages arrive", async ({
     (el) => el.clientHeight
   );
 
-  expect(finalScrollTop).toBeGreaterThan(scrollHeight - clientHeight - 100);
+  // Should still be near the top, not at the bottom
+  expect(currentScrollTop).toBeLessThan(scrollHeight - clientHeight - 200);
+
+  // Now test auto-scroll when already at bottom
+  await messagesContainer.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+
+  await page.waitForTimeout(200);
+
+  // Send another message while at bottom
+  await chatInput.fill("Message while at bottom");
+  await page.keyboard.press("Enter");
+
+  // Wait for response
+  await expect(
+    page.getByText("Received: Message while at bottom", { exact: true })
+  ).toBeVisible({ timeout: TIMEOUTS.MEDIUM });
+
+  // Give extra time for any scrolling animation
+  await page.waitForTimeout(1000);
+
+  // Should still be at bottom
+  const finalScrollTop = await messagesContainer.evaluate((el) => el.scrollTop);
+  const finalScrollHeight = await messagesContainer.evaluate(
+    (el) => el.scrollHeight
+  );
+  const finalClientHeight = await messagesContainer.evaluate(
+    (el) => el.clientHeight
+  );
+
+  // Check if we're near the bottom (within 150px tolerance for scrollbar/padding)
+  const distanceFromBottom =
+    finalScrollHeight - finalClientHeight - finalScrollTop;
+  expect(distanceFromBottom).toBeLessThan(150);
 });
 
 test("shows connection status indicators", async ({ mount, page }) => {

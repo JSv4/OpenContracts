@@ -9,13 +9,7 @@ import {
   Header,
   Label,
 } from "semantic-ui-react";
-import {
-  Tags,
-  FileText,
-  HandshakeIcon,
-  Database,
-  GitForkIcon,
-} from "lucide-react";
+import { Tags, FileText, HandshakeIcon, GitForkIcon } from "lucide-react";
 import _ from "lodash";
 import styled from "styled-components";
 
@@ -434,15 +428,6 @@ export const CorpusItem: React.FC<CorpusItemProps> = ({
                       Relations:{" "}
                       <span className="count">
                         {labelSet.spanLabelCount || 0}
-                      </span>
-                    </span>
-                  </StatItem>
-                  <StatItem>
-                    <Database />
-                    <span>
-                      Metadata:{" "}
-                      <span className="count">
-                        {labelSet.metadataLabelCount || 0}
                       </span>
                     </span>
                   </StatItem>

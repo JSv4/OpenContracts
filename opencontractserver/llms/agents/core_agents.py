@@ -262,9 +262,9 @@ class AgentConfig:
 
 @dataclass
 class DocumentAgentContext:
-    """Context for document-specific agents."""
+    """Context for document-specific agents (corpus may be absent for standalone mode)."""
 
-    corpus: Corpus
+    corpus: Optional[Corpus]
     document: Document
     config: AgentConfig
     vector_store: Optional[CoreAnnotationVectorStore] = None
@@ -275,7 +275,7 @@ class DocumentAgentContext:
             self.vector_store = CoreAnnotationVectorStore(
                 user_id=self.config.user_id,
                 document_id=self.document.id,
-                corpus_id=self.corpus.id,
+                corpus_id=self.corpus.id if self.corpus is not None else None,
                 embedder_path=self.config.embedder_path,
             )
 
@@ -962,28 +962,40 @@ class CoreDocumentAgentFactory:
     @staticmethod
     async def create_context(
         document: Union[str, int, Document],
-        corpus: Union[str, int, Corpus],
+        corpus: Union[str, int, Corpus, None],
         config: AgentConfig,
     ) -> DocumentAgentContext:
-        """Create document agent context with all necessary components."""
+        """Create document agent context with all necessary components. Supports corpus-less mode."""
         if not isinstance(document, Document):
             document = await Document.objects.aget(id=document)
 
-        if not isinstance(corpus, Corpus):
-            corpus = await Corpus.objects.aget(id=corpus)
+        corpus_obj: Optional[Corpus]
+        if corpus is None:
+            corpus_obj = None
+        else:
+            corpus_obj = (
+                corpus
+                if isinstance(corpus, Corpus)
+                else await Corpus.objects.aget(id=corpus)
+            )
 
         # ------------------------------------------------------------------
         # Basic permission check – anonymous sessions cannot access private docs
         # ------------------------------------------------------------------
-        _assert_access(corpus, config.user_id)
+        if corpus_obj is not None:
+            _assert_access(corpus_obj, config.user_id)
         _assert_access(document, config.user_id)
 
         # ------------------------------------------------------------------
-        # Ensure an embedder is configured (async!).
+        # Ensure an embedder is configured
         # ------------------------------------------------------------------
         if config.embedder_path is None:
-            _, name = await aget_embedder(corpus.id)
-            config.embedder_path = name
+            if corpus_obj is not None:
+                _, name = await aget_embedder(corpus_obj.id)
+                config.embedder_path = name
+            else:
+                # Fall back to default embedder when no corpus available
+                config.embedder_path = getattr(settings, "DEFAULT_EMBEDDER", None)
 
         # Set default system prompt if not provided
         if config.system_prompt is None:
@@ -991,7 +1003,7 @@ class CoreDocumentAgentFactory:
                 document
             )
 
-        return DocumentAgentContext(corpus=corpus, document=document, config=config)
+        return DocumentAgentContext(corpus=corpus_obj, document=document, config=config)
 
 
 class CoreCorpusAgentFactory:
@@ -1074,7 +1086,7 @@ class CoreConversationManager:
     @classmethod
     async def create_for_document(
         cls,
-        corpus: Corpus,
+        corpus: Optional[Corpus],
         document: Document,
         user_id: Optional[int],
         config: AgentConfig,

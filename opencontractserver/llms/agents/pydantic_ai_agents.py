@@ -1394,7 +1394,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
     async def create(
         cls,
         document: Union[str, int, Document],
-        corpus: Union[str, int, Corpus],
+        corpus: Union[str, int, Corpus, None],
         config: Optional[AgentConfig] = None,
         tools: Optional[list[Callable]] = None,
         *,
@@ -1409,16 +1409,14 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
             f"Creating Pydantic-AI document agent for document {document} and corpus {corpus}"
         )
         logger.debug(f"Config (type {type(config)}): {config}")
-        # Provide explicit corpus so the factory can pick the proper embedder
+        # Provide explicit corpus (may be None for standalone) so the factory can pick the proper embedder
         context = await CoreDocumentAgentFactory.create_context(
-            document,
-            corpus,
-            config,
+            document, corpus, config
         )
 
         # Use the CoreConversationManager factory method
         conversation_manager = await CoreConversationManager.create_for_document(
-            context.corpus,
+            context.corpus,  # Optional[Corpus]
             context.document,
             user_id=config.user_id,
             config=config,
@@ -1434,7 +1432,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
         # ------------------------------------------------------------------
         vector_store = PydanticAIAnnotationVectorStore(
             user_id=config.user_id,
-            corpus_id=context.corpus.id,
+            corpus_id=context.corpus.id if context.corpus is not None else None,
             document_id=context.document.id,
             embedder_path=config.embedder_path,
         )
@@ -1518,7 +1516,12 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
             truncate_length: int | None = None,
             from_start: bool = True,
         ) -> str:
-            """Return the latest summary content for this document."""
+            """Return the latest summary content for this document (corpus-aware)."""
+            if context.corpus is None:
+                # Standalone mode: fall back to document-level markdown summary
+                return await aload_document_md_summary(
+                    context.document.id, truncate_length, from_start
+                )
             return await aget_document_summary(
                 document_id=context.document.id,
                 corpus_id=context.corpus.id,
@@ -1767,23 +1770,31 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
 
         # Merge caller-supplied tools (if any) after the default one so callers
         # can override behaviour/order if desired.
+        # Build the list conditionally to avoid corpus-required tools in standalone mode.
         effective_tools: list[Callable] = [
             default_vs_tool,
-            load_summary_tool,
-            get_summary_length_tool,
-            get_notes_tool,
-            load_text_tool,
-            search_notes_tool_wrapped,
-            # Write operations below – all require approval
-            add_note_tool_wrapped,
-            update_note_tool_wrapped,
-            duplicate_ann_tool_wrapped,
-            add_exact_ann_tool_wrapped,
-            get_summary_content_wrapped,
-            get_summary_versions_wrapped,
-            get_summary_diff_wrapped,
-            update_summary_wrapped,
+            load_summary_tool,  # corpus-agnostic
+            get_summary_length_tool,  # corpus-agnostic
+            load_text_tool,  # corpus-agnostic
         ]
+
+        if context.corpus is not None:
+            # Only add corpus-dependent tools when corpus is available
+            effective_tools.extend(
+                [
+                    get_notes_tool,
+                    search_notes_tool_wrapped,
+                    # Write operations below – all require approval
+                    add_note_tool_wrapped,
+                    update_note_tool_wrapped,
+                    duplicate_ann_tool_wrapped,
+                    add_exact_ann_tool_wrapped,
+                    get_summary_content_wrapped,
+                    get_summary_versions_wrapped,
+                    get_summary_diff_wrapped,
+                    update_summary_wrapped,
+                ]
+            )
         if tools:
             effective_tools.extend(tools)
 
@@ -1798,7 +1809,7 @@ class PydanticAIDocumentAgent(PydanticAICoreAgent):
 
         agent_deps_instance = PydanticAIDependencies(
             user_id=config.user_id,
-            corpus_id=context.corpus.id,
+            corpus_id=(context.corpus.id if context.corpus is not None else None),
             document_id=context.document.id,
             **kwargs,
         )

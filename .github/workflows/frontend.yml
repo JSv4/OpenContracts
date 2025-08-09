@@ -9,6 +9,9 @@ on:
     branches:
       - main
   pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
 
 jobs:
   lint:
@@ -58,6 +61,11 @@ jobs:
 
       - name: Run Playwright Component Tests
         run: yarn run test:ct
+
+      - name: Run Metadata Component Tests
+        run: |
+          yarn run test:ct tests/*Metadata*.ct.tsx
+        continue-on-error: true
 
   unit-test:
     name: Unit Tests

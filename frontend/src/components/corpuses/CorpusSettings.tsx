@@ -23,6 +23,7 @@ import {
   DeleteCorpusActionOutput,
 } from "../../graphql/mutations";
 import { CreateCorpusActionModal } from "./CreateCorpusActionModal";
+import { CorpusMetadataSettings } from "./CorpusMetadataSettings";
 import { CorpusType } from "../../types/graphql-api";
 
 interface CorpusSettingsProps {
@@ -567,6 +568,15 @@ export const CorpusSettings: React.FC<CorpusSettingsProps> = ({ corpus }) => {
             ))}
           </ActionFlow>
         </ActionContent>
+      </InfoSection>
+
+      <InfoSection>
+        <SectionHeader>
+          <SectionTitle>Metadata Fields</SectionTitle>
+        </SectionHeader>
+        <MetadataContent>
+          <CorpusMetadataSettings corpusId={corpus.id} />
+        </MetadataContent>
       </InfoSection>
 
       <CreateCorpusActionModal

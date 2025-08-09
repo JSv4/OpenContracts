@@ -362,27 +362,6 @@ export const LabelSetEditModal = ({
       });
   };
 
-  const handleCreateMetadataLabel = () => {
-    createAnnotationLabelForLabelset({
-      variables: {
-        color: "00000",
-        description: "New field to hold user-entered values",
-        icon: "braille",
-        text: "Custom Field Name",
-        labelType: LabelType.MetadataLabel,
-        labelsetId: opened_labelset?.id ? opened_labelset.id : "",
-      },
-    })
-      .then((data) => {
-        toast.success("Success! Label created.");
-        refetch();
-      })
-      .catch((err) => {
-        toast.error("Error! Failed to create label");
-        console.log("Error creating new metdata value label", err);
-      });
-  };
-
   const handleCreateTextLabel = () => {
     createAnnotationLabelForLabelset({
       variables: {
@@ -512,10 +491,6 @@ export const LabelSetEditModal = ({
     (label): label is AnnotationLabelType =>
       !!label && label.labelType === LabelType.RelationshipLabel
   );
-  let metadata_labels = labels.filter(
-    (label): label is AnnotationLabelType =>
-      !!label && label.labelType === LabelType.MetadataLabel
-  );
   let span_labels = labels.filter(
     (label): label is AnnotationLabelType =>
       !!label && label.labelType === LabelType.SpanLabel
@@ -524,13 +499,11 @@ export const LabelSetEditModal = ({
   let text_label_fuse = new Fuse(text_labels, fuse_options);
   let doc_label_fuse = new Fuse(doc_type_labels, fuse_options);
   let relationship_label_fuse = new Fuse(relationship_labels, fuse_options);
-  let metadata_label_fuse = new Fuse(metadata_labels, fuse_options);
   let span_label_fuse = new Fuse(span_labels, fuse_options);
 
   let text_label_results: AnnotationLabelType[] = [];
   let doc_label_results: AnnotationLabelType[] = [];
   let relationship_label_results: AnnotationLabelType[] = [];
-  let metadata_label_results: AnnotationLabelType[] = [];
   let span_label_results: AnnotationLabelType[] = [];
 
   if (searchTerm.length > 0) {
@@ -543,9 +516,6 @@ export const LabelSetEditModal = ({
     relationship_label_results = relationship_label_fuse
       .search(searchTerm)
       .map((item) => item.item) as AnnotationLabelType[];
-    metadata_label_results = metadata_label_fuse
-      .search(searchTerm)
-      .map((item) => item.item) as AnnotationLabelType[];
     span_label_results = span_label_fuse
       .search(searchTerm)
       .map((item) => item.item) as AnnotationLabelType[];
@@ -553,7 +523,6 @@ export const LabelSetEditModal = ({
     text_label_results = text_labels;
     doc_label_results = doc_type_labels;
     relationship_label_results = relationship_labels;
-    metadata_label_results = metadata_labels;
     span_label_results = span_labels;
   }
 
@@ -616,14 +585,12 @@ export const LabelSetEditModal = ({
           </div>
         );
       case 1:
-        return renderLabelCards(metadata_label_results);
-      case 2:
         return renderLabelCards(text_label_results);
-      case 3:
+      case 2:
         return renderLabelCards(doc_label_results);
-      case 4:
+      case 3:
         return renderLabelCards(relationship_label_results);
-      case 5:
+      case 4:
         return renderLabelCards(span_label_results);
       default:
         return null;
@@ -634,30 +601,24 @@ export const LabelSetEditModal = ({
     { key: 0, icon: "bars", label: "Details" },
     {
       key: 1,
-      icon: "braille",
-      label: "Metadata",
-      count: metadata_label_results.length,
-    },
-    {
-      key: 2,
       icon: "language",
       label: "Text",
       count: text_label_results.length,
     },
     {
-      key: 3,
+      key: 2,
       icon: "file pdf outline",
       label: "Document Types",
       count: doc_label_results.length,
     },
     {
-      key: 4,
+      key: 3,
       icon: "handshake outline",
       label: "Relations",
       count: relationship_label_results.length,
     },
     {
-      key: 5,
+      key: 4,
       icon: "i cursor",
       label: "Spans",
       count: span_label_results.length,
@@ -676,14 +637,12 @@ export const LabelSetEditModal = ({
       title: (() => {
         switch (activeIndex) {
           case 1:
-            return "Create Metadata Field";
-          case 2:
             return "Create Text Label";
-          case 3:
+          case 2:
             return "Create Document Type Label";
-          case 4:
+          case 3:
             return "Create Relationship Label";
-          case 5:
+          case 4:
             return "Create Span Label";
           default:
             return "";
@@ -693,14 +652,12 @@ export const LabelSetEditModal = ({
       action_function: (() => {
         switch (activeIndex) {
           case 1:
-            return handleCreateMetadataLabel;
-          case 2:
             return handleCreateTextLabel;
-          case 3:
+          case 2:
             return handleCreateDocumentLabel;
-          case 4:
+          case 3:
             return handleCreateRelationshipLabel;
-          case 5:
+          case 4:
             return handleCreateSpanLabel;
           default:
             return () => {};

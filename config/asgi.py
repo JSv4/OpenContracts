@@ -32,6 +32,9 @@ from config.websocket.consumers.corpus_conversation import (  # noqa: E402
 from config.websocket.consumers.document_conversation import (  # noqa: E402
     DocumentQueryConsumer,
 )
+from config.websocket.consumers.standalone_document_conversation import (  # noqa: E402
+    StandaloneDocumentQueryConsumer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +56,16 @@ corpus_query_pattern = re_path(
     CorpusQueryConsumer.as_asgi(),
 )
 
+# NEW - stand-alone document chat (no corpus_id in URL)
+standalone_document_query_pattern = re_path(
+    r"ws/standalone/document/(?P<document_id>[-a-zA-Z0-9_=]+)/query/$",
+    StandaloneDocumentQueryConsumer.as_asgi(),
+)
+
 websocket_urlpatterns = [
     document_query_pattern,
     corpus_query_pattern,
+    standalone_document_query_pattern,  # NEW stand-alone route
 ]
 
 # Log all registered websocket patterns

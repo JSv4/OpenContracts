@@ -507,6 +507,20 @@ GRAPHQL_JWT = {
     # "JWT_ALLOW_ANY_HANDLER": "config.graphql.jwt_overrides.allow_any",
 }
 
+# Reserved top-level user slugs (extendable)
+RESERVED_USER_SLUGS = {
+    "corpuses",
+    "corpus",
+    "documents",
+    "document",
+    "settings",
+    "login",
+    "logout",
+    "admin",
+    "api",
+    "graphql",
+}
+
 # Constants for Permissioning
 DEFAULT_PERMISSIONS_GROUP = "Public Objects Access"
 

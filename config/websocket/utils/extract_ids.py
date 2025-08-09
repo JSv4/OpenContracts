@@ -18,9 +18,9 @@ def extract_websocket_path_id(path: str, resource_type: str) -> str:
     print(f"Extract {resource_type} id from path: {path}")
 
     if resource_type == "document":
-        # For document, match either with or without corpus part
+        # For document, match either with or without corpus part, and support optional 'standalone/' prefix
         match = re.match(
-            "^/?ws/document/(?P<id>[-a-zA-Z0-9_=]+)/query/(?:corpus/[-a-zA-Z0-9_=]+/)?$",
+            r"^/?ws/(?:standalone/)?document/(?P<id>[-a-zA-Z0-9_=]+)/query/(?:corpus/[-a-zA-Z0-9_=]+/)?$",
             path,
         )
     elif resource_type == "corpus" and "/document/" in path:

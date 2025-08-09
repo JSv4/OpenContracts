@@ -146,6 +146,10 @@ interface ChatTrayProps {
    * Used when the user submits a chat query via the floating input.
    */
   initialMessage?: string;
+  /**
+   * When true, hides conversation history and starts a fresh conversation each time.
+   */
+  readOnly?: boolean;
 }
 
 /**
@@ -165,9 +169,15 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   onMessageSelect,
   corpusId,
   initialMessage,
+  readOnly = false,
 }) => {
+  // User / Auth state – must be declared before any state that depends on it
+  const user_obj = useReactiveVar(userObj);
+  const auth_token = useReactiveVar(authToken);
+
   // Chat state
-  const [isNewChat, setIsNewChat] = useState(false);
+  // Start with new chat if readOnly OR if user is anonymous (no token)
+  const [isNewChat, setIsNewChat] = useState<boolean>(readOnly || !auth_token);
   const [newMessage, setNewMessage] = useState("");
   const [chat, setChat] = useState<ChatMessageProps[]>([]);
   const [wsReady, setWsReady] = useState(false);
@@ -198,9 +208,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
   // For messages from server (via the new GET_CHAT_MESSAGES query)
   const [serverMessages, setServerMessages] = useState<ChatMessageProps[]>([]);
 
-  // User / Auth state
-  const user_obj = useReactiveVar(userObj);
-  const auth_token = useReactiveVar(authToken);
+  // (user_obj, auth_token declared above)
 
   // WebSocket reference
   const socketRef = useRef<WebSocket | null>(null);
@@ -229,6 +237,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
       createdAt_Lte: createdAtLte || undefined,
     },
     fetchPolicy: "network-only",
+    skip: !auth_token, // Skip loading conversations for anonymous users
   });
 
   // Lazy query for loading messages of a specific conversation
@@ -831,8 +840,8 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
    * Whenever the selected conversation changes, (re)establish the WebSocket connection.
    */
   useEffect(() => {
-    // If no conversation is selected or no auth token is present, close any socket and exit.
-    if (!auth_token || (!selectedConversationId && !isNewChat)) {
+    // If no conversation is selected and not in new chat mode, close any socket and exit.
+    if (!selectedConversationId && !isNewChat) {
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
@@ -844,7 +853,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     // Build WebSocket URL, including conversation ID
     const wsUrl = getWebSocketUrl(
       documentId,
-      auth_token,
+      auth_token || undefined,
       selectedConversationId,
       corpusId
     );
@@ -1647,7 +1656,7 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
     <ChatContainer id="chat-container">
       <ConversationIndicator id="conversation-indicator">
         <AnimatePresence>
-          {isNewChat || selectedConversationId ? (
+          {isNewChat || selectedConversationId || readOnly || !auth_token ? (
             <motion.div
               style={{
                 display: "flex",
@@ -1674,20 +1683,22 @@ export const ChatTray: React.FC<ChatTrayProps> = ({
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
-                <Button
-                  size="small"
-                  onClick={exitConversation}
-                  style={{
-                    background: "transparent",
-                    padding: "0.5rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <ArrowLeft size={16} />
-                  Back to Conversations
-                </Button>
+                {!readOnly && auth_token && (
+                  <Button
+                    size="small"
+                    onClick={exitConversation}
+                    style={{
+                      background: "transparent",
+                      padding: "0.5rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <ArrowLeft size={16} />
+                    Back to Conversations
+                  </Button>
+                )}
                 <ReopenApprovalButton />
               </motion.div>
 

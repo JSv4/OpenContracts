@@ -58,8 +58,8 @@ import { EditExtractModal } from "./components/widgets/modals/EditExtractModal";
 import { SelectAnalyzerOrFieldsetModal } from "./components/widgets/modals/SelectCorpusAnalyzerOrFieldsetAnalyzer";
 import { DocumentUploadModal } from "./components/widgets/modals/DocumentUploadModal";
 import { FileUploadPackageProps } from "./components/widgets/modals/DocumentUploadModal";
-import { DocumentViewer } from "./components/documents/Viewer";
 import { DocumentKBRoute } from "./components/routes/DocumentKBRoute";
+import { DocumentKBDocRoute } from "./components/routes/DocumentKBDocRoute";
 import { useRouteStateSync } from "./hooks/RouteStateSync";
 
 export const App = () => {
@@ -258,26 +258,14 @@ export const App = () => {
       ) : (
         <></>
       )}
-      {knowledge_base_modal.isOpen &&
-        knowledge_base_modal.documentId &&
-        knowledge_base_modal.corpusId && (
-          <DocumentKnowledgeBase
-            documentId={knowledge_base_modal.documentId}
-            corpusId={knowledge_base_modal.corpusId}
-            initialAnnotationIds={
-              knowledge_base_modal.annotationIds ?? undefined
-            }
-            onClose={handleKnowledgeBaseModalClose}
-          />
-        )}
-      {knowledge_base_modal.isOpen &&
-        knowledge_base_modal.documentId &&
-        !knowledge_base_modal.corpusId && (
-          <DocumentViewer
-            documentId={knowledge_base_modal.documentId}
-            onClose={handleKnowledgeBaseModalClose}
-          />
-        )}
+      {knowledge_base_modal.isOpen && knowledge_base_modal.documentId && (
+        <DocumentKnowledgeBase
+          documentId={knowledge_base_modal.documentId}
+          corpusId={knowledge_base_modal.corpusId ?? undefined}
+          initialAnnotationIds={knowledge_base_modal.annotationIds ?? undefined}
+          onClose={handleKnowledgeBaseModalClose}
+        />
+      )}
       {show_cookie_modal ? <CookieConsentDialog /> : <></>}
       <ThemeProvider>
         <div
@@ -338,6 +326,16 @@ export const App = () => {
                   isLoading ? <div /> : <Navigate to="/corpuses" replace />
                 }
               />
+              {/* Slug-first routes */}
+              <Route
+                path="/:userIdent/:corpusIdent/:docIdent"
+                element={<DocumentKBRoute />}
+              />
+              <Route path="/:userIdent/:corpusIdent" element={<Corpuses />} />
+              <Route
+                path="/:userIdent/:docIdent"
+                element={<DocumentKBDocRoute />}
+              />
               <Route
                 path="/corpus/:corpusId/document/:documentId"
                 element={<DocumentKBRoute />}
@@ -351,6 +349,10 @@ export const App = () => {
                 <></>
               )}
               <Route path="/documents" element={<Documents />} />
+              <Route
+                path="/documents/:documentId"
+                element={<DocumentKBDocRoute />}
+              />
               <Route path="/label_sets" element={<Labelsets />} />
               <Route path="/annotations" element={<Annotations />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />

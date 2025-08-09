@@ -94,24 +94,6 @@ export const GET_DOCUMENTS = gql`
               }
             }
           }
-          metadata_annotations: docAnnotations(
-            annotationLabel_LabelType: METADATA_LABEL
-          ) @include(if: $includeMetadata) {
-            edges {
-              node {
-                id
-                annotationLabel {
-                  labelType
-                  text
-                }
-                rawText
-                corpus {
-                  title
-                  icon
-                }
-              }
-            }
-          }
         }
       }
       pageInfo {
@@ -120,6 +102,51 @@ export const GET_DOCUMENTS = gql`
         startCursor
         endCursor
       }
+    }
+  }
+`;
+
+// ---------------- Slug resolution ----------------
+export const USER_BY_SLUG = gql`
+  query ($slug: String!) {
+    userBySlug(slug: $slug) {
+      id
+      slug
+      username
+    }
+  }
+`;
+
+export const CORPUS_BY_SLUGS = gql`
+  query ($userSlug: String!, $corpusSlug: String!) {
+    corpusBySlugs(userSlug: $userSlug, corpusSlug: $corpusSlug) {
+      id
+      slug
+      title
+    }
+  }
+`;
+
+export const DOCUMENT_BY_SLUGS = gql`
+  query ($userSlug: String!, $documentSlug: String!) {
+    documentBySlugs(userSlug: $userSlug, documentSlug: $documentSlug) {
+      id
+      slug
+      title
+    }
+  }
+`;
+
+export const DOCUMENT_IN_CORPUS_BY_SLUGS = gql`
+  query ($userSlug: String!, $corpusSlug: String!, $documentSlug: String!) {
+    documentInCorpusBySlugs(
+      userSlug: $userSlug
+      corpusSlug: $corpusSlug
+      documentSlug: $documentSlug
+    ) {
+      id
+      slug
+      title
     }
   }
 `;
@@ -193,7 +220,7 @@ export const GET_CORPUS_METADATA = gql`
         diff
         snapshot
       }
-      allAnnotationSummaries(labelTypes: [METADATA_LABEL]) {
+      allAnnotationSummaries {
         id
         rawText
         json
@@ -554,7 +581,6 @@ export const GET_CORPUSES = gql`
             docLabelCount
             spanLabelCount
             tokenLabelCount
-            metadataLabelCount
           }
         }
       }
@@ -1155,7 +1181,6 @@ export const GET_EXPORT = gql`
           extractIsList
           limitToLabel
           taskName
-          agentic
           matchText
           query
           outputType
@@ -1181,6 +1206,12 @@ export interface GetFieldsetsOutputs {
 export const GET_FIELDSETS = gql`
   query GetFieldsets($searchText: String) {
     fieldsets(name_Contains: $searchText) {
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
       edges {
         node {
           id
@@ -1203,11 +1234,45 @@ export const GET_FIELDSETS = gql`
                 instructions
                 extractIsList
                 taskName
-                agentic
               }
             }
           }
         }
+      }
+    }
+  }
+`;
+
+export interface GetFieldsetInput {
+  id: string;
+}
+
+export interface GetFieldsetOutput {
+  fieldset: FieldsetType;
+}
+
+export const REQUEST_GET_FIELDSET = gql`
+  query GetFieldset($id: ID!) {
+    fieldset(id: $id) {
+      id
+      name
+      description
+      inUse
+      creator {
+        id
+        username
+      }
+      fullColumnList {
+        id
+        name
+        query
+        matchText
+        mustContainText
+        outputType
+        limitToLabel
+        instructions
+        extractIsList
+        taskName
       }
     }
   }
@@ -1237,7 +1302,6 @@ export const GET_FIELDSET = gql`
         instructions
         extractIsList
         taskName
-        agentic
       }
     }
   }
@@ -1271,9 +1335,9 @@ export const REQUEST_GET_EXTRACT = gql`
           instructions
           matchText
           limitToLabel
-          agentic
           taskName
           outputType
+          extractIsList
         }
       }
       creator {
@@ -1589,7 +1653,6 @@ export const GET_DATACELLS_FOR_EXTRACT = gql`
           instructions
           extractIsList
           taskName
-          agentic
         }
       }
       fullDatacellList {
@@ -2239,6 +2302,138 @@ export const GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS = gql`
           icon
           description
           labelType
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Query to get document data without corpus context
+ * Used when viewing documents that haven't been assigned to a corpus
+ */
+export interface GetDocumentOnlyInput {
+  documentId: string;
+}
+
+export interface GetDocumentOnlyOutput {
+  document: RawDocumentType & {
+    allNotesWithoutCorpus?: Array<{
+      id: string;
+      title: string;
+      content: string;
+      creator: {
+        email: string;
+      };
+      created: string;
+    }>;
+    corpusSet?: {
+      edges: Array<{
+        node: {
+          id: string;
+          title: string;
+        };
+      }>;
+    };
+  };
+}
+
+export const GET_DOCUMENT_ONLY = gql`
+  query GetDocumentOnly($documentId: String!) {
+    document(id: $documentId) {
+      id
+      title
+      fileType
+      creator {
+        email
+      }
+      created
+      pdfFile
+      txtExtractFile
+      pawlsParseFile
+      myPermissions
+      # Document-level notes (no corpus required)
+      allNotes {
+        id
+        title
+        content
+        creator {
+          email
+        }
+        created
+      }
+      # Check if document is in any corpus (for UI hints)
+      corpusSet {
+        edges {
+          node {
+            id
+            title
+          }
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Mutation to add a document to a corpus
+ */
+export interface AddDocumentToCorpusInput {
+  documentId: string;
+  corpusId: string;
+}
+
+export interface AddDocumentToCorpusOutput {
+  addDocumentToCorpus: {
+    success: boolean;
+    message: string;
+    corpus: {
+      id: string;
+      title: string;
+    };
+  };
+}
+
+export const ADD_DOCUMENT_TO_CORPUS = gql`
+  mutation AddDocumentToCorpus($documentId: ID!, $corpusId: ID!) {
+    addDocumentToCorpus(documentId: $documentId, corpusId: $corpusId) {
+      success
+      message
+      corpus {
+        id
+        title
+      }
+    }
+  }
+`;
+
+/**
+ * Query to get user's corpuses for the Add to Corpus modal
+ */
+export interface GetMyCorpusesOutput {
+  myCorpuses: {
+    edges: Array<{
+      node: {
+        id: string;
+        title: string;
+        documentCount: number;
+        myPermissions: string[];
+      };
+    }>;
+  };
+}
+
+export const GET_MY_CORPUSES = gql`
+  query GetMyCorpuses {
+    corpuses(isPublic: false, myPermissions: ["UPDATE"]) {
+      edges {
+        node {
+          id
+          title
+          documents {
+            totalCount
+          }
+          myPermissions
         }
       }
     }

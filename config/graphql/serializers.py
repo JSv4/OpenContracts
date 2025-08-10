@@ -18,7 +18,14 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Document
-        fields = ["id", "title", "description", "custom_meta", "pdf_file"]
+        fields = [
+            "id",
+            "title",
+            "description",
+            "slug",
+            "custom_meta",
+            "pdf_file",
+        ]
         read_only_fields = ["id"]
 
 
@@ -31,6 +38,7 @@ class CorpusSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
+            "slug",
             "icon",
             "label_set",
             "creator",
@@ -55,6 +63,19 @@ class ExtractSerializer(serializers.ModelSerializer):
             "finished",
         ]
         read_only_fields = ["id", "created"]
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "name",
+            "first_name",
+            "last_name",
+            "phone",
+            "slug",
+        ]
+        read_only_fields = []
 
 
 class ColumnSerializer(serializers.ModelSerializer):

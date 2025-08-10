@@ -2679,11 +2679,12 @@ export const GET_ME = gql`
     me {
       id
       username
-      # Add any other user fields you need globally
+      slug
+      name
+      firstName
+      lastName
+      phone
       isUsageCapped # Crucially, fetch this field
-      # email
-      # firstName
-      # lastName
     }
   }
 `;

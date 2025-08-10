@@ -12,7 +12,9 @@ import {
   userObj,
   openedCorpus,
   openedDocument,
+  showUserSettingsModal,
 } from "../../graphql/cache";
+import UserSettingsModal from "../modals/UserSettingsModal";
 import { useReactiveVar } from "@apollo/client";
 import { useEnv } from "../hooks/UseEnv";
 import { VERSION_TAG } from "../../assets/configurations/constants";
@@ -131,118 +133,138 @@ export const NavMenu = () => {
     };
 
     return (
-      <Menu fluid inverted attached style={{ marginBottom: "0px" }}>
-        <Menu.Item header>
-          <Image size="mini" src={logo} style={{ marginRight: "1.5em" }} />
-          Open Contracts
-          <Label
-            size="tiny"
-            color="grey"
-            style={{ marginLeft: "0.5em", verticalAlign: "middle" }}
-          >
-            {VERSION_TAG}
-          </Label>
-        </Menu.Item>
-        {!isLoading && user ? [...items, ...private_items] : items}
-        <Menu.Menu position="right">
-          {!isLoading && user ? (
-            <>
-              <Menu.Item>
-                <Image src={user_logo} avatar />
-                <Dropdown
-                  item
-                  simple
-                  icon={<Icon style={{ marginLeft: "5px" }} name="dropdown" />}
-                  text={` ${user?.name ? user.name : user.username}`}
-                  style={{ margin: "0px", padding: "0px" }}
-                  header="Logout"
-                >
-                  <Dropdown.Menu>
-                    <Dropdown.Item
-                      text="Exports"
-                      onClick={() => showExportModal(!show_export_modal)}
-                      icon={<Icon name="download" />}
-                    />
-                    <Dropdown.Item
-                      text="Logout"
-                      onClick={() => requestLogout()}
-                      icon={<Icon name="log out" />}
-                    />
-                    {/* <Dropdown.Item 
+      <>
+        <UserSettingsModal />
+        <Menu fluid inverted attached style={{ marginBottom: "0px" }}>
+          <Menu.Item header>
+            <Image size="mini" src={logo} style={{ marginRight: "1.5em" }} />
+            Open Contracts
+            <Label
+              size="tiny"
+              color="grey"
+              style={{ marginLeft: "0.5em", verticalAlign: "middle" }}
+            >
+              {VERSION_TAG}
+            </Label>
+          </Menu.Item>
+          {!isLoading && user ? [...items, ...private_items] : items}
+          <Menu.Menu position="right">
+            {!isLoading && user ? (
+              <>
+                <Menu.Item>
+                  <Image src={user_logo} avatar />
+                  <Dropdown
+                    item
+                    simple
+                    icon={
+                      <Icon style={{ marginLeft: "5px" }} name="dropdown" />
+                    }
+                    text={` ${user?.name ? user.name : user.username}`}
+                    style={{ margin: "0px", padding: "0px" }}
+                    header="Logout"
+                  >
+                    <Dropdown.Menu>
+                      <Dropdown.Item
+                        text="Exports"
+                        onClick={() => showExportModal(!show_export_modal)}
+                        icon={<Icon name="download" />}
+                      />
+                      <Dropdown.Item
+                        text="Profile"
+                        onClick={() => showUserSettingsModal(true)}
+                        icon={<Icon name="user circle" />}
+                      />
+                      <Dropdown.Item
+                        text="Logout"
+                        onClick={() => requestLogout()}
+                        icon={<Icon name="log out" />}
+                      />
+                      {/* <Dropdown.Item 
                                             text='Settings'
                                             onClick={() => console.log("Do nothing yet...")}
                                             icon={<Icon name='settings'/>}
                                         /> */}
-                  </Dropdown.Menu>
-                </Dropdown>
-              </Menu.Item>
-            </>
-          ) : (
-            <Menu.Item onClick={doLogin}>Login</Menu.Item>
-          )}
-        </Menu.Menu>
-      </Menu>
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </Menu.Item>
+              </>
+            ) : (
+              <Menu.Item onClick={doLogin}>Login</Menu.Item>
+            )}
+          </Menu.Menu>
+        </Menu>
+      </>
     );
   } else {
     return (
-      <Menu fluid inverted attached style={{ marginBottom: "0px" }}>
-        <Menu.Item header>
-          <Image size="mini" src={logo} style={{ marginRight: "1.5em" }} />
-          Open Contracts
-          <Label
-            size="tiny"
-            color="grey"
-            style={{ marginLeft: "0.5em", verticalAlign: "middle" }}
-          >
-            {VERSION_TAG}
-          </Label>
-        </Menu.Item>
-        {user ? [...items, ...private_items] : items}
-        <Menu.Menu position="right">
-          {user ? (
-            <>
-              <Menu.Item>
-                <Image src={user_logo} avatar />
-                <Dropdown
-                  item
-                  simple
-                  icon={<Icon style={{ marginLeft: "5px" }} name="dropdown" />}
-                  text={` ${user?.name ? user.name : user.username}`}
-                  style={{ margin: "0px", padding: "0px" }}
-                  header="Logout"
-                >
-                  <Dropdown.Menu>
-                    <Dropdown.Item
-                      text="Exports"
-                      onClick={() => showExportModal(!show_export_modal)}
-                      icon={<Icon name="download" />}
-                    />
-                    <Dropdown.Item
-                      text="Logout"
-                      onClick={() => requestLogout()}
-                      icon={<Icon name="log out" />}
-                    />
-                    {/* <Dropdown.Item 
+      <>
+        <UserSettingsModal />
+        <Menu fluid inverted attached style={{ marginBottom: "0px" }}>
+          <Menu.Item header>
+            <Image size="mini" src={logo} style={{ marginRight: "1.5em" }} />
+            Open Contracts
+            <Label
+              size="tiny"
+              color="grey"
+              style={{ marginLeft: "0.5em", verticalAlign: "middle" }}
+            >
+              {VERSION_TAG}
+            </Label>
+          </Menu.Item>
+          {user ? [...items, ...private_items] : items}
+          <Menu.Menu position="right">
+            {user ? (
+              <>
+                <Menu.Item>
+                  <Image src={user_logo} avatar />
+                  <Dropdown
+                    item
+                    simple
+                    icon={
+                      <Icon style={{ marginLeft: "5px" }} name="dropdown" />
+                    }
+                    text={` ${user?.name ? user.name : user.username}`}
+                    style={{ margin: "0px", padding: "0px" }}
+                    header="Logout"
+                  >
+                    <Dropdown.Menu>
+                      <Dropdown.Item
+                        text="Exports"
+                        onClick={() => showExportModal(!show_export_modal)}
+                        icon={<Icon name="download" />}
+                      />
+                      <Dropdown.Item
+                        text="Profile"
+                        onClick={() => showUserSettingsModal(true)}
+                        icon={<Icon name="user circle" />}
+                      />
+                      <Dropdown.Item
+                        text="Logout"
+                        onClick={() => requestLogout()}
+                        icon={<Icon name="log out" />}
+                      />
+                      {/* <Dropdown.Item 
                                             text='Settings'
                                             onClick={() => console.log("Do nothing yet...")}
                                             icon={<Icon name='settings'/>}
                                         /> */}
-                  </Dropdown.Menu>
-                </Dropdown>
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </Menu.Item>
+              </>
+            ) : (
+              <Menu.Item
+                id="login_nav_button"
+                name="Login"
+                active={pathname === "/login"}
+                key="login_nav_button"
+              >
+                <Link to="/login">Login</Link>
               </Menu.Item>
-            </>
-          ) : (
-            <Menu.Item
-              id="login_nav_button"
-              name="Login"
-              active={pathname === "/login"}
-              key="login_nav_button"
-            >
-              <Link to="/login">Login</Link>
-            </Menu.Item>
-          )}
-        </Menu.Menu>
-      </Menu>
+            )}
+          </Menu.Menu>
+        </Menu>
+      </>
     );
   }
 };

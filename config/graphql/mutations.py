@@ -757,6 +757,7 @@ class UpdateDocument(DRFMutation):
         description = graphene.String(required=False)
         pdf_file = graphene.String(required=False)
         custom_meta = GenericScalar(required=False)
+        slug = graphene.String(required=False)
 
 
 class UpdateDocumentSummary(graphene.Mutation):
@@ -2060,6 +2061,35 @@ class UpdateCorpusMutation(DRFMutation):
         icon = graphene.String(required=False)
         label_set = graphene.String(required=False)
         preferred_embedder = graphene.String(required=False)
+        slug = graphene.String(required=False)
+
+
+class UpdateMe(graphene.Mutation):
+    """Update basic profile fields for the current user, including slug."""
+
+    class Arguments:
+        name = graphene.String(required=False)
+        first_name = graphene.String(required=False)
+        last_name = graphene.String(required=False)
+        phone = graphene.String(required=False)
+        slug = graphene.String(required=False)
+
+    ok = graphene.Boolean()
+    message = graphene.String()
+    user = graphene.Field(UserType)
+
+    @login_required
+    def mutate(self, info, **kwargs):
+        from config.graphql.serializers import UserUpdateSerializer
+
+        user = info.context.user
+        try:
+            serializer = UserUpdateSerializer(user, data=kwargs, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return UpdateMe(ok=True, message="Success", user=user)
+        except Exception as e:
+            return UpdateMe(ok=False, message=f"Failed to update profile: {e}", user=None)
 
 
 class UpdateCorpusDescription(graphene.Mutation):
@@ -3316,6 +3346,7 @@ class Mutation(graphene.ObjectType):
     make_corpus_public = MakeCorpusPublic.Field()
     create_corpus = CreateCorpusMutation.Field()
     update_corpus = UpdateCorpusMutation.Field()
+    update_me = UpdateMe.Field()
     update_corpus_description = UpdateCorpusDescription.Field()
     delete_corpus = DeleteCorpusMutation.Field()
     link_documents_to_corpus = AddDocumentsToCorpus.Field()

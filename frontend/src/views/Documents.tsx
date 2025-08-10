@@ -295,9 +295,7 @@ export const Documents = () => {
   >(UPDATE_DOCUMENT);
   const handleUpdateDocument = (document_obj: any) => {
     // console.log("handleUpdateDocument", document_obj);
-    let variables = {
-      variables: document_obj,
-    };
+    let variables = { variables: document_obj };
     // console.log("handleUpdateDocument variables", variables);
     tryUpdateDocument(variables);
   };

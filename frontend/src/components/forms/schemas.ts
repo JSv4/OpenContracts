@@ -33,6 +33,12 @@ export const editDocForm_Schema = {
       type: "string",
       title: "Title:",
     },
+    slug: {
+      type: "string",
+      title: "Slug:",
+      description:
+        "Case-sensitive; allowed characters: A-Z, a-z, 0-9, and hyphen (-). Leave blank to auto-generate.",
+    },
     description: {
       type: "string",
       title: "Description:",
@@ -134,6 +140,12 @@ export const editCorpusForm_Schema = {
     title: {
       type: "string",
       title: "Title:",
+    },
+    slug: {
+      type: "string",
+      title: "Slug:",
+      description:
+        "Case-sensitive; allowed characters: A-Z, a-z, 0-9, and hyphen (-). Leave blank to auto-generate.",
     },
     description: {
       type: "string",

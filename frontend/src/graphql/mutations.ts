@@ -93,6 +93,7 @@ export interface UpdateCorpusInputs {
   filename?: string;
   preferredEmbedder?: string;
   labelSet?: string;
+  slug?: string;
 }
 
 export interface UpdateCorpusOutputs {
@@ -117,6 +118,7 @@ export const UPDATE_CORPUS = gql`
     $labelSet: String
     $title: String
     $preferredEmbedder: String
+    $slug: String
   ) {
     updateCorpus(
       id: $id
@@ -125,6 +127,7 @@ export const UPDATE_CORPUS = gql`
       labelSet: $labelSet
       title: $title
       preferredEmbedder: $preferredEmbedder
+      slug: $slug
     ) {
       ok
       message
@@ -696,6 +699,7 @@ export interface UpdateDocumentInputs {
   description?: string;
   pdfFile?: string;
   customMeta?: Record<string, any>;
+  slug?: string;
 }
 
 export interface UpdateDocumentOutputs {
@@ -710,6 +714,7 @@ export const UPDATE_DOCUMENT = gql`
     $customMeta: GenericScalar
     $description: String
     $title: String
+    $slug: String
   ) {
     updateDocument(
       id: $id
@@ -717,9 +722,65 @@ export const UPDATE_DOCUMENT = gql`
       customMeta: $customMeta
       description: $description
       title: $title
+      slug: $slug
     ) {
       ok
       message
+    }
+  }
+`;
+
+// ---------------- User profile updates ----------------
+export interface UpdateMeInputs {
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  slug?: string;
+}
+
+export interface UpdateMeOutputs {
+  updateMe: {
+    ok: boolean;
+    message?: string;
+    user?: {
+      id: string;
+      username: string;
+      slug?: string;
+      name?: string;
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+    };
+  };
+}
+
+export const UPDATE_ME = gql`
+  mutation (
+    $name: String
+    $firstName: String
+    $lastName: String
+    $phone: String
+    $slug: String
+  ) {
+    updateMe(
+      name: $name
+      firstName: $firstName
+      lastName: $lastName
+      phone: $phone
+      slug: $slug
+    ) {
+      ok
+      message
+      user {
+        id
+        username
+        slug
+        name
+        firstName
+        lastName
+        phone
+      }
     }
   }
 `;

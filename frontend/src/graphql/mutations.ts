@@ -94,6 +94,7 @@ export interface UpdateCorpusInputs {
   preferredEmbedder?: string;
   labelSet?: string;
   slug?: string;
+  isPublic?: boolean;
 }
 
 export interface UpdateCorpusOutputs {
@@ -119,6 +120,7 @@ export const UPDATE_CORPUS = gql`
     $title: String
     $preferredEmbedder: String
     $slug: String
+    $isPublic: Boolean
   ) {
     updateCorpus(
       id: $id
@@ -128,6 +130,7 @@ export const UPDATE_CORPUS = gql`
       title: $title
       preferredEmbedder: $preferredEmbedder
       slug: $slug
+      isPublic: $isPublic
     ) {
       ok
       message
@@ -215,6 +218,7 @@ export const CREATE_CORPUS = gql`
     $labelSet: String
     $title: String
     $preferredEmbedder: String
+    $slug: String
   ) {
     createCorpus(
       description: $description
@@ -222,6 +226,7 @@ export const CREATE_CORPUS = gql`
       labelSet: $labelSet
       title: $title
       preferredEmbedder: $preferredEmbedder
+      slug: $slug
     ) {
       ok
       message
@@ -630,6 +635,7 @@ export interface UploadDocumentInputProps {
   description?: string;
   title?: string;
   addToCorpusId?: string;
+  slug?: string;
 }
 
 export interface UploadDocumentOutputProps {
@@ -662,6 +668,7 @@ export const UPLOAD_DOCUMENT = gql`
     $makePublic: Boolean!
     $addToCorpusId: ID
     $addToExtractId: ID
+    $slug: String
   ) {
     uploadDocument(
       base64FileString: $base64FileString
@@ -672,6 +679,7 @@ export const UPLOAD_DOCUMENT = gql`
       makePublic: $makePublic
       addToCorpusId: $addToCorpusId
       addToExtractId: $addToExtractId
+      slug: $slug
     ) {
       document {
         id

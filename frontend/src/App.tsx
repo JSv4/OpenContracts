@@ -61,6 +61,8 @@ import { FileUploadPackageProps } from "./components/widgets/modals/DocumentUplo
 import { DocumentKBRoute } from "./components/routes/DocumentKBRoute";
 import { DocumentKBDocRoute } from "./components/routes/DocumentKBDocRoute";
 import { useRouteStateSync } from "./hooks/RouteStateSync";
+import { NotFound } from "./components/routes/NotFound";
+import { CorpusLandingRoute } from "./components/routes/CorpusLandingRoute";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0, REACT_APP_AUDIENCE } = useEnv();
@@ -341,8 +343,14 @@ export const App = () => {
                 element={<DocumentKBRoute />}
               />
               <Route path="/corpuses" element={<Corpuses />} />
-              <Route path="/corpuses/:corpusId" element={<Corpuses />} />
-              <Route path="/corpus/:corpusId" element={<Corpuses />} />
+              <Route
+                path="/corpuses/:corpusId"
+                element={<CorpusLandingRoute />}
+              />
+              <Route
+                path="/corpus/:corpusId"
+                element={<CorpusLandingRoute />}
+              />
               {!REACT_APP_USE_AUTH0 ? (
                 <Route path="/login" element={<Login />} />
               ) : (
@@ -358,6 +366,9 @@ export const App = () => {
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms_of_service" element={<TermsOfService />} />
               <Route path="/extracts" element={<Extracts />} />
+              {/* 404 explicit route and catch-all */}
+              <Route path="/404" element={<NotFound />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Container>
           <Footer />

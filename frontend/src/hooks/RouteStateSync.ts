@@ -5,6 +5,7 @@ import {
   openedCorpus,
   openedDocument,
   selectedAnnotationIds,
+  backendUserObj,
 } from "../graphql/cache";
 import {
   USER_BY_SLUG,
@@ -29,8 +30,21 @@ export function useRouteStateSync() {
 
   const corpus = useReactiveVar(openedCorpus);
   const document = useReactiveVar(openedDocument);
+  const currentUser = useReactiveVar(backendUserObj);
 
   const updatingFromUrl = useRef(false);
+
+  const isLikelyGlobalId = (value: string): boolean => {
+    try {
+      // Accept explicit gid: prefix
+      if (value.startsWith("gid:")) return true;
+      // Try base64 decode and check for Typename:pk
+      const decoded = atob(value);
+      return /:[0-9]+$/.test(decoded);
+    } catch {
+      return false;
+    }
+  };
 
   // Slug resolution queries (lazy; executed only if slug-shaped routes are detected)
   const [resolveUserBySlug] = useLazyQuery(USER_BY_SLUG);
@@ -118,26 +132,36 @@ export function useRouteStateSync() {
       );
       if (annotationIds.length) selectedAnnotationIds(annotationIds);
     } else if (eligibleForSlugRouting && segments.length === 2) {
-      const [userSlug, second] = segments as [string, string];
-      // Try as corpus route first
-      const corpusSlug = second;
-      resolveCorpusBySlugs({ variables: { userSlug, corpusSlug } }).then(
-        (cRes) => {
-          const corpusId = cRes.data?.corpusBySlugs?.id;
-          if (corpusId) {
-            openedCorpus({ id: corpusId } as any);
-            if (document) openedDocument(null);
-          } else {
-            // Fallback: treat as document-only slug under user
-            resolveDocumentBySlugs({
-              variables: { userSlug, documentSlug: second },
-            }).then((dRes) => {
-              const docId = dRes.data?.documentBySlugs?.id;
-              if (docId) openedDocument({ id: docId } as any);
-            });
+      const [userIdent, second] = segments as [string, string];
+      const looksLikeGid = userIdent.startsWith("gid:");
+      if (looksLikeGid) {
+        // Treat as id/id legacy: /gid:<userId>/<corpusId or docId>
+        // Leave to existing ID-based branches if needed, otherwise just seed corpus/doc ids directly
+        // Prefer resolving as corpus id first
+        openedCorpus({ id: second } as any);
+        if (document) openedDocument(null);
+      } else {
+        // Treat as userSlug + (corpusSlug|documentSlug), works for anonymous browsing as well
+        const userSlug = userIdent;
+        const corpusSlug = second;
+        resolveCorpusBySlugs({ variables: { userSlug, corpusSlug } }).then(
+          (cRes) => {
+            const corpusId = cRes.data?.corpusBySlugs?.id;
+            if (corpusId) {
+              openedCorpus({ id: corpusId } as any);
+              if (document) openedDocument(null);
+            } else {
+              // Fallback: treat as document-only slug under user
+              resolveDocumentBySlugs({
+                variables: { userSlug, documentSlug: second },
+              }).then((dRes) => {
+                const docId = dRes.data?.documentBySlugs?.id;
+                if (docId) openedDocument({ id: docId } as any);
+              });
+            }
           }
-        }
-      );
+        );
+      }
     } else if (docMatch) {
       const [, corpusId, docId] = docMatch;
       if (!corpus || corpus.id !== corpusId) {
@@ -160,11 +184,14 @@ export function useRouteStateSync() {
         selectedAnnotationIds(annotationIds);
       }
     } else if (corpusMatch) {
-      const [, corpusId] = corpusMatch;
-      if (!corpus || corpus.id !== corpusId) {
-        openedCorpus({ id: corpusId } as any);
+      const [, corpusIdent] = corpusMatch;
+      // Support ONLY ID on /corpuses/:id. Slug browsing uses slug-first routes.
+      if (isLikelyGlobalId(corpusIdent)) {
+        if (!corpus || corpus.id !== corpusIdent) {
+          openedCorpus({ id: corpusIdent } as any);
+        }
+        if (document) openedDocument(null);
       }
-      if (document) openedDocument(null);
     } else {
       if (corpus) openedCorpus(null);
       if (document) openedDocument(null);

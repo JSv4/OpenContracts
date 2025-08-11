@@ -1679,19 +1679,38 @@ export const Corpuses = () => {
   }, [routeCorpusId, opened_corpus, corpus_items]);
 
   /* ------------------------------------------------------------------ */
-  /* open corpus → URL                                                  */
+  /* open corpus → URL (canonicalize to slug-first if available)        */
   useEffect(() => {
-    if (opened_corpus) {
-      if (routeCorpusId !== opened_corpus.id) {
-        navigate(`/corpuses/${opened_corpus.id}`, { replace: true });
-      }
-    } else {
-      // Do not navigate away if we are on a corpus route and the data is still loading
-      if (routeCorpusId && !loading_corpuses) {
+    if (!opened_corpus) {
+      if (routeCorpusId && !loading_corpuses)
         navigate(`/corpuses`, { replace: true });
-      }
+      return;
     }
-  }, [opened_corpus, routeCorpusId, navigate, loading_corpuses]);
+
+    // If current route is legacy /corpuses/:id and the corpus has a slug and creator, navigate to slug path
+    const onLegacyRoute =
+      location.pathname.startsWith("/corpuses/") ||
+      location.pathname.startsWith("/corpus/");
+    const userSlug =
+      opened_corpus.creator?.slug || opened_corpus.creator?.username;
+    const corpusSlug = (opened_corpus as any).slug;
+    if (onLegacyRoute && userSlug && corpusSlug) {
+      const target = `/${userSlug}/${corpusSlug}`;
+      if (location.pathname !== target) navigate(target, { replace: true });
+      return;
+    }
+
+    // Otherwise, keep legacy stable
+    if (routeCorpusId !== opened_corpus.id && !onLegacyRoute) {
+      navigate(`/corpuses/${opened_corpus.id}`, { replace: true });
+    }
+  }, [
+    opened_corpus,
+    routeCorpusId,
+    navigate,
+    loading_corpuses,
+    location.pathname,
+  ]);
 
   return (
     <CardLayout

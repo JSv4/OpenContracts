@@ -2044,6 +2044,7 @@ class CreateCorpusMutation(DRFMutation):
         icon = graphene.String(required=False)
         label_set = graphene.String(required=False)
         preferred_embedder = graphene.String(required=False)
+        slug = graphene.String(required=False)
 
 
 class UpdateCorpusMutation(DRFMutation):
@@ -2062,6 +2063,7 @@ class UpdateCorpusMutation(DRFMutation):
         label_set = graphene.String(required=False)
         preferred_embedder = graphene.String(required=False)
         slug = graphene.String(required=False)
+        is_public = graphene.Boolean(required=False)
 
 
 class UpdateMe(graphene.Mutation):

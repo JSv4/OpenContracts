@@ -38,6 +38,7 @@ class CorpusSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "description",
+            "is_public",
             "slug",
             "icon",
             "label_set",

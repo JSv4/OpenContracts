@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Container,
   Button,
@@ -24,7 +24,14 @@ import {
 } from "../../graphql/mutations";
 import { CreateCorpusActionModal } from "./CreateCorpusActionModal";
 import { CorpusMetadataSettings } from "./CorpusMetadataSettings";
+import {
+  UPDATE_CORPUS,
+  UpdateCorpusInputs,
+  UpdateCorpusOutputs,
+} from "../../graphql/mutations";
 import { CorpusType } from "../../types/graphql-api";
+import { PermissionTypes } from "../types";
+import { getPermissions } from "../../utils/transform";
 
 interface CorpusSettingsProps {
   corpus: {
@@ -300,6 +307,34 @@ const ActionNote = styled.div`
  * Only visible to users with update permissions
  */
 export const CorpusSettings: React.FC<CorpusSettingsProps> = ({ corpus }) => {
+  const canUpdate = getPermissions(
+    (corpus as CorpusType).myPermissions || []
+  ).includes(PermissionTypes.CAN_UPDATE);
+  const canPermission = getPermissions(
+    (corpus as CorpusType).myPermissions || []
+  ).includes(PermissionTypes.CAN_PERMISSION);
+  const [slugDraft, setSlugDraft] = useState<string>("");
+  const [publicDraft, setPublicDraft] = useState<boolean>(
+    Boolean(corpus.isPublic)
+  );
+  useEffect(() => {
+    setSlugDraft((corpus as any).slug || "");
+    setPublicDraft(Boolean(corpus.isPublic));
+  }, [corpus]);
+
+  const [updateCorpusMutation, { loading: updatingVisibility }] = useMutation<
+    UpdateCorpusOutputs,
+    UpdateCorpusInputs
+  >(UPDATE_CORPUS, {
+    onCompleted: (data) => {
+      if (data.updateCorpus?.ok) {
+        toast.success("Updated corpus settings");
+      } else {
+        toast.error(data.updateCorpus?.message || "Failed to update corpus");
+      }
+    },
+    onError: (err) => toast.error(err.message),
+  });
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [actionToDelete, setActionToDelete] = React.useState<string | null>(
     null
@@ -440,6 +475,77 @@ export const CorpusSettings: React.FC<CorpusSettingsProps> = ({ corpus }) => {
               </MetadataItem>
             )}
           </MetadataGrid>
+        </MetadataContent>
+      </InfoSection>
+
+      <InfoSection>
+        <SectionHeader>
+          <SectionTitle>Visibility & Slug</SectionTitle>
+        </SectionHeader>
+        <MetadataContent>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "1.5rem",
+              alignItems: "end",
+            }}
+          >
+            <div>
+              <div className="label">Public visibility</div>
+              <div
+                className="value"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.75rem",
+                }}
+              >
+                <input
+                  id="corpus-is-public-checkbox"
+                  type="checkbox"
+                  checked={publicDraft}
+                  disabled={!canPermission}
+                  onChange={(e) => setPublicDraft(e.target.checked)}
+                />
+                <label htmlFor="corpus-is-public-checkbox">
+                  {publicDraft ? "Public" : "Private"}
+                </label>
+              </div>
+            </div>
+            <div>
+              <div className="label">Slug</div>
+              <input
+                id="corpus-slug-input"
+                type="text"
+                placeholder="Repo slug (case-sensitive)"
+                value={slugDraft}
+                disabled={!canUpdate}
+                onChange={(e) => setSlugDraft(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "0.6rem",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 6,
+                }}
+              />
+            </div>
+            <div style={{ gridColumn: "1 / span 2" }}>
+              <Button
+                primary
+                loading={updatingVisibility}
+                disabled={!canUpdate && !canPermission}
+                onClick={() => {
+                  const vars: UpdateCorpusInputs = { id: corpus.id } as any;
+                  if (canPermission) vars.isPublic = publicDraft;
+                  if (canUpdate) vars.slug = slugDraft || undefined;
+                  updateCorpusMutation({ variables: vars });
+                }}
+              >
+                <Icon name="save" /> Save
+              </Button>
+            </div>
+          </div>
         </MetadataContent>
       </InfoSection>
 

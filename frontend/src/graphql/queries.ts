@@ -206,9 +206,15 @@ export const GET_CORPUS_METADATA = gql`
   query ($metadataForCorpusId: ID!) {
     corpus(id: $metadataForCorpusId) {
       id
+      slug
       title
       description
       mdDescription
+      creator {
+        id
+        username
+        slug
+      }
       descriptionRevisions {
         id
         version

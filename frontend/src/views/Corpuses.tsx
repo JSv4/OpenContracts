@@ -109,6 +109,7 @@ import { FilterToCorpusActionOutputs } from "../components/widgets/model-filters
 import { CorpusExtractCards } from "../components/extracts/CorpusExtractCards";
 import { getPermissions } from "../utils/transform";
 import { MOBILE_VIEW_BREAKPOINT } from "../assets/configurations/constants";
+import { useEnv } from "../components/hooks/UseEnv";
 import { CorpusDashboard } from "../components/corpuses/CorpusDashboard";
 import { useCorpusState } from "../components/annotator/context/CorpusAtom";
 import { CorpusSettings } from "../components/corpuses/CorpusSettings";
@@ -938,6 +939,7 @@ export const Corpuses = () => {
     () => width > MOBILE_VIEW_BREAKPOINT
   ); // Expanded by default on desktop
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
+  const { REACT_APP_ALLOW_IMPORTS } = useEnv();
 
   const [corpusSearchCache, setCorpusSearchCache] =
     useState<string>(corpus_search_term);
@@ -1370,7 +1372,7 @@ export const Corpuses = () => {
 
     // Currently the import capability is enabled via an env variable in case we want it disabled
     // (which we'll probably do for the public demo to cut down on attack surface and load on server)
-    if (import.meta.env.REACT_APP_ALLOW_IMPORTS && auth_token) {
+    if (REACT_APP_ALLOW_IMPORTS && auth_token) {
       corpus_actions.push({
         icon: "cloud upload",
         title: "Import Corpus",

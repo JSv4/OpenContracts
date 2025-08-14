@@ -98,6 +98,7 @@ import { CorpusType, LabelType } from "../types/graphql-api";
 import { LooseObject, PermissionTypes } from "../components/types";
 import { toBase64 } from "../utils/files";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
+import { ensureValidCorpusId } from "../utils/graphqlGuards";
 import { CorpusAnnotationCards } from "../components/annotations/CorpusAnnotationCards";
 import { CorpusDocumentCards } from "../components/documents/CorpusDocumentCards";
 import { CorpusAnalysesCards } from "../components/analyses/CorpusAnalysesCards";
@@ -1027,6 +1028,8 @@ export const Corpuses = () => {
   if (corpus_search_term) {
     corpus_variables["textSearch"] = corpus_search_term;
   }
+  // Now that auth is guaranteed to be ready before this component renders,
+  // we can use a regular useQuery
   const {
     refetch: refetchCorpuses,
     loading: loading_corpuses,
@@ -1063,9 +1066,30 @@ export const Corpuses = () => {
       !corpusByIdLoading &&
       !corpusByIdData
     ) {
-      fetchCorpusById({ variables: { metadataForCorpusId: routeCorpusId } });
+      // Only fetch if we actually have a valid routeCorpusId
+      if (routeCorpusId) {
+        // Check if it's a valid GraphQL ID before fetching
+        const { id: validId, isValid } = ensureValidCorpusId({
+          id: routeCorpusId,
+        });
+        if (isValid && validId) {
+          fetchCorpusById({ variables: { metadataForCorpusId: validId } });
+        } else {
+          console.warn(
+            "Route corpus ID is not a valid GraphQL ID:",
+            routeCorpusId
+          );
+        }
+      }
     }
-  }, [routeCorpusId, opened_corpus, loading_corpuses, fetchCorpusById]);
+  }, [
+    routeCorpusId,
+    opened_corpus,
+    loading_corpuses,
+    fetchCorpusById,
+    corpusByIdLoading,
+    corpusByIdData,
+  ]);
 
   /* When the single-corpus query returns, sync it with the global reactive var. */
   useEffect(() => {
@@ -1136,13 +1160,20 @@ export const Corpuses = () => {
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Effects to reload data on certain changes
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // If user logs in/out while on this page... refetch to get their authorized corpuses
+  // Handle metadata refetch when auth changes and corpus is open
   useEffect(() => {
-    // Always refetch corpuses when auth state changes (login or logout)
-    refetchCorpuses();
-    if (auth_token) {
-      refetchMetadata();
-    } else {
+    if (auth_token && metadata_called && opened_corpus?.id) {
+      // Only refetch if we have previously called the query successfully
+      if (metadata_data || metadata_loading) {
+        refetchMetadata();
+      } else {
+        // Re-fetch with current corpus ID if we haven't fetched before
+        const { id: validId, isValid } = ensureValidCorpusId(opened_corpus);
+        if (isValid && validId) {
+          fetchMetadata({ variables: { metadataForCorpusId: validId } });
+        }
+      }
+    } else if (!auth_token) {
       // Clear opened corpus when logged out
       openedCorpus(null);
       // Navigate to corpuses list if we were viewing a specific corpus
@@ -1150,7 +1181,7 @@ export const Corpuses = () => {
         navigate("/corpuses");
       }
     }
-  }, [auth_token]);
+  }, [auth_token]); // Re-run when auth token changes
 
   useEffect(() => {
     // console.log("corpus_search_term");
@@ -1160,10 +1191,15 @@ export const Corpuses = () => {
   // If we detech user navigated to this page, refetch
   useEffect(() => {
     if (location.pathname === "/corpuses") {
+      // Clear opened corpus when navigating to corpus list
+      // This ensures the list view is shown even if a corpus was previously persisted
+      if (!routeCorpusId) {
+        openedCorpus(null);
+      }
       refetchCorpuses();
     }
     showQueryViewState("ASK");
-  }, [location]);
+  }, [location, routeCorpusId]);
 
   useEffect(() => {
     console.log("Switched opened_corpus", opened_corpus);
@@ -1172,10 +1208,23 @@ export const Corpuses = () => {
     });
     if (!opened_corpus || opened_corpus === null) {
       refetchCorpuses();
-    } else {
-      console.log("Fetch metdata for corpus id: ", opened_corpus_id);
-      fetchMetadata({ variables: { metadataForCorpusId: opened_corpus.id } });
-      refetchStats(); // Refresh stats when corpus changes
+    } else if (opened_corpus?.id) {
+      console.log("Fetch metadata for corpus id: ", opened_corpus.id);
+      // Only fetch metadata if we have a valid corpus ID
+      const { id: validId, isValid } = ensureValidCorpusId(opened_corpus);
+      if (isValid && validId) {
+        try {
+          fetchMetadata({ variables: { metadataForCorpusId: validId } });
+          refetchStats(); // Refresh stats when corpus changes
+        } catch (error) {
+          console.error("Error fetching corpus metadata:", error);
+        }
+      } else {
+        console.warn(
+          "Skipping metadata fetch - invalid corpus ID:",
+          opened_corpus.id
+        );
+      }
     }
   }, [opened_corpus]);
 
@@ -1187,14 +1236,19 @@ export const Corpuses = () => {
     refetch_documents();
   }, [selected_metadata_id_to_filter_on]);
 
-  // Fetch corpus stats
+  // Fetch corpus stats - with proper ID validation
+  const validCorpusId =
+    opened_corpus?.id && typeof opened_corpus.id === "string"
+      ? opened_corpus.id
+      : undefined;
+
   const {
     data: statsData,
     loading: statsLoading,
     refetch: refetchStats,
   } = useQuery(GET_CORPUS_STATS, {
-    variables: { corpusId: opened_corpus?.id },
-    skip: !opened_corpus_id,
+    variables: { corpusId: validCorpusId || "" }, // Provide empty string as fallback
+    skip: !validCorpusId, // Skip if we don't have a valid ID
     pollInterval: 5000, // Poll every 5 seconds for real-time updates
     fetchPolicy: "cache-and-network", // Always fetch fresh data while showing cached
   });
@@ -1219,10 +1273,8 @@ export const Corpuses = () => {
       // Create a copy of the node
       const node = { ...edge.node };
 
-      // Convert myPermissions from string[] to PermissionTypes[] if it exists
-      if (node.myPermissions) {
-        node.myPermissions = getPermissions(node.myPermissions);
-      }
+      // Don't transform permissions here - let CorpusItem handle it
+      // to avoid double transformation
 
       return node;
     })
@@ -1472,6 +1524,7 @@ export const Corpuses = () => {
                   created: opened_corpus.created,
                   modified: opened_corpus.modified,
                   isPublic: opened_corpus.isPublic,
+                  myPermissions: opened_corpus.myPermissions,
                 }}
               />
             ) : null,
@@ -1681,38 +1734,9 @@ export const Corpuses = () => {
   }, [routeCorpusId, opened_corpus, corpus_items]);
 
   /* ------------------------------------------------------------------ */
-  /* open corpus → URL (canonicalize to slug-first if available)        */
-  useEffect(() => {
-    if (!opened_corpus) {
-      if (routeCorpusId && !loading_corpuses)
-        navigate(`/corpuses`, { replace: true });
-      return;
-    }
-
-    // If current route is legacy /corpuses/:id and the corpus has a slug and creator, navigate to slug path
-    const onLegacyRoute =
-      location.pathname.startsWith("/corpuses/") ||
-      location.pathname.startsWith("/corpus/");
-    const userSlug =
-      opened_corpus.creator?.slug || opened_corpus.creator?.username;
-    const corpusSlug = (opened_corpus as any).slug;
-    if (onLegacyRoute && userSlug && corpusSlug) {
-      const target = `/${userSlug}/${corpusSlug}`;
-      if (location.pathname !== target) navigate(target, { replace: true });
-      return;
-    }
-
-    // Otherwise, keep legacy stable
-    if (routeCorpusId !== opened_corpus.id && !onLegacyRoute) {
-      navigate(`/corpuses/${opened_corpus.id}`, { replace: true });
-    }
-  }, [
-    opened_corpus,
-    routeCorpusId,
-    navigate,
-    loading_corpuses,
-    location.pathname,
-  ]);
+  /* Navigation is now handled by route components (CorpusLandingRoute)  */
+  /* This prevents redirect loops                                        */
+  /* ------------------------------------------------------------------ */
 
   return (
     <CardLayout
@@ -1724,7 +1748,13 @@ export const Corpuses = () => {
               isOpen={showDescriptionEditor}
               onClose={() => setShowDescriptionEditor(false)}
               onUpdate={() => {
-                refetchMetadata();
+                const { id: validId, isValid } =
+                  ensureValidCorpusId(opened_corpus);
+                if (isValid && validId) {
+                  fetchMetadata({
+                    variables: { metadataForCorpusId: validId },
+                  });
+                }
                 refetchStats(); // Refresh stats after description update
                 setShowDescriptionEditor(false);
               }}

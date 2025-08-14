@@ -71,8 +71,8 @@ export const CorpusLandingRoute: React.FC = () => {
     if (c.slug && c.creator?.slug) {
       const canonical = `/${c.creator.slug}/${c.slug}`;
       setCanonical(window.location.origin + canonical);
-      // Canonicalize if we came via ID or wrong path
-      if (cameFromIdRoute || location.pathname !== canonical) {
+      // Only redirect if we came from an ID route to prevent loops
+      if (cameFromIdRoute && location.pathname !== canonical) {
         navigate(canonical, { replace: true });
       }
     }

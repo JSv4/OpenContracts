@@ -1328,6 +1328,7 @@ class UploadDocument(graphene.Mutation):
             description="If True, document is immediately public. "
             "Defaults to False.",
         )
+        slug = graphene.String(required=False)
 
     ok = graphene.Boolean()
     message = graphene.String()
@@ -1345,6 +1346,7 @@ class UploadDocument(graphene.Mutation):
         make_public,
         add_to_corpus_id=None,
         add_to_extract_id=None,
+        slug=None,
     ):
         if add_to_corpus_id is not None and add_to_extract_id is not None:
             return UploadDocument(
@@ -1409,6 +1411,7 @@ class UploadDocument(graphene.Mutation):
                     backend_lock=True,
                     is_public=make_public,
                     file_type=kind,  # Store filetype
+                    slug=slug,
                 )
                 document.save()
             elif kind in ["text/plain", "application/txt"]:
@@ -1422,6 +1425,7 @@ class UploadDocument(graphene.Mutation):
                     backend_lock=True,
                     is_public=make_public,
                     file_type=kind,
+                    slug=slug,
                 )
                 document.save()
 

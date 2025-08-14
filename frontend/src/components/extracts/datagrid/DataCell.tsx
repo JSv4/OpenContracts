@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Table, Icon, Popup, Modal, Button, Loader } from "semantic-ui-react";
 import { useNavigate } from "react-router-dom";
+import { getDocumentUrl } from "../../../utils/navigationUtils";
 
 import {
   DatacellType,
@@ -94,9 +95,12 @@ export const ExtractDatacell = ({
     if (only_display_these_annotations) {
       const first = only_display_these_annotations[0]; // All sources share same doc & corpus
       if (first.document && first.corpus) {
-        navigate(
-          `/corpus/${first.corpus.id}/document/${first.document.id}?ann=${first.id}`
-        );
+        const url = getDocumentUrl(first.document, first.corpus);
+        if (url !== "#") {
+          navigate(`${url}?ann=${first.id}`);
+        } else {
+          console.warn("Cannot navigate - missing slugs:", first);
+        }
       }
       setViewSourceAnnotations(null);
     }

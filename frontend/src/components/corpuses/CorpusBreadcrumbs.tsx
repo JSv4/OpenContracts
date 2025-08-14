@@ -8,6 +8,7 @@ import { VerticallyCenteredDiv } from "../layout/Wrappers";
 
 import { openedCorpus, openedDocument } from "../../graphql/cache";
 import { useNavigate } from "react-router-dom";
+import { navigateToCorpus } from "../../utils/navigationUtils";
 
 export const CorpusBreadcrumbs = () => {
   const opened_corpus = useReactiveVar(openedCorpus);
@@ -20,7 +21,11 @@ export const CorpusBreadcrumbs = () => {
     openedDocument(null);
     navigate("/corpuses");
   };
-  const gotoCorpus = () => navigate(`/corpuses/${opened_corpus?.id}`);
+  const gotoCorpus = () => {
+    if (opened_corpus) {
+      navigateToCorpus(opened_corpus, navigate, window.location.pathname);
+    }
+  };
 
   return (
     <VerticallyCenteredDiv>

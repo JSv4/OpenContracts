@@ -5,6 +5,7 @@ import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button, Icon, Popup, Segment } from "semantic-ui-react";
 import styled from "styled-components";
+import { navigateToDocument } from "../../utils/navigationUtils";
 
 import { DocumentCards } from "../../components/documents/DocumentCards";
 import { DocumentMetadataGrid } from "../../components/documents/DocumentMetadataGrid";
@@ -17,6 +18,7 @@ import {
   selectedMetaAnnotationId,
   showUploadNewDocumentsModal,
   uploadModalPreloadedFiles,
+  openedCorpus,
 } from "../../graphql/cache";
 import {
   REMOVE_DOCUMENTS_FROM_CORPUS,
@@ -195,11 +197,14 @@ export const CorpusDocumentCards = ({
   };
 
   const onOpen = (document: DocumentType) => {
-    if (opened_corpus_id) {
-      navigate(`/corpus/${opened_corpus_id}/document/${document.id}`);
-    } else {
-      navigate(`/documents/${document.id}`);
-    }
+    // Use smart navigation utility to prefer slugs and prevent redirects
+    const corpusData = opened_corpus_id ? openedCorpus() : null;
+    navigateToDocument(
+      document as any,
+      corpusData as any,
+      navigate,
+      window.location.pathname
+    );
   };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {

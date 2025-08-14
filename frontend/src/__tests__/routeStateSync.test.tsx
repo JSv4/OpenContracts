@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { MemoryRouter } from "react-router-dom";
-import { render } from "@testing-library/react";
+import { renderWithProviders } from "../test-utils/test-utils";
 import {
   openedCorpus,
   openedDocument,
@@ -15,11 +14,11 @@ const SyncHelper = () => {
 };
 
 const renderWithRoute = (initialPath: string) =>
-  render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <SyncHelper />
-    </MemoryRouter>
-  );
+  renderWithProviders(<SyncHelper />, {
+    routerProps: {
+      initialEntries: [initialPath],
+    },
+  });
 
 const resetVars = () => {
   openedCorpus(null);

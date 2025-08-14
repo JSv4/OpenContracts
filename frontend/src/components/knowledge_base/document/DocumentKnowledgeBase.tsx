@@ -21,7 +21,11 @@ import {
 } from "../../../graphql/queries";
 import { useFeatureAvailability } from "../../../hooks/useFeatureAvailability";
 import { getDocumentRawText, getPawlsLayer } from "../../annotator/api/rest";
-import { CorpusType, LabelType } from "../../../types/graphql-api";
+import {
+  CorpusType,
+  LabelType,
+  DocumentType,
+} from "../../../types/graphql-api";
 import { AnimatePresence } from "framer-motion";
 import { PDFContainer } from "../../annotator/display/viewer/DocumentViewer";
 import { PDFDocumentLoadingTask } from "pdfjs-dist";
@@ -164,6 +168,27 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
   showCorpusInfo,
   showSuccessMessage,
 }) => {
+  // Validate documentId - must be non-empty
+  if (!documentId || documentId === "") {
+    console.error(
+      "DocumentKnowledgeBase: Invalid documentId provided:",
+      documentId
+    );
+    return (
+      <Modal open onClose={onClose}>
+        <Modal.Content>
+          <Message error>
+            <Message.Header>Invalid Document</Message.Header>
+            <p>Cannot load document: Invalid document ID</p>
+          </Message>
+        </Modal.Content>
+        <Modal.Actions>
+          <Button onClick={onClose}>Close</Button>
+        </Modal.Actions>
+      </Modal>
+    );
+  }
+
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const { isFeatureAvailable, getFeatureStatus, hasCorpus } =
@@ -435,12 +460,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
 
       // *** ADD THE ACTUAL CORPUS OBJECT TO THE PAYLOAD ***
       if (data.corpus) {
-        // Transform RawCorpusType to CorpusType before assigning
-        const transformedCorpus: CorpusType = {
-          ...data.corpus,
-          myPermissions: getPermissions(data.corpus.myPermissions || []),
-        } as any;
-        corpusUpdatePayload.selectedCorpus = transformedCorpus; // Assign the transformed object
+        // Don't transform permissions here - let consuming components handle it
+        corpusUpdatePayload.selectedCorpus = data.corpus as CorpusType; // Pass raw corpus
       }
 
       // Update corpus state using the constructed payload
@@ -457,11 +478,8 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       // Keep global navigation vars in sync so router & other components know
       openedDocument(data.document as any);
       if (data.corpus) {
-        const transformedCorpus: CorpusType = {
-          ...data.corpus,
-          myPermissions: getPermissions(data.corpus.myPermissions || []),
-        } as any;
-        openedCorpus(transformedCorpus);
+        // Don't transform permissions - openedCorpus expects raw string[] permissions
+        openedCorpus(data.corpus as CorpusType);
       }
       setPermissions(data.document.myPermissions ?? []);
     }
@@ -618,9 +636,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       setDocumentType(data.document.fileType ?? "");
       let processedDocData = {
         ...data.document,
-        myPermissions: getPermissions(data.document.myPermissions) ?? [],
+        // Keep permissions as raw strings for consistency
+        myPermissions: data.document.myPermissions ?? [],
       };
-      setDocument(processedDocData);
+      setDocument(processedDocData as any);
       setPermissions(data.document.myPermissions ?? []);
       processAnnotationsData(data);
 
@@ -791,9 +810,10 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
       setDocumentType(data.document.fileType ?? "");
       let processedDocData = {
         ...data.document,
-        myPermissions: getPermissions(data.document.myPermissions) ?? [],
+        // Keep permissions as raw strings for consistency
+        myPermissions: data.document.myPermissions ?? [],
       };
-      setDocument(processedDocData);
+      setDocument(processedDocData as any);
       setPermissions(data.document.myPermissions ?? []);
 
       // Load PDF/TXT content
@@ -1921,9 +1941,24 @@ const DocumentKnowledgeBase: React.FC<DocumentKnowledgeBaseProps> = ({
             documentId={documentId}
             open={showAddToCorpusModal}
             onClose={() => setShowAddToCorpusModal(false)}
-            onSuccess={(newCorpusId) => {
-              // Reload with corpus context
-              window.location.href = `/corpus/${newCorpusId}/document/${documentId}`;
+            onSuccess={(newCorpusId, newCorpus) => {
+              // Reload with corpus context - prefer slug URL if available
+              const document = combinedData?.document;
+              if (
+                newCorpus?.creator?.slug &&
+                newCorpus?.slug &&
+                document?.slug
+              ) {
+                // Use new /d/ prefix for document routes
+                window.location.href = `/d/${newCorpus.creator.slug}/${newCorpus.slug}/${document.slug}`;
+              } else {
+                // Fallback shouldn't happen with new system, but keep safe
+                console.warn("Missing slugs for navigation:", {
+                  newCorpus,
+                  document,
+                });
+                window.location.href = "/documents";
+              }
             }}
           />
         </>

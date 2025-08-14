@@ -14,6 +14,7 @@ import {
 
 import { Card, Dimmer, Loader } from "semantic-ui-react";
 import { useNavigate } from "react-router-dom";
+import { navigateToCorpus } from "../../utils/navigationUtils";
 
 import { PlaceholderCard } from "../placeholders/PlaceholderCard";
 import { CorpusType, PageInfo } from "../../types/graphql-api";
@@ -122,7 +123,7 @@ export const CorpusCards = ({
           contextMenuOpen={contextMenuOpen}
           setContextMenuOpen={setContextMenuOpen}
           onOpen={() => {
-            navigate(`/corpuses/${item.id}`);
+            navigateToCorpus(item as any, navigate, window.location.pathname);
           }}
           onSelect={() => toggleCorpusSelect(item.id)}
           onDelete={() => deletingCorpus(item)}

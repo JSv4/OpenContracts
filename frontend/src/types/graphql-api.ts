@@ -249,6 +249,7 @@ export type AssignmentTypeEdge = {
 export type RawCorpusType = Node & {
   __typename?: "CorpusType";
   id: Scalars["ID"];
+  slug?: Scalars["String"];
   title?: Scalars["String"];
   allowComments?: boolean;
   appliedAnalyzerIds?: string[];
@@ -328,6 +329,7 @@ export type CorpusTypeEdge = {
 export type RawDocumentType = Node & {
   __typename?: "DocumentType";
   id: Scalars["ID"];
+  slug?: Scalars["String"];
   title?: Maybe<Scalars["String"]>;
   description?: Maybe<Scalars["String"]>;
   customMeta?: Maybe<Scalars["JSONString"]>;
@@ -862,6 +864,7 @@ export type UserType = Node & {
   isActive?: Scalars["Boolean"];
   dateJoined?: Scalars["DateTime"];
   name?: Scalars["String"];
+  slug?: Scalars["String"];
   createdAssignments?: AssignmentTypeConnection;
   myAssignments?: AssignmentTypeConnection;
   userexportSet?: UserExportTypeConnection;

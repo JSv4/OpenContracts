@@ -47,6 +47,7 @@ interface CorpusSettingsProps {
     created?: string;
     modified?: string;
     isPublic?: boolean;
+    myPermissions?: string[] | undefined;
     documents?: {
       totalCount: number;
     };

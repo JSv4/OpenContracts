@@ -23,6 +23,7 @@ import {
   LabelDisplayBehavior,
 } from "../../../types/graphql-api";
 import { useNavigate } from "react-router-dom";
+import { getDocumentUrl } from "../../../utils/navigationUtils";
 
 const StatusDot = styled.div<{ statusColor: string }>`
   width: 12px;
@@ -307,9 +308,12 @@ export const ExtractCellFormatter: React.FC<ExtractCellFormatterProps> = ({
     ) {
       const first = only_display_these_annotations[0];
       if (first.document && first.corpus) {
-        navigate(
-          `/corpus/${first.corpus.id}/document/${first.document.id}?ann=${first.id}`
-        );
+        const url = getDocumentUrl(first.document, first.corpus);
+        if (url !== "#") {
+          navigate(`${url}?ann=${first.id}`);
+        } else {
+          console.warn("Cannot navigate - missing slugs:", first);
+        }
       }
       setViewSourceAnnotations(null);
     }

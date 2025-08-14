@@ -86,7 +86,7 @@ interface AddToCorpusModalProps {
   selectedDocumentIds?: string[];
   open: boolean;
   onClose: () => void;
-  onSuccess: (corpusId: string) => void;
+  onSuccess: (corpusId: string, corpus?: CorpusType | null) => void;
   // Optional props for customization
   title?: string;
   multiStep?: boolean; // Enable multi-step workflow like the widgets version
@@ -190,7 +190,7 @@ export const AddToCorpusModal: React.FC<AddToCorpusModalProps> = ({
             documentIds.length > 1 ? "s" : ""
           } added to corpus successfully!`
         );
-        onSuccess(selectedCorpus?.id || addingToCorpusId || "");
+        onSuccess(selectedCorpus?.id || addingToCorpusId || "", selectedCorpus);
         onClose();
       } else {
         toast.error(result.message || "Failed to add documents to corpus");

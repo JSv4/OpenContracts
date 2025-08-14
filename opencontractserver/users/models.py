@@ -9,17 +9,17 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 
+from opencontractserver.shared.db_utils import table_has_column
 from opencontractserver.shared.defaults import jsonfield_default_value
+from opencontractserver.shared.fields import NullableJSONField
 from opencontractserver.shared.slug_utils import (
     generate_unique_slug,
     sanitize_slug,
     validate_user_slug_or_raise,
 )
-from opencontractserver.shared.fields import NullableJSONField
 from opencontractserver.shared.utils import calc_oc_file_path
 from opencontractserver.types.enums import ExportType
 from opencontractserver.users.validators import UserUnicodeUsernameValidator
-from opencontractserver.shared.db_utils import table_has_column
 
 logger = logging.getLogger(__name__)
 

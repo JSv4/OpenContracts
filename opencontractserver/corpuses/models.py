@@ -16,9 +16,9 @@ from tree_queries.models import TreeNode
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.shared.Models import BaseOCModel
 from opencontractserver.shared.QuerySets import PermissionedTreeQuerySet
+from opencontractserver.shared.slug_utils import generate_unique_slug, sanitize_slug
 from opencontractserver.shared.utils import calc_oc_file_path
 from opencontractserver.utils.embeddings import generate_embeddings_from_text
-from opencontractserver.shared.slug_utils import generate_unique_slug, sanitize_slug
 
 logger = logging.getLogger(__name__)
 

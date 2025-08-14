@@ -15,8 +15,8 @@ from opencontractserver.shared.fields import NullableJSONField
 from opencontractserver.shared.Managers import DocumentManager
 from opencontractserver.shared.mixins import HasEmbeddingMixin
 from opencontractserver.shared.Models import BaseOCModel
-from opencontractserver.shared.utils import calc_oc_file_path
 from opencontractserver.shared.slug_utils import generate_unique_slug, sanitize_slug
+from opencontractserver.shared.utils import calc_oc_file_path
 
 
 class Document(BaseOCModel, HasEmbeddingMixin):

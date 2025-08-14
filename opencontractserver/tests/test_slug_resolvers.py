@@ -28,7 +28,9 @@ class SlugResolverTestCase(TestCase):
         # Another user with same corpus/doc titles should be allowed same slugs
         cls.user_b = User.objects.create_user(username="OtherUser", password="x")
         cls.corpus_b = Corpus.objects.create(title="Repo One", creator=cls.user_b)
-        cls.doc_b = Document.objects.create(title="Master Agreement", creator=cls.user_b)
+        cls.doc_b = Document.objects.create(
+            title="Master Agreement", creator=cls.user_b
+        )
 
     def setUp(self):
         self.client = Client(schema, context_value=TestContext(self.user))
@@ -92,9 +94,7 @@ class SlugResolverTestCase(TestCase):
             variables={"u": self.user.slug, "c": self.corpus.slug, "d": self.doc.slug},
         )
         self.assertIsNone(res.get("errors"))
-        self.assertEqual(
-            res["data"]["documentInCorpusBySlugs"]["slug"], self.doc.slug
-        )
+        self.assertEqual(res["data"]["documentInCorpusBySlugs"]["slug"], self.doc.slug)
 
         # If document is not in corpus, expect null
         res2 = self.client.execute(
@@ -107,5 +107,3 @@ class SlugResolverTestCase(TestCase):
         )
         self.assertIsNone(res2.get("errors"))
         self.assertIsNone(res2["data"]["documentInCorpusBySlugs"])
-
-

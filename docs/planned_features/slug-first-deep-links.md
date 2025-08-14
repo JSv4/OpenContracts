@@ -190,5 +190,3 @@ Reserved top-level user slugs (configurable via settings):
 - Reserved name list confirmed; make extendable via settings.
 - Add public browsing by user.
 - Default slug generation when users do not provide a slug (especially for documents).
-
-

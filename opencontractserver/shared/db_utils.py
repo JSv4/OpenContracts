@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Optional
 
 from django.db import connection
 
@@ -19,5 +18,3 @@ def table_has_column(db_table: str, column_name: str) -> bool:
     except Exception:
         # If introspection fails (e.g. table not created yet), assume column absent
         return False
-
-

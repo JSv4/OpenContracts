@@ -2095,7 +2095,9 @@ class UpdateMe(graphene.Mutation):
             serializer.save()
             return UpdateMe(ok=True, message="Success", user=user)
         except Exception as e:
-            return UpdateMe(ok=False, message=f"Failed to update profile: {e}", user=None)
+            return UpdateMe(
+                ok=False, message=f"Failed to update profile: {e}", user=None
+            )
 
 
 class UpdateCorpusDescription(graphene.Mutation):

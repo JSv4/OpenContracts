@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import re
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from django.conf import settings
-from django.db.models import Model, QuerySet
-
+from django.db.models import QuerySet
 
 ALLOWED_SLUG_PATTERN = re.compile(r"[^A-Za-z0-9-]+")
 
@@ -27,7 +26,9 @@ def get_reserved_user_slugs() -> set[str]:
         "api",
         "graphql",
     }
-    configured: Iterable[str] = getattr(settings, "RESERVED_USER_SLUGS", default_reserved)
+    configured: Iterable[str] = getattr(
+        settings, "RESERVED_USER_SLUGS", default_reserved
+    )
     return set(configured)
 
 
@@ -107,5 +108,3 @@ def validate_user_slug_or_raise(slug: str) -> None:
         raise ValueError("Slug contains invalid characters.")
     if slug in get_reserved_user_slugs():
         raise ValueError("Slug is reserved and cannot be used.")
-
-

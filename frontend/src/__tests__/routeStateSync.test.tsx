@@ -32,7 +32,7 @@ describe("RouteStateSync", () => {
   afterEach(resetVars);
 
   it("initialises corpus-only route", async () => {
-    const corpusId = "corpus123";
+    const corpusId = "Q29ycHVzVHlwZToxMjM="; // Base64 encoded ID
     renderWithRoute(`/corpus/${corpusId}`);
     expect(openedCorpus()).toEqual({ id: corpusId });
     expect(openedDocument()).toBeNull();

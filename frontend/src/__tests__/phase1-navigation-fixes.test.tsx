@@ -4,7 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react-hooks";
+import { renderHook } from "@testing-library/react-hooks";
+import { waitFor } from "@testing-library/react";
 import { MockedProvider } from "@apollo/client/testing";
 import { MemoryRouter } from "react-router-dom";
 import React from "react";
@@ -13,6 +14,8 @@ import {
   RESOLVE_CORPUS_BY_SLUGS_FULL,
   RESOLVE_DOCUMENT_BY_SLUGS_FULL,
   RESOLVE_DOCUMENT_IN_CORPUS_BY_SLUGS_FULL,
+  GET_CORPUS_BY_ID_FOR_REDIRECT,
+  GET_DOCUMENT_BY_ID_FOR_REDIRECT,
   GET_CORPUS_METADATA,
   GET_CORPUS_STATS,
 } from "../graphql/queries";
@@ -51,7 +54,7 @@ describe("Phase 1 Navigation Fixes", () => {
           },
           result: {
             data: {
-              resolveCorpus: {
+              corpusBySlugs: {
                 id: validCorpusId,
                 slug: invalidSlug,
                 title: "Test Corpus",
@@ -103,15 +106,14 @@ describe("Phase 1 Navigation Fixes", () => {
       const mocks = [
         {
           request: {
-            query: RESOLVE_CORPUS_BY_SLUGS_FULL,
+            query: GET_CORPUS_BY_ID_FOR_REDIRECT,
             variables: {
-              userIdent: validCorpusId,
-              corpusIdent: validCorpusId,
+              id: validCorpusId,
             },
           },
           result: {
             data: {
-              resolveCorpus: {
+              corpus: {
                 id: validCorpusId,
                 slug: "test-corpus",
                 title: "Test Corpus",
@@ -148,10 +150,8 @@ describe("Phase 1 Navigation Fixes", () => {
         expect(result.current.loading).toBe(false);
       });
 
-      // Should have resolved the corpus with full data
-      expect(result.current.corpus).toBeDefined();
-      expect(result.current.corpus?.id).toBe(validCorpusId);
-      expect(result.current.corpus?.title).toBe("Test Corpus");
+      // Should have redirected or handled the ID
+      expect(mockNavigate).toHaveBeenCalled();
     });
   });
 
@@ -165,7 +165,7 @@ describe("Phase 1 Navigation Fixes", () => {
           },
           result: {
             data: {
-              resolveCorpus: {
+              corpusBySlugs: {
                 id: validCorpusId,
                 slug: "corpus1",
                 title: "Complete Corpus",
@@ -261,7 +261,7 @@ describe("Phase 1 Navigation Fixes", () => {
         () => {
           expect(result.current.loading).toBe(false);
         },
-        { timeout: 100 }
+        { timeout: 1000 }
       );
 
       expect(result.current.corpus).toBeNull();

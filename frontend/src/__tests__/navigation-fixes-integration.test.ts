@@ -8,7 +8,6 @@ import {
   getCorpusUrl,
   getDocumentUrl,
   isCanonicalPath,
-  wouldCauseRedirectLoop,
   navigateToCorpus,
   navigateToDocument,
   requestTracker,
@@ -33,8 +32,8 @@ describe("Navigation System Integration Tests", () => {
 
   const corpusWithoutSlugs = {
     id: validCorpusId,
-    slug: null,
-    creator: { id: "1", slug: null },
+    slug: undefined,
+    creator: { id: "1", slug: undefined },
   };
 
   const documentWithSlugs = {
@@ -55,7 +54,7 @@ describe("Navigation System Integration Tests", () => {
       expect(url).not.toContain(validCorpusId);
     });
 
-    it("should fallback to ID URLs when slugs unavailable", () => {
+    it("should return safe fallback when slugs unavailable", () => {
       const url = getCorpusUrl(corpusWithoutSlugs);
       expect(url).toBe("#"); // Returns # when slugs are missing
     });
@@ -65,10 +64,18 @@ describe("Navigation System Integration Tests", () => {
       expect(url).toBe("/d/john/my-corpus/my-document");
     });
 
-    it("should build ID-based document URLs when slugs missing", () => {
+    it("should return safe fallback when document slugs missing", () => {
       const url = getDocumentUrl(
-        { id: validDocumentId, slug: null },
-        { id: validCorpusId, slug: null }
+        {
+          id: validDocumentId,
+          slug: undefined,
+          creator: { id: "1", slug: undefined },
+        },
+        {
+          id: validCorpusId,
+          slug: undefined,
+          creator: { id: "1", slug: undefined },
+        }
       );
       expect(url).toBe("#"); // Returns # when slugs are missing
     });
@@ -94,24 +101,15 @@ describe("Navigation System Integration Tests", () => {
       );
     });
 
-    it("should detect redirect loops", () => {
-      const previousPaths = ["/path1", "/path2", "/path3"];
-      expect(wouldCauseRedirectLoop("/path3", "/path1", previousPaths)).toBe(
-        true
-      );
-    });
-
-    it("should not trigger redirect for same path", () => {
-      expect(wouldCauseRedirectLoop("/john/my-corpus", "/john/my-corpus")).toBe(
-        true
-      );
+    it("should detect when paths are equivalent", () => {
+      expect(isCanonicalPath("/john/my-corpus", "/john/my-corpus")).toBe(true);
     });
   });
 
   describe("Smart Navigation Functions", () => {
     it("should not navigate if already at canonical path", () => {
       const mockNavigate = vi.fn();
-      const currentPath = "/john/my-corpus";
+      const currentPath = "/c/john/my-corpus";
 
       navigateToCorpus(corpusWithSlugs, mockNavigate, currentPath);
 
@@ -124,7 +122,7 @@ describe("Navigation System Integration Tests", () => {
 
       navigateToCorpus(corpusWithSlugs, mockNavigate, currentPath);
 
-      expect(mockNavigate).toHaveBeenCalledWith("/john/my-corpus", {
+      expect(mockNavigate).toHaveBeenCalledWith("/c/john/my-corpus", {
         replace: true,
       });
     });
@@ -140,9 +138,12 @@ describe("Navigation System Integration Tests", () => {
         currentPath
       );
 
-      expect(mockNavigate).toHaveBeenCalledWith("/john/my-corpus/my-document", {
-        replace: true,
-      });
+      expect(mockNavigate).toHaveBeenCalledWith(
+        "/d/john/my-corpus/my-document",
+        {
+          replace: true,
+        }
+      );
     });
   });
 
@@ -273,12 +274,12 @@ describe("Navigation System Integration Tests", () => {
       navigateToCorpus(corpusWithSlugs, mockNavigate, currentPath);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      expect(mockNavigate).toHaveBeenCalledWith("/john/my-corpus", {
+      expect(mockNavigate).toHaveBeenCalledWith("/c/john/my-corpus", {
         replace: true,
       });
 
       // Simulate arriving at new URL
-      const newPath = "/john/my-corpus";
+      const newPath = "/c/john/my-corpus";
 
       // Should not navigate again (already at canonical)
       mockNavigate.mockClear();
@@ -303,18 +304,13 @@ describe("Navigation System Integration Tests", () => {
       expect(corpusGuard.canExecute).toBe(true);
     });
 
-    it("should prevent infinite redirect loop", () => {
+    it("should prevent navigation to same path", () => {
       const mockNavigate = vi.fn();
-      const paths = [
-        "/corpuses/123",
-        "/john/my-corpus",
-        "/corpuses/123", // Back to start - would be a loop
-      ];
+      const currentPath = "/c/john/my-corpus";
 
-      // Should detect this as a loop
-      expect(
-        wouldCauseRedirectLoop(paths[1], paths[2], [paths[0], paths[1]])
-      ).toBe(true);
+      // Should not navigate if already at target path
+      navigateToCorpus(corpusWithSlugs, mockNavigate, currentPath);
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
 

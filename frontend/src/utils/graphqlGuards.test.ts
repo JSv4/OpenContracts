@@ -37,12 +37,12 @@ describe("GraphQL Guards", () => {
 
     it("should report missing required fields", () => {
       const result = guardGraphQLQuery({
-        variables: { name: "Test" },
+        variables: { name: "Test" } as any,
         requiredFields: ["corpusId", "name"],
       });
 
       expect(result.errors).toContain("Missing required field: corpusId");
-      expect(result.variables.corpusId).toBe(""); // Safe default
+      expect((result.variables as any).corpusId).toBe(""); // Safe default
     });
 
     it("should call onError callback with errors", () => {

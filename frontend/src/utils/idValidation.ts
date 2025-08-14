@@ -16,12 +16,9 @@ export function isValidGraphQLId(value: string | undefined | null): boolean {
   }
 
   // Check if it's a numeric ID (common in this system)
-  // But be careful not to treat small numbers that could be slugs as IDs
-  // Only consider strings of digits that are unlikely to be slugs
-  if (/^\d+$/.test(value) && value.length >= 1) {
-    // This is risky - numeric strings could be slugs
-    // Only return true for numeric strings that are clearly IDs
-    // For now, accept all numeric strings but log a warning
+  // Be conservative - only treat longer numeric strings as IDs
+  // Short numeric strings (1-3 digits) are likely not GraphQL IDs
+  if (/^\d+$/.test(value) && value.length >= 4) {
     console.log(`Treating numeric string "${value}" as potential ID`);
     return true;
   }

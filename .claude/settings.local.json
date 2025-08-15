@@ -13,7 +13,10 @@
       "Bash(grep:*)",
       "Bash(mkdir:*)",
       "Bash(ls:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(timeout:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)"
     ],
     "deny": []
   }

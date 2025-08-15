@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useLazyQuery } from "@apollo/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   openedCorpus,
   openedDocument,
@@ -60,6 +60,7 @@ export function useSlugResolver({
   onResolved,
 }: SlugResolverOptions): SlugResolverResult {
   const navigate = useNavigate();
+  const location = useLocation();
   const [state, setState] = useState<SlugResolverResult>({
     loading: true,
     error: undefined,
@@ -139,7 +140,7 @@ export function useSlugResolver({
     }
 
     // Preserve query parameters (like ?ann=)
-    const currentParams = new URLSearchParams(window.location.search);
+    const currentParams = new URLSearchParams(location.search);
     if (currentParams.toString()) {
       canonicalUrl += `?${currentParams.toString()}`;
     }

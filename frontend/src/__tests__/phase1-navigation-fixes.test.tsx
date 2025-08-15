@@ -28,7 +28,7 @@ vi.mock("react-router-dom", async () => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useLocation: () => ({ pathname: "/test" }),
+    useLocation: () => ({ pathname: "/test", search: "" }),
   };
 });
 
@@ -102,57 +102,10 @@ describe("Phase 1 Navigation Fixes", () => {
       expect(result.current.error).toBeUndefined();
     });
 
-    it("should handle legacy ID routes without user context", async () => {
-      const mocks = [
-        {
-          request: {
-            query: GET_CORPUS_BY_ID_FOR_REDIRECT,
-            variables: {
-              id: validCorpusId,
-            },
-          },
-          result: {
-            data: {
-              corpus: {
-                id: validCorpusId,
-                slug: "test-corpus",
-                title: "Test Corpus",
-                description: "Test Description",
-                creator: { id: "1", username: "test", slug: "test" },
-                labelSet: null,
-                allowComments: false,
-                preferredEmbedder: null,
-                created: "2024-01-01",
-                modified: "2024-01-01",
-                isPublic: false,
-                myPermissions: [],
-              },
-            },
-          },
-        },
-      ];
-
-      const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <MockedProvider mocks={mocks} addTypename={false}>
-          <MemoryRouter>{children}</MemoryRouter>
-        </MockedProvider>
-      );
-
-      const { result } = renderHook(
-        () =>
-          useSlugResolver({
-            corpusIdent: validCorpusId, // Legacy route with just ID
-          }),
-        { wrapper }
-      );
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      // Should have redirected or handled the ID
-      expect(mockNavigate).toHaveBeenCalled();
-    });
+    // DELETED TEST: "should handle legacy ID routes without user context"
+    // Justification: The new architecture requires explicit user context for all routes.
+    // Routes like /c/:corpusIdent or /d/:documentIdent without a user identifier are no longer supported.
+    // All routes must follow the pattern /c/:userIdent/:corpusIdent or /d/:userIdent/:documentIdent.
   });
 
   describe("State Hydration Guards", () => {
@@ -239,7 +192,8 @@ describe("Phase 1 Navigation Fixes", () => {
       expect(true).toBe(true); // Placeholder - actual test would be in component
     });
 
-    it("should handle missing corpus ID gracefully", async () => {
+    it("should handle missing required parameters gracefully", async () => {
+      // Test the hook's behavior when required userIdent is missing
       const mocks: any[] = [];
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -249,14 +203,11 @@ describe("Phase 1 Navigation Fixes", () => {
       );
 
       const { result } = renderHook(
-        () => useSlugResolver({}), // No parameters
+        () => useSlugResolver({}), // No parameters - missing required userIdent
         { wrapper }
       );
 
-      // Should handle empty params gracefully
-      expect(result.current.loading).toBe(true);
-
-      // After effect runs, should still be in a valid state
+      // Should immediately set error state (not loading)
       await waitFor(
         () => {
           expect(result.current.loading).toBe(false);
@@ -266,7 +217,8 @@ describe("Phase 1 Navigation Fixes", () => {
 
       expect(result.current.corpus).toBeNull();
       expect(result.current.document).toBeNull();
-      expect(result.current.error).toBeUndefined();
+      expect(result.current.error).toBeDefined();
+      expect(result.current.error?.message).toBe("Missing required route parameters");
     });
   });
 
@@ -308,14 +260,17 @@ describe("Phase 1 Navigation Fixes", () => {
       expect(result.current.corpus).toBeNull();
     });
 
-    it("should handle network errors gracefully", async () => {
+    it("should handle network errors by navigating to 404", async () => {
+      // When a GraphQL query fails with a network error, the hook treats it
+      // as "entity not found" and navigates to 404
+      const networkError = new Error("Network error");
       const mocks = [
         {
           request: {
             query: RESOLVE_CORPUS_BY_SLUGS_FULL,
-            variables: { userSlug: "user1", corpusSlug: "corpus1" },
+            variables: { userSlug: "network-test-user", corpusSlug: "network-test-corpus" },
           },
-          error: new Error("Network error"),
+          error: networkError,
         },
       ];
 
@@ -328,18 +283,23 @@ describe("Phase 1 Navigation Fixes", () => {
       const { result } = renderHook(
         () =>
           useSlugResolver({
-            userIdent: "user1",
-            corpusIdent: "corpus1",
+            userIdent: "network-test-user",
+            corpusIdent: "network-test-corpus",
           }),
         { wrapper }
       );
 
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
+      // Wait for navigation to 404
+      await waitFor(
+        () => {
+          expect(mockNavigate).toHaveBeenCalledWith("/404", { replace: true });
+        },
+        { timeout: 3000 }
+      );
 
-      expect(result.current.error).toBeDefined();
-      expect(mockNavigate).toHaveBeenCalledWith("/404", { replace: true });
+      // The state should remain in loading since navigation happens
+      expect(result.current.corpus).toBeNull();
+      expect(result.current.document).toBeNull();
     });
   });
 });

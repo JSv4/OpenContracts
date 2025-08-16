@@ -6,7 +6,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { MockedProvider } from "@apollo/client/testing";
 import { DocumentLandingRoute } from "../components/routes/DocumentLandingRoute";
-import { CorpusLandingRouteV2 } from "../components/routes/CorpusLandingRouteV2";
+import { CorpusLandingRoute } from "../components/routes/CorpusLandingRoute";
 import {
   RESOLVE_CORPUS_BY_SLUGS_FULL,
   RESOLVE_DOCUMENT_BY_SLUGS_FULL,
@@ -94,7 +94,7 @@ describe("Navigation with GraphQL Mocks", () => {
           <Routes>
             <Route
               path="/c/:userIdent/:corpusIdent"
-              element={<CorpusLandingRouteV2 />}
+              element={<CorpusLandingRoute />}
             />
           </Routes>
         </MemoryRouter>
@@ -233,7 +233,7 @@ describe("Navigation with GraphQL Mocks", () => {
           <Routes>
             <Route
               path="/c/:userIdent/:corpusIdent"
-              element={<CorpusLandingRouteV2 />}
+              element={<CorpusLandingRoute />}
             />
           </Routes>
         </MemoryRouter>

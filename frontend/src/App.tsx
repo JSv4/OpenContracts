@@ -65,7 +65,6 @@ import { DocumentLandingRoute } from "./components/routes/DocumentLandingRoute";
 import { useRouteStateSync } from "./hooks/RouteStateSync";
 import { NotFound } from "./components/routes/NotFound";
 import { CorpusLandingRoute } from "./components/routes/CorpusLandingRoute";
-import { CorpusLandingRouteV2 } from "./components/routes/CorpusLandingRouteV2";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0, REACT_APP_AUDIENCE } = useEnv();
@@ -275,7 +274,7 @@ export const App = () => {
                 {/* Corpus routes */}
                 <Route
                   path="/c/:userIdent/:corpusIdent"
-                  element={<CorpusLandingRouteV2 />}
+                  element={<CorpusLandingRoute />}
                 />
 
                 {/* List views */}

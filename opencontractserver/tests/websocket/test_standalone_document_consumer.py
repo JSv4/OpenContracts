@@ -189,14 +189,19 @@ class StandaloneDocumentConsumerTestCase(WebsocketFixtureBaseTestCase):
 
     async def test_agent_called_with_embedder(self) -> None:
         """Ensure the consumer passes the chosen embedder to the agent factory."""
-        graphql_doc_id = to_global_id("DocumentType", self.doc.id)
-        encoded_doc_id = quote(graphql_doc_id)
-        ws_path = f"ws/standalone/document/{encoded_doc_id}/query/?token={self.token}"
-
         # Ensure the document is readable for the authenticated user to allow connection
         self.doc.is_public = True
         await database_sync_to_async(self.doc.save)(update_fields=["is_public"])
 
+        graphql_doc_id = to_global_id("DocumentType", self.doc.id)
+        encoded_doc_id = quote(graphql_doc_id)
+        ws_path = f"ws/standalone/document/{encoded_doc_id}/query/?token={self.token}"
+
+        communicator = WebsocketCommunicator(self.application, ws_path)
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected)
+
+        # Patch agent factory and embedder picker after connection
         with patch(
             "config.websocket.consumers.standalone_document_conversation.agents.for_document"
         ) as mock_agent, patch(
@@ -206,9 +211,6 @@ class StandaloneDocumentConsumerTestCase(WebsocketFixtureBaseTestCase):
             mock_picker.return_value = embedder_path
             mock_agent.return_value = self._StubAgent(self._mock_stream_events)
 
-            communicator = WebsocketCommunicator(self.application, ws_path)
-            connected, _ = await communicator.connect()
-            self.assertTrue(connected)
             await communicator.send_to(json.dumps({"query": "Hi"}))
 
             # Drain messages
@@ -219,7 +221,8 @@ class StandaloneDocumentConsumerTestCase(WebsocketFixtureBaseTestCase):
 
             mock_agent.assert_called_once()
             self.assertEqual(mock_agent.call_args.kwargs.get("embedder"), embedder_path)
-            await communicator.disconnect()
+
+        await communicator.disconnect()
 
     async def test_missing_document_id(self) -> None:
         """Missing document ID should reject connection with 4000."""

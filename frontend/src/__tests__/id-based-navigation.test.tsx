@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { MockedProvider } from "@apollo/client/testing";
 import { HelmetProvider } from "react-helmet-async";
 import { DocumentLandingRoute } from "../components/routes/DocumentLandingRoute";
-import { CorpusLandingRouteV2 } from "../components/routes/CorpusLandingRouteV2";
+import { CorpusLandingRoute } from "../components/routes/CorpusLandingRoute";
 import {
   GET_CORPUS_BY_ID_FOR_REDIRECT,
   GET_DOCUMENT_BY_ID_FOR_REDIRECT,
@@ -131,7 +131,7 @@ describe("ID-based Navigation", () => {
             <Routes>
               <Route
                 path="/c/:userIdent/:corpusIdent"
-                element={<CorpusLandingRouteV2 />}
+                element={<CorpusLandingRoute />}
               />
             </Routes>
           </MemoryRouter>

@@ -10,6 +10,7 @@ import {
 } from "semantic-ui-react";
 import { useQuery, useReactiveVar, useMutation } from "@apollo/client";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { editingCorpus } from "../../graphql/cache";
 import {
@@ -40,14 +41,16 @@ interface CorpusSettingsProps {
     description: string;
     allowComments: boolean;
     preferredEmbedder?: string | null;
+    slug?: string | null;
     creator?: {
       email: string;
       username?: string;
+      slug?: string;
     };
     created?: string;
     modified?: string;
     isPublic?: boolean;
-    myPermissions?: string[] | undefined;
+    myPermissions?: PermissionTypes[] | string[] | undefined;
     documents?: {
       totalCount: number;
     };
@@ -108,6 +111,27 @@ const ActionFlow = styled.div`
 const PageContainer = styled(Container)`
   padding: 2rem;
   max-width: 1200px !important;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 4px;
+
+    &:hover {
+      background: #cbd5e1;
+    }
+  }
 `;
 
 const CorpusHeader = styled.div`
@@ -307,19 +331,38 @@ const ActionNote = styled.div`
  * Component for managing corpus settings and actions
  * Only visible to users with update permissions
  */
+const SettingsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+`;
+
 export const CorpusSettings: React.FC<CorpusSettingsProps> = ({ corpus }) => {
-  const canUpdate = getPermissions(
-    (corpus as CorpusType).myPermissions || []
-  ).includes(PermissionTypes.CAN_UPDATE);
-  const canPermission = getPermissions(
-    (corpus as CorpusType).myPermissions || []
-  ).includes(PermissionTypes.CAN_PERMISSION);
+  const navigate = useNavigate();
+
+  // Check if myPermissions is already processed (array of PermissionTypes) or raw
+  const permissions =
+    Array.isArray(corpus.myPermissions) &&
+    corpus.myPermissions.length > 0 &&
+    typeof corpus.myPermissions[0] === "string" &&
+    corpus.myPermissions[0].includes("CAN_")
+      ? (corpus.myPermissions as PermissionTypes[]) // Already processed
+      : getPermissions(corpus.myPermissions || []); // Need to process
+
+  const canUpdate = permissions.includes(PermissionTypes.CAN_UPDATE);
+  const canPermission = permissions.includes(PermissionTypes.CAN_PERMISSION);
   const [slugDraft, setSlugDraft] = useState<string>("");
   const [publicDraft, setPublicDraft] = useState<boolean>(
     Boolean(corpus.isPublic)
   );
+  const [originalSlug, setOriginalSlug] = useState<string>("");
+
   useEffect(() => {
-    setSlugDraft((corpus as any).slug || "");
+    setSlugDraft(corpus.slug || "");
+    setOriginalSlug(corpus.slug || "");
     setPublicDraft(Boolean(corpus.isPublic));
   }, [corpus]);
 
@@ -330,6 +373,12 @@ export const CorpusSettings: React.FC<CorpusSettingsProps> = ({ corpus }) => {
     onCompleted: (data) => {
       if (data.updateCorpus?.ok) {
         toast.success("Updated corpus settings");
+
+        // If slug was updated, navigate to the new URL
+        if (slugDraft && slugDraft !== originalSlug && corpus.creator?.slug) {
+          const newUrl = `/c/${corpus.creator.slug}/${slugDraft}`;
+          navigate(newUrl, { replace: true });
+        }
       } else {
         toast.error(data.updateCorpus?.message || "Failed to update corpus");
       }
@@ -386,324 +435,359 @@ export const CorpusSettings: React.FC<CorpusSettingsProps> = ({ corpus }) => {
   };
 
   return (
-    <PageContainer>
-      <CorpusHeader>
-        <TitleArea>
-          <CorpusTitle>{corpus.title}</CorpusTitle>
-          <CorpusDescription>
-            {corpus.description || "No description provided."}
-          </CorpusDescription>
-        </TitleArea>
-        <EditButton
-          icon
-          labelPosition="left"
-          onClick={() => editingCorpus(corpus as unknown as CorpusType)}
-        >
-          <Icon name="edit outline" />
-          Edit
-        </EditButton>
-      </CorpusHeader>
+    <SettingsContainer>
+      <PageContainer>
+        <CorpusHeader>
+          <TitleArea>
+            <CorpusTitle>{corpus.title}</CorpusTitle>
+            <CorpusDescription>
+              {corpus.description || "No description provided."}
+            </CorpusDescription>
+          </TitleArea>
+          <EditButton
+            icon
+            labelPosition="left"
+            onClick={() => editingCorpus(corpus as unknown as CorpusType)}
+          >
+            <Icon name="edit outline" />
+            Edit
+          </EditButton>
+        </CorpusHeader>
 
-      <InfoSection>
-        <SectionHeader>
-          <SectionTitle>Corpus Information</SectionTitle>
-        </SectionHeader>
+        <InfoSection>
+          <SectionHeader>
+            <SectionTitle>Corpus Information</SectionTitle>
+          </SectionHeader>
 
-        <MetadataContent>
-          <MetadataGrid>
-            <MetadataItem>
-              <div className="label">Created by</div>
-              <div className="value">{corpus.creator?.email || "Unknown"}</div>
-            </MetadataItem>
-
-            <MetadataItem>
-              <div className="label">Preferred Embedder</div>
-              <div className="value">
-                {corpus.preferredEmbedder || "Default"}
-              </div>
-            </MetadataItem>
-
-            <MetadataItem>
-              <div className="label">Created</div>
-              <div className="value">
-                {corpus.created
-                  ? new Date(corpus.created).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })
-                  : "Unknown"}
-              </div>
-            </MetadataItem>
-
-            <MetadataItem>
-              <div className="label">Last Updated</div>
-              <div className="value">
-                {corpus.modified
-                  ? new Date(corpus.modified).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })
-                  : "Unknown"}
-              </div>
-            </MetadataItem>
-
-            <MetadataItem>
-              <div className="label">Visibility</div>
-              <div className="value">
-                <span
-                  className={`badge ${corpus.isPublic ? "public" : "private"}`}
-                >
-                  <Icon
-                    name={corpus.isPublic ? "unlock" : "lock"}
-                    size="small"
-                  />
-                  {corpus.isPublic ? "Public" : "Private"}
-                </span>
-              </div>
-            </MetadataItem>
-
-            {corpus.allowComments && (
+          <MetadataContent>
+            <MetadataGrid>
               <MetadataItem>
-                <div className="label">Comments</div>
+                <div className="label">Created by</div>
                 <div className="value">
-                  <span className="badge public">
-                    <Icon name="comments" size="small" />
-                    Enabled
+                  {corpus.creator?.email || "Unknown"}
+                </div>
+              </MetadataItem>
+
+              <MetadataItem>
+                <div className="label">Preferred Embedder</div>
+                <div className="value">
+                  {corpus.preferredEmbedder || "Default"}
+                </div>
+              </MetadataItem>
+
+              <MetadataItem>
+                <div className="label">Created</div>
+                <div className="value">
+                  {corpus.created
+                    ? new Date(corpus.created).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })
+                    : "Unknown"}
+                </div>
+              </MetadataItem>
+
+              <MetadataItem>
+                <div className="label">Last Updated</div>
+                <div className="value">
+                  {corpus.modified
+                    ? new Date(corpus.modified).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })
+                    : "Unknown"}
+                </div>
+              </MetadataItem>
+
+              <MetadataItem>
+                <div className="label">Visibility</div>
+                <div className="value">
+                  <span
+                    className={`badge ${
+                      corpus.isPublic ? "public" : "private"
+                    }`}
+                  >
+                    <Icon
+                      name={corpus.isPublic ? "unlock" : "lock"}
+                      size="small"
+                    />
+                    {corpus.isPublic ? "Public" : "Private"}
                   </span>
                 </div>
               </MetadataItem>
-            )}
-          </MetadataGrid>
-        </MetadataContent>
-      </InfoSection>
 
-      <InfoSection>
-        <SectionHeader>
-          <SectionTitle>Visibility & Slug</SectionTitle>
-        </SectionHeader>
-        <MetadataContent>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "1.5rem",
-              alignItems: "end",
-            }}
-          >
-            <div>
-              <div className="label">Public visibility</div>
+              {corpus.allowComments && (
+                <MetadataItem>
+                  <div className="label">Comments</div>
+                  <div className="value">
+                    <span className="badge public">
+                      <Icon name="comments" size="small" />
+                      Enabled
+                    </span>
+                  </div>
+                </MetadataItem>
+              )}
+            </MetadataGrid>
+          </MetadataContent>
+        </InfoSection>
+
+        <InfoSection>
+          <SectionHeader>
+            <SectionTitle>Visibility & Slug</SectionTitle>
+          </SectionHeader>
+          <MetadataContent>
+            {!canUpdate && !canPermission && (
               <div
-                className="value"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.75rem",
+                  background: "#fef3c7",
+                  border: "1px solid #fbbf24",
+                  borderRadius: "6px",
+                  padding: "0.75rem",
+                  marginBottom: "1rem",
+                  fontSize: "0.875rem",
+                  color: "#92400e",
                 }}
               >
-                <input
-                  id="corpus-is-public-checkbox"
-                  type="checkbox"
-                  checked={publicDraft}
-                  disabled={!canPermission}
-                  onChange={(e) => setPublicDraft(e.target.checked)}
-                />
-                <label htmlFor="corpus-is-public-checkbox">
-                  {publicDraft ? "Public" : "Private"}
-                </label>
+                ⚠️ You don't have permission to update these settings. Contact
+                the corpus owner for access.
               </div>
-            </div>
-            <div>
-              <div className="label">Slug</div>
-              <input
-                id="corpus-slug-input"
-                type="text"
-                placeholder="Repo slug (case-sensitive)"
-                value={slugDraft}
-                disabled={!canUpdate}
-                onChange={(e) => setSlugDraft(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "0.6rem",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 6,
-                }}
-              />
-            </div>
-            <div style={{ gridColumn: "1 / span 2" }}>
-              <Button
-                primary
-                loading={updatingVisibility}
-                disabled={!canUpdate && !canPermission}
-                onClick={() => {
-                  const vars: UpdateCorpusInputs = { id: corpus.id } as any;
-                  if (canPermission) vars.isPublic = publicDraft;
-                  if (canUpdate) vars.slug = slugDraft || undefined;
-                  updateCorpusMutation({ variables: vars });
-                }}
-              >
-                <Icon name="save" /> Save
-              </Button>
-            </div>
-          </div>
-        </MetadataContent>
-      </InfoSection>
-
-      <InfoSection>
-        <ActionHeader>
-          <SectionTitle>Corpus Actions</SectionTitle>
-          <AddActionButton onClick={() => setIsModalOpen(true)}>
-            <Icon name="plus" />
-            Add Action
-          </AddActionButton>
-        </ActionHeader>
-
-        <ActionContent>
-          <ActionNote>
-            This system allows you to <strong>automate actions</strong> when
-            documents are
-            <span className="highlight"> added</span> or{" "}
-            <span className="highlight"> edited</span> in a corpus, either
-            running extractions via <strong>fieldsets</strong> or analyses via{" "}
-            <strong>analyzers</strong>.
-          </ActionNote>
-
-          <ActionFlow>
-            {actionsData?.corpusActions?.edges.map(({ node: action }) => (
-              <ActionCard key={action.id}>
+            )}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "1.5rem",
+                alignItems: "end",
+              }}
+            >
+              <div>
+                <div className="label">
+                  Public visibility {!canPermission && "(No permission)"}
+                </div>
                 <div
+                  className="value"
                   style={{
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
+                    alignItems: "center",
+                    gap: "0.75rem",
                   }}
                 >
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "1rem",
-                        alignItems: "center",
-                        marginBottom: "0.5rem",
-                      }}
-                    >
-                      <h3
-                        style={{
-                          margin: 0,
-                          color: "#111827",
-                          fontSize: "1.25rem",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {action.name}
-                      </h3>
-                      <TriggerBadge
-                        trigger={
-                          action.trigger as "add_document" | "edit_document"
-                        }
-                      >
-                        {action.trigger === "add_document"
-                          ? "📥 On Add"
-                          : "✏️ On Edit"}
-                      </TriggerBadge>
-                    </div>
+                  <input
+                    id="corpus-is-public-checkbox"
+                    type="checkbox"
+                    checked={publicDraft}
+                    disabled={!canPermission}
+                    onChange={(e) => setPublicDraft(e.target.checked)}
+                    style={{
+                      cursor: !canPermission ? "not-allowed" : "pointer",
+                      opacity: !canPermission ? 0.5 : 1,
+                    }}
+                  />
+                  <label htmlFor="corpus-is-public-checkbox">
+                    {publicDraft ? "Public" : "Private"}
+                  </label>
+                </div>
+              </div>
+              <div>
+                <div className="label">
+                  Slug {!canUpdate && "(No permission)"}
+                </div>
+                <input
+                  id="corpus-slug-input"
+                  type="text"
+                  placeholder="Repo slug (case-sensitive)"
+                  value={slugDraft}
+                  disabled={!canUpdate}
+                  onChange={(e) => setSlugDraft(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "0.6rem",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 6,
+                    background: !canUpdate ? "#f5f5f5" : "white",
+                    cursor: !canUpdate ? "not-allowed" : "text",
+                    opacity: !canUpdate ? 0.7 : 1,
+                  }}
+                />
+              </div>
+              <div style={{ gridColumn: "1 / span 2" }}>
+                <Button
+                  primary
+                  loading={updatingVisibility}
+                  disabled={!canUpdate && !canPermission}
+                  onClick={() => {
+                    const vars: UpdateCorpusInputs = { id: corpus.id } as any;
+                    if (canPermission) vars.isPublic = publicDraft;
+                    if (canUpdate) vars.slug = slugDraft || undefined;
+                    updateCorpusMutation({ variables: vars });
+                  }}
+                >
+                  <Icon name="save" /> Save
+                </Button>
+              </div>
+            </div>
+          </MetadataContent>
+        </InfoSection>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "2rem",
-                        color: "rgba(0,0,0,0.75)",
-                        marginTop: "1rem",
-                        fontSize: "0.95rem",
-                      }}
-                    >
-                      <div>
-                        <Icon name="code" />
-                        {action.fieldset
-                          ? `Fieldset: ${action.fieldset.name}`
-                          : `Analyzer: ${action.analyzer?.name}`}
-                      </div>
-                      <div>
-                        <Icon name="user" />
-                        {action.creator.username}
-                      </div>
-                      <div>
-                        <Icon name="calendar" />
-                        {new Date(action.created).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </div>
+        <InfoSection>
+          <ActionHeader>
+            <SectionTitle>Corpus Actions</SectionTitle>
+            <AddActionButton onClick={() => setIsModalOpen(true)}>
+              <Icon name="plus" />
+              Add Action
+            </AddActionButton>
+          </ActionHeader>
 
+          <ActionContent>
+            <ActionNote>
+              This system allows you to <strong>automate actions</strong> when
+              documents are
+              <span className="highlight"> added</span> or{" "}
+              <span className="highlight"> edited</span> in a corpus, either
+              running extractions via <strong>fieldsets</strong> or analyses via{" "}
+              <strong>analyzers</strong>.
+            </ActionNote>
+
+            <ActionFlow>
+              {actionsData?.corpusActions?.edges.map(({ node: action }) => (
+                <ActionCard key={action.id}>
                   <div
                     style={{
                       display: "flex",
-                      gap: "0.5rem",
-                      alignItems: "center",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
                     }}
                   >
+                    <div>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "1rem",
+                          alignItems: "center",
+                          marginBottom: "0.5rem",
+                        }}
+                      >
+                        <h3
+                          style={{
+                            margin: 0,
+                            color: "#111827",
+                            fontSize: "1.25rem",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {action.name}
+                        </h3>
+                        <TriggerBadge
+                          trigger={
+                            action.trigger as "add_document" | "edit_document"
+                          }
+                        >
+                          {action.trigger === "add_document"
+                            ? "📥 On Add"
+                            : "✏️ On Edit"}
+                        </TriggerBadge>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "2rem",
+                          color: "rgba(0,0,0,0.75)",
+                          marginTop: "1rem",
+                          fontSize: "0.95rem",
+                        }}
+                      >
+                        <div>
+                          <Icon name="code" />
+                          {action.fieldset
+                            ? `Fieldset: ${action.fieldset.name}`
+                            : `Analyzer: ${action.analyzer?.name}`}
+                        </div>
+                        <div>
+                          <Icon name="user" />
+                          {action.creator.username}
+                        </div>
+                        <div>
+                          <Icon name="calendar" />
+                          {new Date(action.created).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+
                     <div
                       style={{
                         display: "flex",
-                        alignItems: "center",
                         gap: "0.5rem",
-                        padding: "0.5rem 1rem",
-                        borderRadius: "6px",
-                        background: action.disabled ? "#fef2f2" : "#f0fdf4",
-                        color: action.disabled ? "#dc2626" : "#16a34a",
-                        fontWeight: 600,
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                        alignItems: "center",
                       }}
                     >
-                      <Icon
-                        name={action.disabled ? "pause circle" : "play circle"}
-                      />
-                      {action.disabled ? "Disabled" : "Active"}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          padding: "0.5rem 1rem",
+                          borderRadius: "6px",
+                          background: action.disabled ? "#fef2f2" : "#f0fdf4",
+                          color: action.disabled ? "#dc2626" : "#16a34a",
+                          fontWeight: 600,
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                        }}
+                      >
+                        <Icon
+                          name={
+                            action.disabled ? "pause circle" : "play circle"
+                          }
+                        />
+                        {action.disabled ? "Disabled" : "Active"}
+                      </div>
+
+                      <Button
+                        icon
+                        negative
+                        size="tiny"
+                        onClick={() => setActionToDelete(action.id)}
+                      >
+                        <Icon name="trash" />
+                      </Button>
                     </div>
-
-                    <Button
-                      icon
-                      negative
-                      size="tiny"
-                      onClick={() => setActionToDelete(action.id)}
-                    >
-                      <Icon name="trash" />
-                    </Button>
                   </div>
-                </div>
-              </ActionCard>
-            ))}
-          </ActionFlow>
-        </ActionContent>
-      </InfoSection>
+                </ActionCard>
+              ))}
+            </ActionFlow>
+          </ActionContent>
+        </InfoSection>
 
-      <InfoSection>
-        <SectionHeader>
-          <SectionTitle>Metadata Fields</SectionTitle>
-        </SectionHeader>
-        <MetadataContent>
-          <CorpusMetadataSettings corpusId={corpus.id} />
-        </MetadataContent>
-      </InfoSection>
+        <InfoSection>
+          <SectionHeader>
+            <SectionTitle>Metadata Fields</SectionTitle>
+          </SectionHeader>
+          <MetadataContent>
+            <CorpusMetadataSettings corpusId={corpus.id} />
+          </MetadataContent>
+        </InfoSection>
 
-      <CreateCorpusActionModal
-        corpusId={corpus.id}
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={() => {
-          setIsModalOpen(false);
-          refetchActions();
-        }}
-      />
+        <CreateCorpusActionModal
+          corpusId={corpus.id}
+          open={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSuccess={() => {
+            setIsModalOpen(false);
+            refetchActions();
+          }}
+        />
 
-      <Confirm
-        open={!!actionToDelete}
-        onCancel={() => setActionToDelete(null)}
-        onConfirm={() => actionToDelete && handleDelete(actionToDelete)}
-        content="Are you sure you want to delete this action? This cannot be undone."
-        confirmButton="Delete"
-        cancelButton="Cancel"
-      />
-    </PageContainer>
+        <Confirm
+          open={!!actionToDelete}
+          onCancel={() => setActionToDelete(null)}
+          onConfirm={() => actionToDelete && handleDelete(actionToDelete)}
+          content="Are you sure you want to delete this action? This cannot be undone."
+          confirmButton="Delete"
+          cancelButton="Cancel"
+        />
+      </PageContainer>
+    </SettingsContainer>
   );
 };

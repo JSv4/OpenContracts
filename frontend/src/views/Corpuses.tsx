@@ -1567,6 +1567,7 @@ export const Corpuses = () => {
                   description: opened_corpus.description || "",
                   allowComments: opened_corpus.allowComments || false,
                   preferredEmbedder: opened_corpus.preferredEmbedder,
+                  slug: (opened_corpus as any).slug || null,
                   creator: opened_corpus.creator,
                   created: opened_corpus.created,
                   modified: opened_corpus.modified,

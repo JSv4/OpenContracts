@@ -70,7 +70,7 @@ export function useSlugResolver({
 
   // Track if we've already processed this route
   const processedRef = useRef<string>("");
-  const currentRouteKey = `${userIdent}-${corpusIdent}-${documentIdent}`;
+  const currentRouteKey = [userIdent, corpusIdent, documentIdent].join("-");
 
   // GraphQL queries - slug-based
   const [resolveCorpus] = useLazyQuery<
@@ -145,7 +145,7 @@ export function useSlugResolver({
       canonicalUrl += `?${currentParams.toString()}`;
     }
 
-    console.log(`Redirecting from ID to canonical URL: ${canonicalUrl}`);
+    console.log("Redirecting from ID to canonical URL:", canonicalUrl);
     navigate(canonicalUrl, { replace: true });
   };
 
@@ -178,7 +178,7 @@ export function useSlugResolver({
 
     // Async resolution logic
     const resolve = async () => {
-      const resolutionMetric = `slug-resolution-${currentRouteKey}`;
+      const resolutionMetric = "slug-resolution-" + currentRouteKey;
       performanceMonitor.startMetric(resolutionMetric, {
         userIdent,
         corpusIdent,
@@ -195,7 +195,10 @@ export function useSlugResolver({
 
       // Check if we're already processing this request
       if (requestTracker.isPending(requestKey)) {
-        console.log(`Request already pending for ${requestKey}, skipping...`);
+        console.log(
+          "Request already pending for",
+          requestKey + ", skipping..."
+        );
         return;
       }
 
@@ -538,7 +541,7 @@ export function useCanonicalRedirect(
     const normalize = (path: string) => path.replace(/\/$/, "").toLowerCase();
 
     if (normalize(currentPath) !== normalize(canonicalPath)) {
-      console.log(`Redirecting to canonical path: ${canonicalPath}`);
+      console.log("Redirecting to canonical path:", canonicalPath);
       navigate(canonicalPath, { replace: true });
     }
   }, [entity, entityType, corpus, navigate, location]);

@@ -68,6 +68,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   # Translations dependencies
   gettext \
   git \
+  wget \
   poppler-utils \
   tesseract-ocr \
   libtesseract-dev  \
@@ -105,9 +106,17 @@ RUN for script in ./model_preloaders/*.py; do \
       python "$script"; \
     done
 
-# Download spacy models
-RUN python -m spacy download en_core_web_sm
-RUN python -m spacy download en_core_web_lg
+# Download spacy models with retry logic and direct pip installation
+# Using pip directly is more reliable than spacy download command in Docker
+RUN pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl && \
+    python -c "import spacy; spacy.load('en_core_web_sm')"
+
+# For the large model, we'll use wget with retry to ensure download completes
+RUN wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 5 \
+    https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl && \
+    pip install en_core_web_lg-3.8.0-py3-none-any.whl && \
+    rm en_core_web_lg-3.8.0-py3-none-any.whl && \
+    python -c "import spacy; spacy.load('en_core_web_lg')"
 
 COPY ./compose/production/django/entrypoint /entrypoint
 RUN sed -i 's/\r$//g' /entrypoint

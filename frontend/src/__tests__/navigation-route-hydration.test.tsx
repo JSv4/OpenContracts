@@ -218,7 +218,9 @@ describe("Phase 1 Navigation Fixes", () => {
       expect(result.current.corpus).toBeNull();
       expect(result.current.document).toBeNull();
       expect(result.current.error).toBeDefined();
-      expect(result.current.error?.message).toBe("Missing required route parameters");
+      expect(result.current.error?.message).toBe(
+        "Missing required route parameters"
+      );
     });
   });
 
@@ -268,7 +270,10 @@ describe("Phase 1 Navigation Fixes", () => {
         {
           request: {
             query: RESOLVE_CORPUS_BY_SLUGS_FULL,
-            variables: { userSlug: "network-test-user", corpusSlug: "network-test-corpus" },
+            variables: {
+              userSlug: "network-test-user",
+              corpusSlug: "network-test-corpus",
+            },
           },
           error: networkError,
         },

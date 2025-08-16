@@ -27,7 +27,7 @@ class PerformanceMonitor {
     };
 
     this.metrics.set(name, metric);
-    console.debug(`[Performance] Started: ${name}`, metadata);
+    console.debug("[Performance] Started:", name, metadata);
   }
 
   /**
@@ -38,7 +38,7 @@ class PerformanceMonitor {
 
     const metric = this.metrics.get(name);
     if (!metric) {
-      console.warn(`[Performance] No metric found for: ${name}`);
+      console.warn("[Performance] No metric found for:", name);
       return;
     }
 
@@ -47,7 +47,10 @@ class PerformanceMonitor {
     metric.metadata = { ...metric.metadata, ...additionalMetadata };
 
     console.debug(
-      `[Performance] Completed: ${name} in ${metric.duration.toFixed(2)}ms`,
+      "[Performance] Completed:",
+      name,
+      "in",
+      metric.duration.toFixed(2) + "ms",
       metric.metadata
     );
 
@@ -98,9 +101,10 @@ class PerformanceMonitor {
       // Log slow operations
       if (metric.duration > 1000) {
         console.warn(
-          `[Performance] Slow operation detected: ${
-            metric.name
-          } took ${metric.duration.toFixed(2)}ms`
+          "[Performance] Slow operation detected:",
+          metric.name,
+          "took",
+          metric.duration.toFixed(2) + "ms"
         );
       }
     }

@@ -28,11 +28,7 @@ vi.mock("react-router-dom", async () => {
 
 // Helper wrapper for tests
 const renderWithProviders = (ui: React.ReactElement) => {
-  return render(
-    <HelmetProvider>
-      {ui}
-    </HelmetProvider>
-  );
+  return render(<HelmetProvider>{ui}</HelmetProvider>);
 };
 
 // Mock data with all required fields
@@ -360,11 +356,15 @@ describe("ID-based Navigation", () => {
 
       // Wait for loading to complete
       await waitFor(() => {
-        expect(container.querySelector(".document-loading-container")).not.toBeInTheDocument();
+        expect(
+          container.querySelector(".document-loading-container")
+        ).not.toBeInTheDocument();
       });
 
       // Verify no error occurred
-      expect(container.querySelector(".document-error-container")).not.toBeInTheDocument();
+      expect(
+        container.querySelector(".document-error-container")
+      ).not.toBeInTheDocument();
     });
   });
 

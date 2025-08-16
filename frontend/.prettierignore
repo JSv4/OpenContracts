@@ -26,3 +26,6 @@ yarn-error.log*
 # bit files (for now)
 /public/bit/*
 workspace.jsonc
+
+# playwright cache
+playwright/.cache

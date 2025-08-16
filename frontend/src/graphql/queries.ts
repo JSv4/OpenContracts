@@ -165,6 +165,7 @@ export const RESOLVE_CORPUS_BY_SLUGS_FULL = gql`
       description
       mdDescription
       isPublic
+      myPermissions
       creator {
         id
         username
@@ -312,6 +313,7 @@ export const GET_CORPUS_METADATA = gql`
       title
       description
       mdDescription
+      myPermissions
       creator {
         id
         username

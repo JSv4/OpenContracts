@@ -1203,9 +1203,18 @@ export const Corpuses = () => {
 
   useEffect(() => {
     console.log("Switched opened_corpus", opened_corpus);
-    setCorpus({
-      selectedCorpus: opened_corpus,
-    });
+    if (opened_corpus) {
+      const corpus_permissions = getPermissions(opened_corpus.myPermissions);
+      setCorpus({
+        selectedCorpus: opened_corpus,
+        myPermissions: corpus_permissions,
+      });
+    } else {
+      setCorpus({
+        selectedCorpus: opened_corpus,
+        myPermissions: [],
+      });
+    }
     if (!opened_corpus || opened_corpus === null) {
       refetchCorpuses();
     } else if (opened_corpus?.id) {
@@ -1227,6 +1236,22 @@ export const Corpuses = () => {
       }
     }
   }, [opened_corpus]);
+
+  // Update CorpusAtom when metadata is fetched
+  useEffect(() => {
+    if (metadata_data?.corpus) {
+      const corpus = metadata_data.corpus;
+      console.log(
+        "Metadata fetched, updating CorpusAtom with permissions:",
+        corpus.myPermissions
+      );
+      const corpus_permissions = getPermissions(corpus.myPermissions || []);
+      setCorpus({
+        selectedCorpus: corpus,
+        myPermissions: corpus_permissions,
+      });
+    }
+  }, [metadata_data]);
 
   useEffect(() => {
     console.log(
@@ -1461,6 +1486,9 @@ export const Corpuses = () => {
     });
   }
 
+  const { canUpdateCorpus, myPermissions: corpusAtomPermissions } =
+    useCorpusState();
+
   // Navigation items configuration
   const navigationItems = [
     {
@@ -1504,9 +1532,28 @@ export const Corpuses = () => {
       component: <CorpusExtractCards />,
     },
     ...(opened_corpus &&
-    getPermissions(opened_corpus.myPermissions || []).includes(
-      PermissionTypes.CAN_UPDATE
-    )
+    (() => {
+      const legacyPermissions = getPermissions(
+        opened_corpus.myPermissions || []
+      );
+      const legacyHasUpdate = legacyPermissions.includes(
+        PermissionTypes.CAN_UPDATE
+      );
+
+      console.log("CorpusSettings Debug:", {
+        corpusId: opened_corpus.id,
+        corpusTitle: opened_corpus.title,
+        legacyRawPermissions: opened_corpus.myPermissions,
+        legacyProcessedPermissions: legacyPermissions,
+        legacyHasUpdatePermission: legacyHasUpdate,
+        corpusAtomPermissions,
+        canUpdateCorpusFromAtom: canUpdateCorpus,
+        creator: opened_corpus.creator?.email,
+        usingAtomPermissions: true,
+      });
+
+      return canUpdateCorpus;
+    })()
       ? [
           {
             id: "settings",
@@ -1524,7 +1571,7 @@ export const Corpuses = () => {
                   created: opened_corpus.created,
                   modified: opened_corpus.modified,
                   isPublic: opened_corpus.isPublic,
-                  myPermissions: opened_corpus.myPermissions,
+                  myPermissions: corpusAtomPermissions,
                 }}
               />
             ) : null,

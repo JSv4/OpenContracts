@@ -59,8 +59,6 @@ import { EditExtractModal } from "./components/widgets/modals/EditExtractModal";
 import { SelectAnalyzerOrFieldsetModal } from "./components/widgets/modals/SelectCorpusAnalyzerOrFieldsetAnalyzer";
 import { DocumentUploadModal } from "./components/widgets/modals/DocumentUploadModal";
 import { FileUploadPackageProps } from "./components/widgets/modals/DocumentUploadModal";
-import { DocumentKBRoute } from "./components/routes/DocumentKBRoute";
-import { DocumentKBDocRoute } from "./components/routes/DocumentKBDocRoute";
 import { DocumentLandingRoute } from "./components/routes/DocumentLandingRoute";
 import { useRouteStateSync } from "./hooks/RouteStateSync";
 import { NotFound } from "./components/routes/NotFound";

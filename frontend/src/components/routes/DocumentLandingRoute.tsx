@@ -6,7 +6,8 @@ import {
   useSlugResolver,
   useCanonicalRedirect,
 } from "../../hooks/useSlugResolver";
-import { LoadingSpinner } from "../widgets/LoadingSpinner";
+import { ModernLoadingDisplay } from "../widgets/ModernLoadingDisplay";
+import { ModernErrorDisplay } from "../widgets/ModernErrorDisplay";
 import { ErrorBoundary } from "../widgets/ErrorBoundary";
 import { performanceMonitor } from "../../utils/performance";
 
@@ -88,19 +89,15 @@ export const DocumentLandingRoute: React.FC = () => {
   }, [corpus, navigate]);
 
   if (loading) {
-    return (
-      <div className="document-loading-container">
-        <LoadingSpinner message="Loading document..." />
-      </div>
-    );
+    return <ModernLoadingDisplay type="document" size="large" />;
   }
 
   if (error || !document) {
     return (
-      <div className="document-error-container">
-        <h2>Error loading document</h2>
-        <p>{error?.message || "Document not found"}</p>
-      </div>
+      <ModernErrorDisplay
+        type="document"
+        error={error || "Document not found"}
+      />
     );
   }
 

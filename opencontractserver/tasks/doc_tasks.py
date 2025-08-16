@@ -152,12 +152,17 @@ def burn_doc_annotations(
     Returns a tuple containing all data needed for packaging:
       (filename, base64-encoded file, doc_export_data, text_labels, doc_labels)
     """
+    from opencontractserver.types.enums import AnnotationFilterMode
+
+    # Convert string to enum
+    filter_mode_enum = AnnotationFilterMode(annotation_filter_mode)
+
     return build_document_export(
         label_lookups=label_lookups,
         doc_id=doc_id,
         corpus_id=corpus_id,
         analysis_ids=analysis_ids,
-        annotation_filter_mode=annotation_filter_mode,
+        annotation_filter_mode=filter_mode_enum,
     )
 
 

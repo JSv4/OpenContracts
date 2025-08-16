@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useReactiveVar } from "@apollo/client";
-import { Dimmer, Loader } from "semantic-ui-react";
 import { authToken, authStatusVar, userObj } from "../../graphql/cache";
 import { toast } from "react-toastify";
+import { ModernLoadingDisplay } from "../widgets/ModernLoadingDisplay";
 
 interface AuthGateProps {
   children: React.ReactNode;
@@ -112,9 +112,12 @@ export const AuthGate: React.FC<AuthGateProps> = ({
   // Show loading screen while auth is initializing
   if (!authInitialized || authStatus === "LOADING") {
     return (
-      <Dimmer active inverted>
-        <Loader size="large">Initializing...</Loader>
-      </Dimmer>
+      <ModernLoadingDisplay
+        type="auth"
+        message="Initializing OpenContracts"
+        fullScreen={true}
+        size="large"
+      />
     );
   }
 

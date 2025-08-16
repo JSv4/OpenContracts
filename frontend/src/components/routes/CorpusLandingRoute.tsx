@@ -6,7 +6,8 @@ import {
   useSlugResolver,
   useCanonicalRedirect,
 } from "../../hooks/useSlugResolver";
-import { LoadingSpinner } from "../widgets/LoadingSpinner";
+import { ModernLoadingDisplay } from "../widgets/ModernLoadingDisplay";
+import { ModernErrorDisplay } from "../widgets/ModernErrorDisplay";
 import { ErrorBoundary } from "../widgets/ErrorBoundary";
 
 /**
@@ -37,20 +38,11 @@ export const CorpusLandingRoute: React.FC = () => {
   useCanonicalRedirect(corpus, "corpus");
 
   if (loading) {
-    return (
-      <div className="corpus-loading-container">
-        <LoadingSpinner message="Loading corpus..." />
-      </div>
-    );
+    return <ModernLoadingDisplay type="corpus" size="large" />;
   }
 
   if (error) {
-    return (
-      <div className="corpus-error-container">
-        <h2>Error loading corpus</h2>
-        <p>{error.message}</p>
-      </div>
-    );
+    return <ModernErrorDisplay type="corpus" error={error} />;
   }
 
   return (

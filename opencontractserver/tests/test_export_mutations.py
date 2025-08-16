@@ -12,7 +12,7 @@ from config.graphql.schema import schema
 from opencontractserver.annotations.models import AnnotationLabel, LabelSet
 from opencontractserver.documents.models import Document
 from opencontractserver.tests.base import BaseFixtureTestCase
-from opencontractserver.types.enums import ExportType, AnnotationFilterMode
+from opencontractserver.types.enums import ExportType
 
 User = get_user_model()
 
@@ -37,34 +37,34 @@ class TestExportMutations(BaseFixtureTestCase):
 
     def setUp(self):
         super().setUp()
-        
+
         # Create a test label set
         self.label_set = LabelSet.objects.create(
             title="Test Label Set",
             description="Test Label Set for Export Testing",
             creator=self.user,
         )
-        
+
         # Create annotation labels
         self.label1 = AnnotationLabel.objects.create(
             text="Test Label 1",
             description="First test label",
             creator=self.user,
         )
-        
+
         self.label2 = AnnotationLabel.objects.create(
             text="Test Label 2",
             description="Second test label",
             creator=self.user,
         )
-        
+
         # Add labels to label set
         self.label_set.annotation_labels.add(self.label1, self.label2)
-        
+
         # Update corpus with label set
         self.corpus.label_set = self.label_set
         self.corpus.save()
-        
+
         # Add documents to corpus
         for doc in self.docs[:2]:  # Add first 2 docs
             doc.corpus = self.corpus
@@ -76,7 +76,7 @@ class TestExportMutations(BaseFixtureTestCase):
         This is the default use case for most exports.
         """
         client = Client(schema, context_value=TestContext(self.user))
-        
+
         mutation = """
             mutation ExportCorpus($corpusId: String!, $exportFormat: ExportType!) {
                 exportCorpus(corpusId: $corpusId, exportFormat: $exportFormat) {
@@ -92,28 +92,32 @@ class TestExportMutations(BaseFixtureTestCase):
                 }
             }
         """
-        
+
         variables = {
             "corpusId": to_global_id("CorpusType", self.corpus.id),
             "exportFormat": ExportType.OPEN_CONTRACTS.value,
         }
-        
-        print(f"\n=== Test: Basic export without analysis parameters ===")
+
+        print("\n=== Test: Basic export without analysis parameters ===")
         print(f"Corpus ID: {self.corpus.id}")
-        print(f"Documents in corpus: {Document.objects.filter(corpus=self.corpus).count()}")
-        
+        print(
+            f"Documents in corpus: {Document.objects.filter(corpus=self.corpus).count()}"
+        )
+
         response = client.execute(mutation, variables=variables)
-        
+
         # Check for errors
-        self.assertNotIn("errors", response, f"GraphQL errors: {response.get('errors')}")
-        
+        self.assertNotIn(
+            "errors", response, f"GraphQL errors: {response.get('errors')}"
+        )
+
         # Verify success
         result = response["data"]["exportCorpus"]
         self.assertTrue(result["ok"], f"Export failed: {result['message']}")
         self.assertEqual(result["message"], "SUCCESS")
         self.assertIsNotNone(result["export"]["id"])
-        
-        print(f"✅ Basic export completed successfully")
+
+        print("✅ Basic export completed successfully")
 
     def test_export_with_empty_analysis_list(self):
         """
@@ -121,10 +125,10 @@ class TestExportMutations(BaseFixtureTestCase):
         This verifies the mutation handles empty lists correctly.
         """
         client = Client(schema, context_value=TestContext(self.user))
-        
+
         mutation = """
             mutation ExportCorpus(
-                $corpusId: String!, 
+                $corpusId: String!,
                 $exportFormat: ExportType!,
                 $analysesIds: [String!]
             ) {
@@ -143,24 +147,26 @@ class TestExportMutations(BaseFixtureTestCase):
                 }
             }
         """
-        
+
         variables = {
             "corpusId": to_global_id("CorpusType", self.corpus.id),
             "exportFormat": ExportType.OPEN_CONTRACTS.value,
             "analysesIds": [],  # Empty list
         }
-        
-        print(f"\n=== Test: Export with empty analysis list ===")
-        
+
+        print("\n=== Test: Export with empty analysis list ===")
+
         response = client.execute(mutation, variables=variables)
-        
-        self.assertNotIn("errors", response, f"GraphQL errors: {response.get('errors')}")
-        
+
+        self.assertNotIn(
+            "errors", response, f"GraphQL errors: {response.get('errors')}"
+        )
+
         result = response["data"]["exportCorpus"]
         self.assertTrue(result["ok"], f"Export failed: {result['message']}")
         self.assertEqual(result["message"], "SUCCESS")
-        
-        print(f"✅ Export with empty analysis list works correctly")
+
+        print("✅ Export with empty analysis list works correctly")
 
     def test_export_with_corpus_labelset_only_mode(self):
         """
@@ -168,7 +174,7 @@ class TestExportMutations(BaseFixtureTestCase):
         This mode only includes annotations from the corpus's label set.
         """
         client = Client(schema, context_value=TestContext(self.user))
-        
+
         mutation = """
             mutation ExportCorpus(
                 $corpusId: String!,
@@ -190,24 +196,26 @@ class TestExportMutations(BaseFixtureTestCase):
                 }
             }
         """
-        
+
         variables = {
             "corpusId": to_global_id("CorpusType", self.corpus.id),
             "exportFormat": ExportType.OPEN_CONTRACTS.value,
             "annotationFilterMode": "CORPUS_LABELSET_ONLY",
         }
-        
-        print(f"\n=== Test: Export with CORPUS_LABELSET_ONLY mode ===")
-        
+
+        print("\n=== Test: Export with CORPUS_LABELSET_ONLY mode ===")
+
         response = client.execute(mutation, variables=variables)
-        
-        self.assertNotIn("errors", response, f"GraphQL errors: {response.get('errors')}")
-        
+
+        self.assertNotIn(
+            "errors", response, f"GraphQL errors: {response.get('errors')}"
+        )
+
         result = response["data"]["exportCorpus"]
         self.assertTrue(result["ok"], f"Export failed: {result['message']}")
         self.assertEqual(result["message"], "SUCCESS")
-        
-        print(f"✅ CORPUS_LABELSET_ONLY mode works correctly")
+
+        print("✅ CORPUS_LABELSET_ONLY mode works correctly")
 
     def test_export_with_corpus_plus_analyses_mode(self):
         """
@@ -215,7 +223,7 @@ class TestExportMutations(BaseFixtureTestCase):
         This mode combines corpus label set with specified analyses.
         """
         client = Client(schema, context_value=TestContext(self.user))
-        
+
         mutation = """
             mutation ExportCorpus(
                 $corpusId: String!,
@@ -239,25 +247,27 @@ class TestExportMutations(BaseFixtureTestCase):
                 }
             }
         """
-        
+
         variables = {
             "corpusId": to_global_id("CorpusType", self.corpus.id),
             "exportFormat": ExportType.OPEN_CONTRACTS.value,
             "annotationFilterMode": "CORPUS_LABELSET_PLUS_ANALYSES",
             "analysesIds": [],  # Empty for this test, but would normally contain analysis IDs
         }
-        
-        print(f"\n=== Test: Export with CORPUS_LABELSET_PLUS_ANALYSES mode ===")
-        
+
+        print("\n=== Test: Export with CORPUS_LABELSET_PLUS_ANALYSES mode ===")
+
         response = client.execute(mutation, variables=variables)
-        
-        self.assertNotIn("errors", response, f"GraphQL errors: {response.get('errors')}")
-        
+
+        self.assertNotIn(
+            "errors", response, f"GraphQL errors: {response.get('errors')}"
+        )
+
         result = response["data"]["exportCorpus"]
         self.assertTrue(result["ok"], f"Export failed: {result['message']}")
         self.assertEqual(result["message"], "SUCCESS")
-        
-        print(f"✅ CORPUS_LABELSET_PLUS_ANALYSES mode works correctly")
+
+        print("✅ CORPUS_LABELSET_PLUS_ANALYSES mode works correctly")
 
     def test_export_with_analyses_only_mode(self):
         """
@@ -265,7 +275,7 @@ class TestExportMutations(BaseFixtureTestCase):
         This mode only includes annotations from specified analyses.
         """
         client = Client(schema, context_value=TestContext(self.user))
-        
+
         mutation = """
             mutation ExportCorpus(
                 $corpusId: String!,
@@ -289,25 +299,27 @@ class TestExportMutations(BaseFixtureTestCase):
                 }
             }
         """
-        
+
         variables = {
             "corpusId": to_global_id("CorpusType", self.corpus.id),
             "exportFormat": ExportType.OPEN_CONTRACTS.value,
             "annotationFilterMode": "ANALYSES_ONLY",
             "analysesIds": [],  # Empty list means no annotations will be included
         }
-        
-        print(f"\n=== Test: Export with ANALYSES_ONLY mode ===")
-        
+
+        print("\n=== Test: Export with ANALYSES_ONLY mode ===")
+
         response = client.execute(mutation, variables=variables)
-        
-        self.assertNotIn("errors", response, f"GraphQL errors: {response.get('errors')}")
-        
+
+        self.assertNotIn(
+            "errors", response, f"GraphQL errors: {response.get('errors')}"
+        )
+
         result = response["data"]["exportCorpus"]
         self.assertTrue(result["ok"], f"Export failed: {result['message']}")
         self.assertEqual(result["message"], "SUCCESS")
-        
-        print(f"✅ ANALYSES_ONLY mode works correctly")
+
+        print("✅ ANALYSES_ONLY mode works correctly")
 
     def test_funsd_export_format(self):
         """
@@ -315,7 +327,7 @@ class TestExportMutations(BaseFixtureTestCase):
         FUNSD is an alternative export format for form understanding.
         """
         client = Client(schema, context_value=TestContext(self.user))
-        
+
         mutation = """
             mutation ExportCorpus(
                 $corpusId: String!,
@@ -335,23 +347,25 @@ class TestExportMutations(BaseFixtureTestCase):
                 }
             }
         """
-        
+
         variables = {
             "corpusId": to_global_id("CorpusType", self.corpus.id),
             "exportFormat": ExportType.FUNSD.value,
         }
-        
-        print(f"\n=== Test: FUNSD export format ===")
-        
+
+        print("\n=== Test: FUNSD export format ===")
+
         response = client.execute(mutation, variables=variables)
-        
-        self.assertNotIn("errors", response, f"GraphQL errors: {response.get('errors')}")
-        
+
+        self.assertNotIn(
+            "errors", response, f"GraphQL errors: {response.get('errors')}"
+        )
+
         result = response["data"]["exportCorpus"]
         self.assertTrue(result["ok"], f"Export failed: {result['message']}")
         self.assertEqual(result["message"], "SUCCESS")
-        
-        print(f"✅ FUNSD export format works correctly")
+
+        print("✅ FUNSD export format works correctly")
 
     def test_funsd_export_with_analysis_filter(self):
         """
@@ -359,7 +373,7 @@ class TestExportMutations(BaseFixtureTestCase):
         Verifies FUNSD format works with the same filtering options.
         """
         client = Client(schema, context_value=TestContext(self.user))
-        
+
         mutation = """
             mutation ExportCorpus(
                 $corpusId: String!,
@@ -381,24 +395,26 @@ class TestExportMutations(BaseFixtureTestCase):
                 }
             }
         """
-        
+
         variables = {
             "corpusId": to_global_id("CorpusType", self.corpus.id),
             "exportFormat": ExportType.FUNSD.value,
             "analysesIds": [],  # Empty analysis list
         }
-        
-        print(f"\n=== Test: FUNSD export with analysis filter ===")
-        
+
+        print("\n=== Test: FUNSD export with analysis filter ===")
+
         response = client.execute(mutation, variables=variables)
-        
-        self.assertNotIn("errors", response, f"GraphQL errors: {response.get('errors')}")
-        
+
+        self.assertNotIn(
+            "errors", response, f"GraphQL errors: {response.get('errors')}"
+        )
+
         result = response["data"]["exportCorpus"]
         self.assertTrue(result["ok"], f"Export failed: {result['message']}")
         self.assertEqual(result["message"], "SUCCESS")
-        
-        print(f"✅ FUNSD export with filtering works correctly")
+
+        print("✅ FUNSD export with filtering works correctly")
 
     def test_export_with_post_processors(self):
         """
@@ -406,7 +422,7 @@ class TestExportMutations(BaseFixtureTestCase):
         Post-processors can transform the export after generation.
         """
         client = Client(schema, context_value=TestContext(self.user))
-        
+
         mutation = """
             mutation ExportCorpus(
                 $corpusId: String!,
@@ -428,21 +444,23 @@ class TestExportMutations(BaseFixtureTestCase):
                 }
             }
         """
-        
+
         variables = {
             "corpusId": to_global_id("CorpusType", self.corpus.id),
             "exportFormat": ExportType.OPEN_CONTRACTS.value,
             "postProcessors": [],  # Empty list of post-processors
         }
-        
-        print(f"\n=== Test: Export with post-processors parameter ===")
-        
+
+        print("\n=== Test: Export with post-processors parameter ===")
+
         response = client.execute(mutation, variables=variables)
-        
-        self.assertNotIn("errors", response, f"GraphQL errors: {response.get('errors')}")
-        
+
+        self.assertNotIn(
+            "errors", response, f"GraphQL errors: {response.get('errors')}"
+        )
+
         result = response["data"]["exportCorpus"]
         self.assertTrue(result["ok"], f"Export failed: {result['message']}")
         self.assertEqual(result["message"], "SUCCESS")
-        
-        print(f"✅ Export with post-processors parameter works correctly")
+
+        print("✅ Export with post-processors parameter works correctly")

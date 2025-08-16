@@ -1,4 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  type MockedFunction,
+} from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { AuthGate } from "./AuthGate";
@@ -25,7 +32,7 @@ describe("AuthGate", () => {
 
   describe("Auth0 Mode", () => {
     it("shows loading screen while Auth0 is loading", () => {
-      const mockUseAuth0 = useAuth0 as vi.MockedFunction<typeof useAuth0>;
+      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
       mockUseAuth0.mockReturnValue({
         isLoading: true,
         isAuthenticated: false,
@@ -54,7 +61,7 @@ describe("AuthGate", () => {
       const mockUser = { email: "test@example.com", sub: "user123" };
       const mockGetAccessTokenSilently = vi.fn().mockResolvedValue(mockToken);
 
-      const mockUseAuth0 = useAuth0 as vi.MockedFunction<typeof useAuth0>;
+      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
       mockUseAuth0.mockReturnValue({
         isLoading: false,
         isAuthenticated: true,
@@ -94,7 +101,7 @@ describe("AuthGate", () => {
     });
 
     it("sets anonymous status when not authenticated", async () => {
-      const mockUseAuth0 = useAuth0 as vi.MockedFunction<typeof useAuth0>;
+      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
       mockUseAuth0.mockReturnValue({
         isLoading: false,
         isAuthenticated: false,
@@ -131,7 +138,7 @@ describe("AuthGate", () => {
         .fn()
         .mockRejectedValue(new Error("Token fetch failed"));
 
-      const mockUseAuth0 = useAuth0 as vi.MockedFunction<typeof useAuth0>;
+      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
       mockUseAuth0.mockReturnValue({
         isLoading: false,
         isAuthenticated: true,
@@ -166,7 +173,7 @@ describe("AuthGate", () => {
   describe("Non-Auth0 Mode", () => {
     it("immediately sets anonymous status and renders children", async () => {
       // Mock useAuth0 to return minimal values for non-Auth0 mode
-      const mockUseAuth0 = useAuth0 as vi.MockedFunction<typeof useAuth0>;
+      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
       mockUseAuth0.mockReturnValue({
         isLoading: false,
         isAuthenticated: false,
@@ -210,7 +217,7 @@ describe("AuthGate", () => {
           })
       );
 
-      const mockUseAuth0 = useAuth0 as vi.MockedFunction<typeof useAuth0>;
+      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
       mockUseAuth0.mockReturnValue({
         isLoading: false,
         isAuthenticated: true,
@@ -250,7 +257,7 @@ describe("AuthGate", () => {
       const mockUser = { email: "test@example.com", sub: "user123" };
       const mockGetAccessTokenSilently = vi.fn().mockResolvedValue(mockToken);
 
-      const mockUseAuth0 = useAuth0 as vi.MockedFunction<typeof useAuth0>;
+      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
       mockUseAuth0.mockReturnValue({
         isLoading: false,
         isAuthenticated: true,

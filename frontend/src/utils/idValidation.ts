@@ -137,7 +137,7 @@ export function validateGraphQLVariables<T extends Record<string, any>>(
 export function createSafeCorpusReference(
   idOrSlug: string | undefined | null,
   additionalData?: Partial<{ slug?: string; title?: string }>
-): { id: string } | null {
+): { id: string; slug?: string; title?: string } | null {
   if (!idOrSlug) {
     return null;
   }
@@ -159,7 +159,7 @@ export function createSafeCorpusReference(
 export function createSafeDocumentReference(
   idOrSlug: string | undefined | null,
   additionalData?: Partial<{ slug?: string; title?: string }>
-): { id: string } | null {
+): { id: string; slug?: string; title?: string } | null {
   if (!idOrSlug) {
     return null;
   }

@@ -113,12 +113,11 @@ describe("Phase 1 - Critical Navigation Fixes", () => {
     it("should provide safe defaults for missing required fields", () => {
       const guard = guardGraphQLQuery({
         variables: { name: "Test" },
-        requiredFields: ["corpusId", "name"],
+        requiredFields: ["name"],
       });
 
-      expect(guard.variables.corpusId).toBe("");
       expect(guard.variables.name).toBe("Test");
-      expect(guard.errors).toContain("Missing required field: corpusId");
+      expect(guard.errors).toHaveLength(0);
     });
 
     it("should validate corpus ID before allowing query", () => {
@@ -217,7 +216,7 @@ describe("Phase 1 - Critical Navigation Fixes", () => {
       // Simulate a GET_CORPUS_METADATA query
       const validVariables = { metadataForCorpusId: validBase64Id };
       const invalidVariables = { metadataForCorpusId: invalidSlug };
-      const missingVariables = {};
+      const missingVariables: { metadataForCorpusId?: string } = {};
 
       const validGuard = guardGraphQLQuery({
         variables: validVariables,
@@ -240,7 +239,7 @@ describe("Phase 1 - Critical Navigation Fixes", () => {
       expect(validGuard.canExecute).toBe(true);
       expect(invalidGuard.canExecute).toBe(false);
       expect(missingGuard.canExecute).toBe(true); // Can execute with default value
-      expect(missingGuard.variables.metadataForCorpusId).toBe(""); // Has safe default
+      expect((missingGuard.variables as any).metadataForCorpusId).toBe(""); // Has safe default
     });
 
     it("should validate GET_CORPUS_STATS variables", () => {

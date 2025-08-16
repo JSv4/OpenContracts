@@ -1,6 +1,6 @@
 volumes:
-  local_postgres_data: {}
-  local_postgres_data_backups: {}
+  test_postgres_data: {}
+  test_postgres_data_backups: {}
 
 services:
 
@@ -43,8 +43,8 @@ services:
       dockerfile: ./compose/production/postgres/Dockerfile
     image: opencontractserver_production_postgres
     volumes:
-      - local_postgres_data:/var/lib/postgresql/data:Z
-      - local_postgres_data_backups:/backups:z
+      - test_postgres_data:/var/lib/postgresql/data:Z
+      - test_postgres_data_backups:/backups:z
       - ./compose/production/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     env_file:
       - ./.envs/.test/.postgres

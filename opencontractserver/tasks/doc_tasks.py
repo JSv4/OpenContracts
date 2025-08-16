@@ -153,7 +153,11 @@ def burn_doc_annotations(
       (filename, base64-encoded file, doc_export_data, text_labels, doc_labels)
     """
     return build_document_export(
-        label_lookups=label_lookups, doc_id=doc_id, corpus_id=corpus_id
+        label_lookups=label_lookups,
+        doc_id=doc_id,
+        corpus_id=corpus_id,
+        analysis_ids=analysis_ids,
+        annotation_filter_mode=annotation_filter_mode,
     )
 
 

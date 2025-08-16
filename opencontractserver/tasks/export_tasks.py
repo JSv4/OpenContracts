@@ -93,6 +93,8 @@ def package_annotated_docs(
     ],
     export_id: int,
     corpus_pk: int,
+    analysis_pk_list: list[int] | None = None,
+    annotation_filter_mode: str = "CORPUS_LABELSET_ONLY",
 ):
     """
     Gathers the partial doc exports from burn_doc_annotations() and compiles
@@ -193,6 +195,7 @@ def package_funsd_exports(
     ],
     export_id: int,
     corpus_pk: int,
+    analysis_pk_list: list[int] | None = None,
 ):
     """
     Similar to package_annotated_docs, but for FUNSD exports. The key difference

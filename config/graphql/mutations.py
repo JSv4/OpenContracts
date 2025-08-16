@@ -2050,6 +2050,25 @@ class CreateCorpusMutation(DRFMutation):
         preferred_embedder = graphene.String(required=False)
         slug = graphene.String(required=False)
 
+    @classmethod
+    def mutate(cls, root, info, *args, **kwargs):
+        result = super().mutate(root, info, *args, **kwargs)
+
+        if result.ok and result.obj_id:
+            from graphql_relay import from_global_id
+
+            from opencontractserver.types.enums import PermissionTypes
+
+            obj_pk = from_global_id(result.obj_id)[1]
+            corpus = cls.IOSettings.model.objects.get(pk=obj_pk)
+            set_permissions_for_obj_to_user(
+                info.context.user,
+                corpus,
+                [PermissionTypes.CRUD, PermissionTypes.PUBLISH],
+            )
+
+        return result
+
 
 class UpdateCorpusMutation(DRFMutation):
     class IOSettings:

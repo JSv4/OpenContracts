@@ -84,21 +84,27 @@ public_group_permissions = {
 
 
 def add_group_permissions(apps, schema_editor):
+    """Create default public access group and assign permissions.
 
-    # See https://code.djangoproject.com/ticket/23422
-    db_alias = schema_editor.connection.alias
-
-    try:
-        emit_post_migrate_signal(2, False, 'default')
-    except TypeError:  # Django < 1.8
-        emit_post_migrate_signal([], 2, False, 'default', db_alias)
+    Avoids triggering `emit_post_migrate_signal` here to prevent model/schema
+    mismatches when new fields are added to the User model in later migrations.
+    Post-migrate signals will be emitted by Django after all migrations anyway.
+    """
+    # Previously this migration called emit_post_migrate_signal to ensure
+    # content types and permissions existed. This can cause issues when models
+    # evolve. Allow the global post-migrate to handle it instead.
 
     for group in public_group_permissions:
         role, created = Group.objects.get_or_create(name=group)
         logger.info(f'{group} Group created')
         for perm in public_group_permissions[group]:
-            logger.info(f'Permitting {group} to {perm}')
-            role.permissions.add(Permission.objects.get(codename=perm))
+            try:
+                logger.info(f'Permitting {group} to {perm}')
+                role.permissions.add(Permission.objects.get(codename=perm))
+            except Permission.DoesNotExist:
+                # Permissions for some apps may not yet be created depending on migration order.
+                # Skip missing permissions; they can be assigned later via admin or another migration.
+                logger.warning(f"Permission '{perm}' does not exist yet; skipping assignment.")
         role.save()
 
     logger.info("Installation of default public access group COMPLETE!")

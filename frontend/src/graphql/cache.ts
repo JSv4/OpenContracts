@@ -157,6 +157,25 @@ export const cache = new InMemoryCache({
         relationshipLabels: relayStylePagination(),
         extracts: relayStylePagination(),
         columns: relayStylePagination(),
+        // Slug resolution queries - cache by input parameters
+        userBySlug: {
+          keyArgs: ["slug"],
+        },
+        corpusBySlugs: {
+          keyArgs: ["userSlug", "corpusSlug"],
+        },
+        documentBySlugs: {
+          keyArgs: ["userSlug", "documentSlug"],
+        },
+        documentInCorpusBySlugs: {
+          keyArgs: ["userSlug", "corpusSlug", "documentSlug"],
+        },
+        resolveCorpus: {
+          keyArgs: ["userIdent", "corpusIdent"],
+        },
+        resolveDocument: {
+          keyArgs: ["userIdent", "documentIdent", "corpusIdent"],
+        },
       },
     },
     DatacellType: {
@@ -181,6 +200,7 @@ export const showUploadNewDocumentsModal = makeVar<boolean>(false);
 export const showDeleteDocumentsModal = makeVar<boolean>(false);
 export const showNewLabelsetModal = makeVar<boolean>(false);
 export const showExportModal = makeVar<boolean>(false);
+export const showUserSettingsModal = makeVar<boolean>(false);
 export const showKnowledgeBaseModal = persistentVar<{
   isOpen: boolean;
   documentId: string | null;

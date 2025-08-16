@@ -585,7 +585,10 @@ export const CorpusHome: React.FC<CorpusHomeProps> = ({
     totalExtracts: 0,
   };
 
-  const canEdit = getPermissions(corpus.myPermissions || []).includes(
+  // Use the fetched corpus data instead of the prop
+  const fullCorpus = corpusData?.corpus || corpus;
+
+  const canEdit = getPermissions(fullCorpus.myPermissions || []).includes(
     PermissionTypes.CAN_UPDATE
   );
 
@@ -596,14 +599,57 @@ export const CorpusHome: React.FC<CorpusHomeProps> = ({
     { label: "Extracts", value: stats.totalExtracts },
   ];
 
+  // Show loading state while corpus data is being fetched
+  if (corpusLoading && !corpusData) {
+    return (
+      <Container id="corpus-home-container">
+        <TopBar id="corpus-home-top-bar">
+          <CorpusInfo id="corpus-home-corpus-info">
+            <LoadingPlaceholder>
+              <div
+                className="title-skeleton"
+                style={{ width: "300px", height: "32px" }}
+              ></div>
+              <div
+                className="line-skeleton medium"
+                style={{ marginTop: "0.5rem" }}
+              ></div>
+            </LoadingPlaceholder>
+          </CorpusInfo>
+        </TopBar>
+        <MainContent id="corpus-home-main-content">
+          <ContentWrapper id="corpus-home-content">
+            <DescriptionCard>
+              <DescriptionHeader>
+                <DescriptionTitle>
+                  <BookOpen size={20} />
+                  About this Corpus
+                </DescriptionTitle>
+              </DescriptionHeader>
+              <DescriptionContent>
+                <LoadingPlaceholder>
+                  <div className="paragraph-skeleton">
+                    <div className="line-skeleton long"></div>
+                    <div className="line-skeleton long"></div>
+                    <div className="line-skeleton medium"></div>
+                  </div>
+                </LoadingPlaceholder>
+              </DescriptionContent>
+            </DescriptionCard>
+          </ContentWrapper>
+        </MainContent>
+      </Container>
+    );
+  }
+
   return (
     <Container id="corpus-home-container">
       <TopBar id="corpus-home-top-bar">
         <CorpusInfo id="corpus-home-corpus-info">
           <TitleRow>
-            <CorpusTitle>{corpus.title}</CorpusTitle>
-            <AccessBadge isPublic={corpus.isPublic}>
-              {corpus.isPublic ? (
+            <CorpusTitle>{fullCorpus.title || "Loading..."}</CorpusTitle>
+            <AccessBadge isPublic={fullCorpus.isPublic}>
+              {fullCorpus.isPublic ? (
                 <>
                   <Globe size={12} />
                   Public
@@ -620,26 +666,26 @@ export const CorpusHome: React.FC<CorpusHomeProps> = ({
           <MetadataRow>
             <div className="meta-item">
               <Users size={14} />
-              <span>{corpus.creator?.email || "Unknown creator"}</span>
+              <span>{fullCorpus.creator?.email || "Unknown creator"}</span>
             </div>
             <div className="separator" />
             <div className="meta-item">
               <Calendar size={14} />
               <span>
                 Created{" "}
-                {corpus.created
-                  ? formatDistanceToNow(new Date(corpus.created), {
+                {fullCorpus.created
+                  ? formatDistanceToNow(new Date(fullCorpus.created), {
                       addSuffix: true,
                     })
                   : "recently"}
               </span>
             </div>
-            {corpus.labelSet && (
+            {fullCorpus.labelSet && (
               <>
                 <div className="separator" />
                 <div className="meta-item">
                   <Hash size={14} />
-                  <span>{corpus.labelSet.title}</span>
+                  <span>{fullCorpus.labelSet.title}</span>
                 </div>
               </>
             )}
@@ -674,7 +720,7 @@ export const CorpusHome: React.FC<CorpusHomeProps> = ({
                 About this Corpus
               </DescriptionTitle>
               <ActionButtons>
-                {(mdContent || corpus.description) && (
+                {(mdContent || fullCorpus.description) && (
                   <HeaderHistoryButton onClick={onEditDescription}>
                     <Activity size={14} />
                     Version History
@@ -682,7 +728,7 @@ export const CorpusHome: React.FC<CorpusHomeProps> = ({
                 )}
                 {canEdit && (
                   <HeaderEditButton onClick={onEditDescription}>
-                    {mdContent || corpus.description ? (
+                    {mdContent || fullCorpus.description ? (
                       <>
                         <Edit size={14} />
                         Edit Description
@@ -699,7 +745,7 @@ export const CorpusHome: React.FC<CorpusHomeProps> = ({
             </DescriptionHeader>
 
             <DescriptionContent
-              className={!mdContent && !corpus.description ? "empty" : ""}
+              className={!mdContent && !fullCorpus.description ? "empty" : ""}
             >
               {corpusLoading ? (
                 <LoadingPlaceholder>
@@ -722,8 +768,8 @@ export const CorpusHome: React.FC<CorpusHomeProps> = ({
                 </LoadingPlaceholder>
               ) : mdContent ? (
                 <SafeMarkdown>{mdContent}</SafeMarkdown>
-              ) : corpus.description ? (
-                <p>{corpus.description}</p>
+              ) : fullCorpus.description ? (
+                <p>{fullCorpus.description}</p>
               ) : (
                 <>
                   <Sparkles

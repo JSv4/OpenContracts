@@ -45,6 +45,7 @@ export const UPLOADING = "UPLOADING";
 
 export interface FileDetailsProps {
   title?: string;
+  slug?: string;
   description?: string;
 }
 
@@ -165,7 +166,15 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
   const addFile = (file_package: FileUploadPackageProps) => {
     setFiles((files) => [
       ...(files ? files : []),
-      { ...file_package, status: NOT_STARTED },
+      {
+        ...file_package,
+        formData: {
+          slug: "",
+          description: file_package.formData.description,
+          title: file_package.formData.title,
+        },
+        status: NOT_STARTED,
+      },
     ]);
     setUploadState((statuses) => [...statuses, NOT_STARTED]);
   };
@@ -187,6 +196,7 @@ export function DocumentUploadModal(props: DocumentUploadModalProps) {
                 customMeta: {},
                 description: file_package.formData.description,
                 title: file_package.formData.title,
+                slug: file_package.formData.slug,
                 addToCorpusId: corpusId || selected_corpus?.id,
                 makePublic: false,
               },

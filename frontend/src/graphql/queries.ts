@@ -64,6 +64,7 @@ export const GET_DOCUMENTS = gql`
       edges {
         node {
           id
+          slug
           title
           description
           backendLock
@@ -74,6 +75,9 @@ export const GET_DOCUMENTS = gql`
           icon
           isPublic
           myPermissions
+          creator {
+            slug
+          }
           is_selected @client
           is_open @client
           doc_label_annotations: docAnnotations(
@@ -94,24 +98,6 @@ export const GET_DOCUMENTS = gql`
               }
             }
           }
-          metadata_annotations: docAnnotations(
-            annotationLabel_LabelType: METADATA_LABEL
-          ) @include(if: $includeMetadata) {
-            edges {
-              node {
-                id
-                annotationLabel {
-                  labelType
-                  text
-                }
-                rawText
-                corpus {
-                  title
-                  icon
-                }
-              }
-            }
-          }
         }
       }
       pageInfo {
@@ -119,6 +105,146 @@ export const GET_DOCUMENTS = gql`
         hasPreviousPage
         startCursor
         endCursor
+      }
+    }
+  }
+`;
+
+// ---------------- Slug resolution ----------------
+export const USER_BY_SLUG = gql`
+  query ($slug: String!) {
+    userBySlug(slug: $slug) {
+      id
+      slug
+      username
+    }
+  }
+`;
+
+export const CORPUS_BY_SLUGS = gql`
+  query ($userSlug: String!, $corpusSlug: String!) {
+    corpusBySlugs(userSlug: $userSlug, corpusSlug: $corpusSlug) {
+      id
+      slug
+      title
+    }
+  }
+`;
+
+export const DOCUMENT_BY_SLUGS = gql`
+  query ($userSlug: String!, $documentSlug: String!) {
+    documentBySlugs(userSlug: $userSlug, documentSlug: $documentSlug) {
+      id
+      slug
+      title
+    }
+  }
+`;
+
+export const DOCUMENT_IN_CORPUS_BY_SLUGS = gql`
+  query ($userSlug: String!, $corpusSlug: String!, $documentSlug: String!) {
+    documentInCorpusBySlugs(
+      userSlug: $userSlug
+      corpusSlug: $corpusSlug
+      documentSlug: $documentSlug
+    ) {
+      id
+      slug
+      title
+    }
+  }
+`;
+
+// Enhanced queries that fetch full data in single request
+export const RESOLVE_CORPUS_BY_SLUGS_FULL = gql`
+  query ResolveCorpusFull($userSlug: String!, $corpusSlug: String!) {
+    corpusBySlugs(userSlug: $userSlug, corpusSlug: $corpusSlug) {
+      id
+      slug
+      title
+      description
+      mdDescription
+      isPublic
+      myPermissions
+      creator {
+        id
+        username
+        slug
+      }
+      labelSet {
+        id
+        title
+      }
+      documents {
+        totalCount
+      }
+      analyses {
+        totalCount
+      }
+    }
+  }
+`;
+
+export const RESOLVE_DOCUMENT_BY_SLUGS_FULL = gql`
+  query ResolveDocumentFull($userSlug: String!, $documentSlug: String!) {
+    documentBySlugs(userSlug: $userSlug, documentSlug: $documentSlug) {
+      id
+      slug
+      title
+      description
+      fileType
+      isPublic
+      pdfFile
+      backendLock
+      creator {
+        id
+        username
+        slug
+      }
+    }
+  }
+`;
+
+export const RESOLVE_DOCUMENT_IN_CORPUS_BY_SLUGS_FULL = gql`
+  query ResolveDocumentInCorpusFull(
+    $userSlug: String!
+    $corpusSlug: String!
+    $documentSlug: String!
+  ) {
+    corpusBySlugs(userSlug: $userSlug, corpusSlug: $corpusSlug) {
+      id
+      slug
+      title
+      description
+      mdDescription
+      isPublic
+      creator {
+        id
+        username
+        slug
+      }
+      labelSet {
+        id
+        title
+      }
+    }
+    documentInCorpusBySlugs(
+      userSlug: $userSlug
+      corpusSlug: $corpusSlug
+      documentSlug: $documentSlug
+    ) {
+      id
+      slug
+      title
+      description
+      fileType
+      isPublic
+      pdfFile
+      backendLock
+      creator {
+        id
+        username
+        slug
       }
     }
   }
@@ -144,6 +270,7 @@ export const SEARCH_DOCUMENTS = gql`
       edges {
         node {
           id
+          slug
           title
           description
           backendLock
@@ -154,6 +281,9 @@ export const SEARCH_DOCUMENTS = gql`
           icon
           isPublic
           myPermissions
+          creator {
+            slug
+          }
           is_selected @client
         }
       }
@@ -179,9 +309,16 @@ export const GET_CORPUS_METADATA = gql`
   query ($metadataForCorpusId: ID!) {
     corpus(id: $metadataForCorpusId) {
       id
+      slug
       title
       description
       mdDescription
+      myPermissions
+      creator {
+        id
+        username
+        slug
+      }
       descriptionRevisions {
         id
         version
@@ -193,7 +330,7 @@ export const GET_CORPUS_METADATA = gql`
         diff
         snapshot
       }
-      allAnnotationSummaries(labelTypes: [METADATA_LABEL]) {
+      allAnnotationSummaries {
         id
         rawText
         json
@@ -210,14 +347,24 @@ export const GET_CORPUS_WITH_HISTORY = gql`
   query GetCorpusWithHistory($id: ID!) {
     corpus(id: $id) {
       id
+      slug
       title
       description
       mdDescription
       created
       modified
+      isPublic
+      myPermissions
       creator {
         id
         email
+        slug
+        __typename
+      }
+      labelSet {
+        id
+        title
+        __typename
       }
       descriptionRevisions {
         id
@@ -225,11 +372,14 @@ export const GET_CORPUS_WITH_HISTORY = gql`
         author {
           id
           email
+          __typename
         }
         created
         diff
         snapshot
+        __typename
       }
+      __typename
     }
   }
 `;
@@ -244,25 +394,38 @@ export interface CorpusRevision {
   author: {
     id: string;
     email: string;
+    __typename: string;
   };
   created: string;
   diff: string;
   snapshot?: string;
+  __typename: string;
 }
 
 export interface GetCorpusWithHistoryQuery {
   corpus: {
     id: string;
+    slug?: string | null;
     title: string;
     description: string;
-    mdDescription?: string;
+    mdDescription?: string | null;
     created: string;
     modified: string;
+    isPublic: boolean;
+    myPermissions: string[];
     creator: {
       id: string;
       email: string;
+      slug?: string | null;
+      __typename: string;
     };
+    labelSet?: {
+      id: string;
+      title: string;
+      __typename: string;
+    } | null;
     descriptionRevisions: CorpusRevision[];
+    __typename: string;
   };
 }
 
@@ -515,10 +678,12 @@ export const GET_CORPUSES = gql`
       edges {
         node {
           id
+          slug
           icon
           title
           creator {
             email
+            slug
           }
           description
           preferredEmbedder
@@ -554,7 +719,6 @@ export const GET_CORPUSES = gql`
             docLabelCount
             spanLabelCount
             tokenLabelCount
-            metadataLabelCount
           }
         }
       }
@@ -1155,7 +1319,6 @@ export const GET_EXPORT = gql`
           extractIsList
           limitToLabel
           taskName
-          agentic
           matchText
           query
           outputType
@@ -1181,6 +1344,12 @@ export interface GetFieldsetsOutputs {
 export const GET_FIELDSETS = gql`
   query GetFieldsets($searchText: String) {
     fieldsets(name_Contains: $searchText) {
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
       edges {
         node {
           id
@@ -1203,11 +1372,45 @@ export const GET_FIELDSETS = gql`
                 instructions
                 extractIsList
                 taskName
-                agentic
               }
             }
           }
         }
+      }
+    }
+  }
+`;
+
+export interface GetFieldsetInput {
+  id: string;
+}
+
+export interface GetFieldsetOutput {
+  fieldset: FieldsetType;
+}
+
+export const REQUEST_GET_FIELDSET = gql`
+  query GetFieldset($id: ID!) {
+    fieldset(id: $id) {
+      id
+      name
+      description
+      inUse
+      creator {
+        id
+        username
+      }
+      fullColumnList {
+        id
+        name
+        query
+        matchText
+        mustContainText
+        outputType
+        limitToLabel
+        instructions
+        extractIsList
+        taskName
       }
     }
   }
@@ -1237,7 +1440,6 @@ export const GET_FIELDSET = gql`
         instructions
         extractIsList
         taskName
-        agentic
       }
     }
   }
@@ -1271,9 +1473,9 @@ export const REQUEST_GET_EXTRACT = gql`
           instructions
           matchText
           limitToLabel
-          agentic
           taskName
           outputType
+          extractIsList
         }
       }
       creator {
@@ -1589,7 +1791,6 @@ export const GET_DATACELLS_FOR_EXTRACT = gql`
           instructions
           extractIsList
           taskName
-          agentic
         }
       }
       fullDatacellList {
@@ -2246,6 +2447,138 @@ export const GET_DOCUMENT_KNOWLEDGE_AND_ANNOTATIONS = gql`
 `;
 
 /**
+ * Query to get document data without corpus context
+ * Used when viewing documents that haven't been assigned to a corpus
+ */
+export interface GetDocumentOnlyInput {
+  documentId: string;
+}
+
+export interface GetDocumentOnlyOutput {
+  document: RawDocumentType & {
+    allNotesWithoutCorpus?: Array<{
+      id: string;
+      title: string;
+      content: string;
+      creator: {
+        email: string;
+      };
+      created: string;
+    }>;
+    corpusSet?: {
+      edges: Array<{
+        node: {
+          id: string;
+          title: string;
+        };
+      }>;
+    };
+  };
+}
+
+export const GET_DOCUMENT_ONLY = gql`
+  query GetDocumentOnly($documentId: String!) {
+    document(id: $documentId) {
+      id
+      title
+      fileType
+      creator {
+        email
+      }
+      created
+      pdfFile
+      txtExtractFile
+      pawlsParseFile
+      myPermissions
+      # Document-level notes (no corpus required)
+      allNotes {
+        id
+        title
+        content
+        creator {
+          email
+        }
+        created
+      }
+      # Check if document is in any corpus (for UI hints)
+      corpusSet {
+        edges {
+          node {
+            id
+            title
+          }
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Mutation to add a document to a corpus
+ */
+export interface AddDocumentToCorpusInput {
+  documentId: string;
+  corpusId: string;
+}
+
+export interface AddDocumentToCorpusOutput {
+  addDocumentToCorpus: {
+    success: boolean;
+    message: string;
+    corpus: {
+      id: string;
+      title: string;
+    };
+  };
+}
+
+export const ADD_DOCUMENT_TO_CORPUS = gql`
+  mutation AddDocumentToCorpus($documentId: ID!, $corpusId: ID!) {
+    addDocumentToCorpus(documentId: $documentId, corpusId: $corpusId) {
+      success
+      message
+      corpus {
+        id
+        title
+      }
+    }
+  }
+`;
+
+/**
+ * Query to get user's corpuses for the Add to Corpus modal
+ */
+export interface GetMyCorpusesOutput {
+  myCorpuses: {
+    edges: Array<{
+      node: {
+        id: string;
+        title: string;
+        documentCount: number;
+        myPermissions: string[];
+      };
+    }>;
+  };
+}
+
+export const GET_MY_CORPUSES = gql`
+  query GetMyCorpuses {
+    corpuses(isPublic: false, myPermissions: ["UPDATE"]) {
+      edges {
+        node {
+          id
+          title
+          documents {
+            totalCount
+          }
+          myPermissions
+        }
+      }
+    }
+  }
+`;
+
+/**
  * Interfaces and query for GET_CHAT_MESSAGES
  * to fetch messages once a conversation is selected.
  */
@@ -2484,11 +2817,12 @@ export const GET_ME = gql`
     me {
       id
       username
-      # Add any other user fields you need globally
+      slug
+      name
+      firstName
+      lastName
+      phone
       isUsageCapped # Crucially, fetch this field
-      # email
-      # firstName
-      # lastName
     }
   }
 `;
@@ -2500,3 +2834,88 @@ export interface GetMeOutputs {
 
 // No inputs needed for this query
 export interface GetMeInputs {}
+
+// ID-based resolution queries for navigation fallback
+export const GET_CORPUS_BY_ID_FOR_REDIRECT = gql`
+  query GetCorpusByIdForRedirect($id: ID!) {
+    corpus(id: $id) {
+      id
+      slug
+      title
+      creator {
+        id
+        slug
+        username
+      }
+    }
+  }
+`;
+
+export interface GetCorpusByIdForRedirectInput {
+  id: string;
+}
+
+export interface GetCorpusByIdForRedirectOutput {
+  corpus: {
+    id: string;
+    slug: string;
+    title: string;
+    creator: {
+      id: string;
+      slug: string;
+      username: string;
+    };
+  } | null;
+}
+
+export const GET_DOCUMENT_BY_ID_FOR_REDIRECT = gql`
+  query GetDocumentByIdForRedirect($id: String!) {
+    document(id: $id) {
+      id
+      slug
+      title
+      creator {
+        id
+        slug
+        username
+      }
+      corpus {
+        id
+        slug
+        title
+        creator {
+          id
+          slug
+          username
+        }
+      }
+    }
+  }
+`;
+
+export interface GetDocumentByIdForRedirectInput {
+  id: string;
+}
+
+export interface GetDocumentByIdForRedirectOutput {
+  document: {
+    id: string;
+    slug: string;
+    title: string;
+    creator: {
+      id: string;
+      slug: string;
+      username: string;
+    };
+    corpus: {
+      id: string;
+      slug: string;
+      title: string;
+      creator: {
+        id: string;
+        slug: string;
+        username: string;
+      };
+    } | null;
+  } | null;
+}

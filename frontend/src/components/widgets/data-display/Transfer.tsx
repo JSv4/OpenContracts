@@ -12,7 +12,6 @@ import {
   ResponderProvided,
 } from "@hello-pangea/dnd";
 import { AnnotationSummary } from "../../annotator/AnnotationSummary";
-import { RenderedSpanAnnotation } from "../../annotator/types/annotations";
 import styled from "styled-components";
 
 // Use string ID for annotation consistency with RelationModal

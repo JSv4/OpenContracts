@@ -98,6 +98,7 @@ import { CorpusType, LabelType } from "../types/graphql-api";
 import { LooseObject, PermissionTypes } from "../components/types";
 import { toBase64 } from "../utils/files";
 import { FilterToLabelSelector } from "../components/widgets/model-filters/FilterToLabelSelector";
+import { ensureValidCorpusId } from "../utils/graphqlGuards";
 import { CorpusAnnotationCards } from "../components/annotations/CorpusAnnotationCards";
 import { CorpusDocumentCards } from "../components/documents/CorpusDocumentCards";
 import { CorpusAnalysesCards } from "../components/analyses/CorpusAnalysesCards";
@@ -109,6 +110,7 @@ import { FilterToCorpusActionOutputs } from "../components/widgets/model-filters
 import { CorpusExtractCards } from "../components/extracts/CorpusExtractCards";
 import { getPermissions } from "../utils/transform";
 import { MOBILE_VIEW_BREAKPOINT } from "../assets/configurations/constants";
+import { useEnv } from "../components/hooks/UseEnv";
 import { CorpusDashboard } from "../components/corpuses/CorpusDashboard";
 import { useCorpusState } from "../components/annotator/context/CorpusAtom";
 import { CorpusSettings } from "../components/corpuses/CorpusSettings";
@@ -938,6 +940,7 @@ export const Corpuses = () => {
     () => width > MOBILE_VIEW_BREAKPOINT
   ); // Expanded by default on desktop
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
+  const { REACT_APP_ALLOW_IMPORTS } = useEnv();
 
   const [corpusSearchCache, setCorpusSearchCache] =
     useState<string>(corpus_search_term);
@@ -1025,6 +1028,8 @@ export const Corpuses = () => {
   if (corpus_search_term) {
     corpus_variables["textSearch"] = corpus_search_term;
   }
+  // Now that auth is guaranteed to be ready before this component renders,
+  // we can use a regular useQuery
   const {
     refetch: refetchCorpuses,
     loading: loading_corpuses,
@@ -1061,9 +1066,30 @@ export const Corpuses = () => {
       !corpusByIdLoading &&
       !corpusByIdData
     ) {
-      fetchCorpusById({ variables: { metadataForCorpusId: routeCorpusId } });
+      // Only fetch if we actually have a valid routeCorpusId
+      if (routeCorpusId) {
+        // Check if it's a valid GraphQL ID before fetching
+        const { id: validId, isValid } = ensureValidCorpusId({
+          id: routeCorpusId,
+        });
+        if (isValid && validId) {
+          fetchCorpusById({ variables: { metadataForCorpusId: validId } });
+        } else {
+          console.warn(
+            "Route corpus ID is not a valid GraphQL ID:",
+            routeCorpusId
+          );
+        }
+      }
     }
-  }, [routeCorpusId, opened_corpus, loading_corpuses, fetchCorpusById]);
+  }, [
+    routeCorpusId,
+    opened_corpus,
+    loading_corpuses,
+    fetchCorpusById,
+    corpusByIdLoading,
+    corpusByIdData,
+  ]);
 
   /* When the single-corpus query returns, sync it with the global reactive var. */
   useEffect(() => {
@@ -1073,6 +1099,7 @@ export const Corpuses = () => {
   }, [corpusByIdData]);
 
   if (corpus_load_error) {
+    console.log("Corpuses.tsx - corpus_load_error", corpus_load_error);
     toast.error("ERROR\nUnable to fetch corpuses.");
   }
 
@@ -1133,13 +1160,20 @@ export const Corpuses = () => {
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Effects to reload data on certain changes
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // If user logs in/out while on this page... refetch to get their authorized corpuses
+  // Handle metadata refetch when auth changes and corpus is open
   useEffect(() => {
-    // Always refetch corpuses when auth state changes (login or logout)
-    refetchCorpuses();
-    if (auth_token) {
-      refetchMetadata();
-    } else {
+    if (auth_token && metadata_called && opened_corpus?.id) {
+      // Only refetch if we have previously called the query successfully
+      if (metadata_data || metadata_loading) {
+        refetchMetadata();
+      } else {
+        // Re-fetch with current corpus ID if we haven't fetched before
+        const { id: validId, isValid } = ensureValidCorpusId(opened_corpus);
+        if (isValid && validId) {
+          fetchMetadata({ variables: { metadataForCorpusId: validId } });
+        }
+      }
+    } else if (!auth_token) {
       // Clear opened corpus when logged out
       openedCorpus(null);
       // Navigate to corpuses list if we were viewing a specific corpus
@@ -1147,7 +1181,7 @@ export const Corpuses = () => {
         navigate("/corpuses");
       }
     }
-  }, [auth_token]);
+  }, [auth_token]); // Re-run when auth token changes
 
   useEffect(() => {
     // console.log("corpus_search_term");
@@ -1157,24 +1191,67 @@ export const Corpuses = () => {
   // If we detech user navigated to this page, refetch
   useEffect(() => {
     if (location.pathname === "/corpuses") {
+      // Clear opened corpus when navigating to corpus list
+      // This ensures the list view is shown even if a corpus was previously persisted
+      if (!routeCorpusId) {
+        openedCorpus(null);
+      }
       refetchCorpuses();
     }
     showQueryViewState("ASK");
-  }, [location]);
+  }, [location, routeCorpusId]);
 
   useEffect(() => {
     console.log("Switched opened_corpus", opened_corpus);
-    setCorpus({
-      selectedCorpus: opened_corpus,
-    });
+    if (opened_corpus) {
+      const corpus_permissions = getPermissions(opened_corpus.myPermissions);
+      setCorpus({
+        selectedCorpus: opened_corpus,
+        myPermissions: corpus_permissions,
+      });
+    } else {
+      setCorpus({
+        selectedCorpus: opened_corpus,
+        myPermissions: [],
+      });
+    }
     if (!opened_corpus || opened_corpus === null) {
       refetchCorpuses();
-    } else {
-      console.log("Fetch metdata for corpus id: ", opened_corpus_id);
-      fetchMetadata({ variables: { metadataForCorpusId: opened_corpus.id } });
-      refetchStats(); // Refresh stats when corpus changes
+    } else if (opened_corpus?.id) {
+      console.log("Fetch metadata for corpus id: ", opened_corpus.id);
+      // Only fetch metadata if we have a valid corpus ID
+      const { id: validId, isValid } = ensureValidCorpusId(opened_corpus);
+      if (isValid && validId) {
+        try {
+          fetchMetadata({ variables: { metadataForCorpusId: validId } });
+          refetchStats(); // Refresh stats when corpus changes
+        } catch (error) {
+          console.error("Error fetching corpus metadata:", error);
+        }
+      } else {
+        console.warn(
+          "Skipping metadata fetch - invalid corpus ID:",
+          opened_corpus.id
+        );
+      }
     }
   }, [opened_corpus]);
+
+  // Update CorpusAtom when metadata is fetched
+  useEffect(() => {
+    if (metadata_data?.corpus) {
+      const corpus = metadata_data.corpus;
+      console.log(
+        "Metadata fetched, updating CorpusAtom with permissions:",
+        corpus.myPermissions
+      );
+      const corpus_permissions = getPermissions(corpus.myPermissions || []);
+      setCorpus({
+        selectedCorpus: corpus,
+        myPermissions: corpus_permissions,
+      });
+    }
+  }, [metadata_data]);
 
   useEffect(() => {
     console.log(
@@ -1184,14 +1261,19 @@ export const Corpuses = () => {
     refetch_documents();
   }, [selected_metadata_id_to_filter_on]);
 
-  // Fetch corpus stats
+  // Fetch corpus stats - with proper ID validation
+  const validCorpusId =
+    opened_corpus?.id && typeof opened_corpus.id === "string"
+      ? opened_corpus.id
+      : undefined;
+
   const {
     data: statsData,
     loading: statsLoading,
     refetch: refetchStats,
   } = useQuery(GET_CORPUS_STATS, {
-    variables: { corpusId: opened_corpus?.id },
-    skip: !opened_corpus_id,
+    variables: { corpusId: validCorpusId || "" }, // Provide empty string as fallback
+    skip: !validCorpusId, // Skip if we don't have a valid ID
     pollInterval: 5000, // Poll every 5 seconds for real-time updates
     fetchPolicy: "cache-and-network", // Always fetch fresh data while showing cached
   });
@@ -1216,10 +1298,8 @@ export const Corpuses = () => {
       // Create a copy of the node
       const node = { ...edge.node };
 
-      // Convert myPermissions from string[] to PermissionTypes[] if it exists
-      if (node.myPermissions) {
-        node.myPermissions = getPermissions(node.myPermissions);
-      }
+      // Don't transform permissions here - let CorpusItem handle it
+      // to avoid double transformation
 
       return node;
     })
@@ -1369,7 +1449,7 @@ export const Corpuses = () => {
 
     // Currently the import capability is enabled via an env variable in case we want it disabled
     // (which we'll probably do for the public demo to cut down on attack surface and load on server)
-    if (import.meta.env.REACT_APP_ALLOW_IMPORTS && auth_token) {
+    if (REACT_APP_ALLOW_IMPORTS && auth_token) {
       corpus_actions.push({
         icon: "cloud upload",
         title: "Import Corpus",
@@ -1405,6 +1485,9 @@ export const Corpuses = () => {
       action_function: () => showSelectCorpusAnalyzerOrFieldsetModal(true),
     });
   }
+
+  const { canUpdateCorpus, myPermissions: corpusAtomPermissions } =
+    useCorpusState();
 
   // Navigation items configuration
   const navigationItems = [
@@ -1449,9 +1532,28 @@ export const Corpuses = () => {
       component: <CorpusExtractCards />,
     },
     ...(opened_corpus &&
-    getPermissions(opened_corpus.myPermissions || []).includes(
-      PermissionTypes.CAN_UPDATE
-    )
+    (() => {
+      const legacyPermissions = getPermissions(
+        opened_corpus.myPermissions || []
+      );
+      const legacyHasUpdate = legacyPermissions.includes(
+        PermissionTypes.CAN_UPDATE
+      );
+
+      console.log("CorpusSettings Debug:", {
+        corpusId: opened_corpus.id,
+        corpusTitle: opened_corpus.title,
+        legacyRawPermissions: opened_corpus.myPermissions,
+        legacyProcessedPermissions: legacyPermissions,
+        legacyHasUpdatePermission: legacyHasUpdate,
+        corpusAtomPermissions,
+        canUpdateCorpusFromAtom: canUpdateCorpus,
+        creator: opened_corpus.creator?.email,
+        usingAtomPermissions: true,
+      });
+
+      return canUpdateCorpus;
+    })()
       ? [
           {
             id: "settings",
@@ -1465,10 +1567,12 @@ export const Corpuses = () => {
                   description: opened_corpus.description || "",
                   allowComments: opened_corpus.allowComments || false,
                   preferredEmbedder: opened_corpus.preferredEmbedder,
+                  slug: (opened_corpus as any).slug || null,
                   creator: opened_corpus.creator,
                   created: opened_corpus.created,
                   modified: opened_corpus.modified,
                   isPublic: opened_corpus.isPublic,
+                  myPermissions: corpusAtomPermissions,
                 }}
               />
             ) : null,
@@ -1678,19 +1782,9 @@ export const Corpuses = () => {
   }, [routeCorpusId, opened_corpus, corpus_items]);
 
   /* ------------------------------------------------------------------ */
-  /* open corpus → URL                                                  */
-  useEffect(() => {
-    if (opened_corpus) {
-      if (routeCorpusId !== opened_corpus.id) {
-        navigate(`/corpuses/${opened_corpus.id}`, { replace: true });
-      }
-    } else {
-      // Do not navigate away if we are on a corpus route and the data is still loading
-      if (routeCorpusId && !loading_corpuses) {
-        navigate(`/corpuses`, { replace: true });
-      }
-    }
-  }, [opened_corpus, routeCorpusId, navigate, loading_corpuses]);
+  /* Navigation is now handled by route components (CorpusLandingRoute)  */
+  /* This prevents redirect loops                                        */
+  /* ------------------------------------------------------------------ */
 
   return (
     <CardLayout
@@ -1702,7 +1796,13 @@ export const Corpuses = () => {
               isOpen={showDescriptionEditor}
               onClose={() => setShowDescriptionEditor(false)}
               onUpdate={() => {
-                refetchMetadata();
+                const { id: validId, isValid } =
+                  ensureValidCorpusId(opened_corpus);
+                if (isValid && validId) {
+                  fetchMetadata({
+                    variables: { metadataForCorpusId: validId },
+                  });
+                }
                 refetchStats(); // Refresh stats after description update
                 setShowDescriptionEditor(false);
               }}
@@ -1736,7 +1836,7 @@ export const Corpuses = () => {
           <CRUDModal
             open={corpus_to_edit !== null}
             mode="EDIT"
-            oldInstance={corpus_to_edit ? corpus_to_edit : {}}
+            oldInstance={corpus_to_edit ?? {}}
             modelName="corpus"
             uiSchema={editCorpusForm_Ui_Schema}
             dataSchema={editCorpusForm_Schema}
@@ -1751,6 +1851,7 @@ export const Corpuses = () => {
               labelSet: <LabelSetSelector />,
               preferredEmbedder: <EmbedderSelector />,
             }}
+            loading={update_corpus_loading}
           />
           {exporting_corpus ? (
             <SelectExportTypeModal visible={Boolean(exportingCorpus)} />
@@ -1808,6 +1909,7 @@ export const Corpuses = () => {
                 labelSet: <LabelSetSelector />,
                 preferredEmbedder: <EmbedderSelector />,
               }}
+              loading={create_corpus_loading}
             />
           ) : (
             <></>

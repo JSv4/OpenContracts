@@ -1,10 +1,14 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import _ from "lodash";
 import { toast } from "react-toastify";
 import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Button, Icon, Popup, Segment } from "semantic-ui-react";
+import styled from "styled-components";
+import { navigateToDocument } from "../../utils/navigationUtils";
 
 import { DocumentCards } from "../../components/documents/DocumentCards";
+import { DocumentMetadataGrid } from "../../components/documents/DocumentMetadataGrid";
 
 import {
   selectedDocumentIds,
@@ -14,6 +18,7 @@ import {
   selectedMetaAnnotationId,
   showUploadNewDocumentsModal,
   uploadModalPreloadedFiles,
+  openedCorpus,
 } from "../../graphql/cache";
 import {
   REMOVE_DOCUMENTS_FROM_CORPUS,
@@ -27,12 +32,33 @@ import {
 } from "../../graphql/queries";
 import { DocumentType } from "../../types/graphql-api";
 import { FileUploadPackageProps } from "../widgets/modals/DocumentUploadModal";
+import { openedDocument } from "../../graphql/cache";
+
+const ViewToggleContainer = styled.div`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+`;
+
+const ViewToggleButton = styled(Button)`
+  &&& {
+    background: white;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+    &:hover {
+      background: #f8fafc;
+    }
+  }
+`;
 
 export const CorpusDocumentCards = ({
   opened_corpus_id,
 }: {
   opened_corpus_id: string | null;
 }) => {
+  const [viewMode, setViewMode] = useState<"cards" | "grid">("cards");
   /**
    * Similar to AnnotationCorpusCards, this component wraps the DocumentCards component
    * (which is a pure rendering component) with some query logic for a given corpus_id.
@@ -171,9 +197,14 @@ export const CorpusDocumentCards = ({
   };
 
   const onOpen = (document: DocumentType) => {
-    if (opened_corpus_id) {
-      navigate(`/corpus/${opened_corpus_id}/document/${document.id}`);
-    }
+    // Use smart navigation utility to prefer slugs and prevent redirects
+    const corpusData = opened_corpus_id ? openedCorpus() : null;
+    navigateToDocument(
+      document as any,
+      corpusData as any,
+      navigate,
+      window.location.pathname
+    );
   };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -191,18 +222,61 @@ export const CorpusDocumentCards = ({
   }, []);
 
   return (
-    <DocumentCards
-      items={document_items}
-      loading={documents_loading}
-      loading_message="Documents Loading..."
-      pageInfo={documents_response?.documents.pageInfo}
-      style={{ minHeight: "70vh", overflowY: "" }}
-      fetchMore={fetchMoreDocuments}
-      onShiftClick={onSelect}
-      onClick={onOpen}
-      removeFromCorpus={opened_corpus_id ? handleRemoveContracts : undefined}
-      onDrop={onDrop}
-      corpusId={opened_corpus_id}
-    />
+    <div style={{ height: "100%", width: "100%", position: "relative" }}>
+      <ViewToggleContainer>
+        <Button.Group>
+          <Popup
+            content="Card View"
+            trigger={
+              <ViewToggleButton
+                icon="grid layout"
+                active={viewMode === "cards"}
+                onClick={() => setViewMode("cards")}
+                data-testid="card-view-button"
+              />
+            }
+          />
+          <Popup
+            content="Metadata Grid View"
+            trigger={
+              <ViewToggleButton
+                icon="table"
+                active={viewMode === "grid"}
+                onClick={() => setViewMode("grid")}
+                data-testid="grid-view-button"
+              />
+            }
+          />
+        </Button.Group>
+      </ViewToggleContainer>
+
+      {viewMode === "cards" ? (
+        <DocumentCards
+          items={document_items}
+          loading={documents_loading}
+          loading_message="Documents Loading..."
+          pageInfo={documents_response?.documents.pageInfo}
+          style={{ minHeight: "70vh", overflowY: "" }}
+          fetchMore={fetchMoreDocuments}
+          onShiftClick={onSelect}
+          onClick={onOpen}
+          removeFromCorpus={
+            opened_corpus_id ? handleRemoveContracts : undefined
+          }
+          onDrop={onDrop}
+          corpusId={opened_corpus_id}
+        />
+      ) : (
+        <DocumentMetadataGrid
+          corpusId={opened_corpus_id || ""}
+          documents={document_items}
+          loading={documents_loading}
+          onDocumentClick={onOpen}
+          pageInfo={documents_response?.documents.pageInfo}
+          fetchMore={fetchMoreDocuments}
+          hasMore={documents_response?.documents.pageInfo?.hasNextPage ?? false}
+        />
+      )}
+    </div>
   );
 };

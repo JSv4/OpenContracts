@@ -14,6 +14,7 @@ import {
 import _ from "lodash";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
+import { navigateToDocument } from "../../utils/navigationUtils";
 
 import {
   editingDocument,
@@ -321,10 +322,14 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
           icon: "book",
           onClick: () => {
             const currentCorpus = openedCorpus();
-            if (currentCorpus) {
-              navigate(`/corpus/${currentCorpus.id}/document/${item.id}`);
-              if (onClick) onClick(item);
-            }
+            // Use smart navigation to prefer slugs and prevent redirects
+            navigateToDocument(
+              item as any,
+              currentCorpus as any,
+              navigate,
+              window.location.pathname
+            );
+            if (onClick) onClick(item);
           },
         },
         {
@@ -444,14 +449,6 @@ export const DocumentItem: React.FC<DocumentItemProps> = ({
             <Label.Group size="mini">{doc_labels}</Label.Group>
           </Card.Content>
         ) : null}
-        <Card.Content extra>
-          <Statistic.Group size="mini" widths={3}>
-            <MyPermissionsIndicator
-              myPermissions={myPermissions}
-              isPublic={isPublic}
-            />
-          </Statistic.Group>
-        </Card.Content>
       </StyledCard>
 
       {contextMenuState.open && contextMenuState.id === id && (

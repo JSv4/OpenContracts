@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <!-- Load runtime environment. Only one runtime env script should be included -->
     <script src="/env-config.js"></script>
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -51,7 +52,7 @@
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <script src="/env.js"></script>
+    <!-- Removed duplicate runtime env loader to avoid overrides: env.js -->
     <script type="module" src="/src/index.tsx"></script>
     <div id="root" style="overflow-x: hidden"></div>
     <!--

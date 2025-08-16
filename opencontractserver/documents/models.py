@@ -15,6 +15,7 @@ from opencontractserver.shared.fields import NullableJSONField
 from opencontractserver.shared.Managers import DocumentManager
 from opencontractserver.shared.mixins import HasEmbeddingMixin
 from opencontractserver.shared.Models import BaseOCModel
+from opencontractserver.shared.slug_utils import generate_unique_slug, sanitize_slug
 from opencontractserver.shared.utils import calc_oc_file_path
 
 
@@ -28,6 +29,15 @@ class Document(BaseOCModel, HasEmbeddingMixin):
     # Key fields
     title = django.db.models.CharField(max_length=1024, null=True, blank=True)
     description = django.db.models.TextField(null=True, blank=True)
+    slug = django.db.models.CharField(
+        max_length=128,
+        db_index=True,
+        null=True,
+        blank=True,
+        help_text=(
+            "Case-sensitive slug unique per creator. Allowed: A-Z, a-z, 0-9, hyphen (-)."
+        ),
+    )
     custom_meta = NullableJSONField(
         default=jsonfield_default_value, null=True, blank=True
     )
@@ -94,6 +104,11 @@ class Document(BaseOCModel, HasEmbeddingMixin):
             django.db.models.Index(fields=["creator"]),
             django.db.models.Index(fields=["created"]),
             django.db.models.Index(fields=["modified"]),
+        ]
+        constraints = [
+            django.db.models.UniqueConstraint(
+                fields=["creator", "slug"], name="uniq_document_slug_per_creator_cs"
+            )
         ]
 
     # ------ Revision mechanics ------ #
@@ -206,6 +221,25 @@ class Document(BaseOCModel, HasEmbeddingMixin):
         return f"Doc ({self.id}) - {self.description}".encode("utf-8", "ignore").decode(
             "utf-8", "ignore"
         )
+
+    def save(self, *args, **kwargs):
+        # Ensure slug exists and is unique within creator scope
+        if not self.slug or not isinstance(self.slug, str) or not self.slug.strip():
+            base_value = self.title or self.description or f"document-{self.pk or ''}"
+            scope = Document.objects.filter(creator_id=self.creator_id)
+            if self.pk:
+                scope = scope.exclude(pk=self.pk)
+            self.slug = generate_unique_slug(
+                base_value=base_value,
+                scope_qs=scope,
+                slug_field="slug",
+                max_length=128,
+                fallback_prefix="document",
+            )
+        else:
+            self.slug = sanitize_slug(self.slug, max_length=128)
+
+        super().save(*args, **kwargs)
 
 
 # Model for Django Guardian permissions... trying to improve performance...

@@ -8,6 +8,12 @@ export const newDocForm_Schema = {
       type: "string",
       title: "Title:",
     },
+    slug: {
+      type: "string",
+      title: "Slug:",
+      description:
+        "Case-sensitive; allowed characters: A-Z, a-z, 0-9, and hyphen (-). Leave blank to auto-generate.",
+    },
     description: {
       type: "string",
       title: "Description:",
@@ -33,6 +39,12 @@ export const editDocForm_Schema = {
       type: "string",
       title: "Title:",
     },
+    slug: {
+      type: "string",
+      title: "Slug:",
+      description:
+        "Case-sensitive; allowed characters: A-Z, a-z, 0-9, and hyphen (-). Leave blank to auto-generate.",
+    },
     description: {
       type: "string",
       title: "Description:",
@@ -57,6 +69,12 @@ export const newCorpusForm_Schema = {
     title: {
       type: "string",
       title: "Title:",
+    },
+    slug: {
+      type: "string",
+      title: "Slug:",
+      description:
+        "Case-sensitive; allowed characters: A-Z, a-z, 0-9, and hyphen (-). Leave blank to auto-generate.",
     },
     description: {
       type: "string",
@@ -106,11 +124,6 @@ export const editColumnForm_Schema = {
       title:
         "If you want to provide detailed instructions to data parser, provide them here.",
     },
-    agentic: {
-      type: "boolean",
-      title:
-        "Use agentic retrieval of referenced sections and definitions in returned text.",
-    },
   },
   required: ["name", "outputType"],
 };
@@ -139,6 +152,12 @@ export const editCorpusForm_Schema = {
     title: {
       type: "string",
       title: "Title:",
+    },
+    slug: {
+      type: "string",
+      title: "Slug:",
+      description:
+        "Case-sensitive; allowed characters: A-Z, a-z, 0-9, and hyphen (-). Leave blank to auto-generate.",
     },
     description: {
       type: "string",

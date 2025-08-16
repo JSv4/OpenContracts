@@ -41,6 +41,7 @@ import { Corpuses } from "./views/Corpuses";
 import { Documents } from "./views/Documents";
 import { Labelsets } from "./views/LabelSets";
 import { Login } from "./views/Login";
+import { AuthGate } from "./components/auth/AuthGate";
 import { Annotations } from "./views/Annotations";
 
 import { ThemeProvider } from "./theme/ThemeProvider";
@@ -58,9 +59,10 @@ import { EditExtractModal } from "./components/widgets/modals/EditExtractModal";
 import { SelectAnalyzerOrFieldsetModal } from "./components/widgets/modals/SelectCorpusAnalyzerOrFieldsetAnalyzer";
 import { DocumentUploadModal } from "./components/widgets/modals/DocumentUploadModal";
 import { FileUploadPackageProps } from "./components/widgets/modals/DocumentUploadModal";
-import { DocumentViewer } from "./components/documents/Viewer";
-import { DocumentKBRoute } from "./components/routes/DocumentKBRoute";
+import { DocumentLandingRoute } from "./components/routes/DocumentLandingRoute";
 import { useRouteStateSync } from "./hooks/RouteStateSync";
+import { NotFound } from "./components/routes/NotFound";
+import { CorpusLandingRoute } from "./components/routes/CorpusLandingRoute";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0, REACT_APP_AUDIENCE } = useEnv();
@@ -78,20 +80,8 @@ export const App = () => {
     showUploadNewDocumentsModal
   );
 
-  const {
-    getAccessTokenSilently,
-    user,
-    isLoading,
-    isAuthenticated,
-    error: authError,
-  } = useAuth0();
-
-  // Global debug logging for auth state in App
-  console.log("[App] isLoading:", isLoading);
-  console.log("[App] isAuthenticated:", isAuthenticated);
-  console.log("[App] user:", user);
-  console.log("[App] current authStatusVar:", authStatusVar());
-  console.log("[App] authError:", authError);
+  // Auth0 hooks for conditional rendering only
+  const { isLoading } = useAuth0();
 
   const handleKnowledgeBaseModalClose = useCallback(() => {
     showKnowledgeBaseModal({
@@ -134,70 +124,8 @@ export const App = () => {
     }
   }, [width]);
 
-  // Only use this if we're using Auth0 Authentication... otherwise we don't
-  // need to access the Auth0 SDK.
-  useEffect(() => {
-    if (!REACT_APP_USE_AUTH0) {
-      return;
-    }
-
-    if (isLoading) {
-      console.log("[App] Auth0 is still loading; skipping token fetch");
-      return; // Still loading, do nothing.
-    }
-
-    if (isAuthenticated && user) {
-      console.log(
-        "[App] User is authenticated, attempting to fetch access token..."
-      );
-      getAccessTokenSilently({
-        authorizationParams: {
-          audience: REACT_APP_AUDIENCE || undefined,
-          scope: "openid profile email",
-        },
-      })
-        .then((token) => {
-          if (token) {
-            console.log("[App] Received token:", token);
-            console.log("Auth0 token obtained");
-            authToken(token);
-            userObj(user);
-            authStatusVar("AUTHENTICATED");
-          } else {
-            console.error(
-              "[App] No token received from getAccessTokenSilently"
-            );
-            authToken("");
-            userObj(null);
-            authStatusVar("ANONYMOUS");
-            toast.error("Unable to login: no token received");
-          }
-        })
-        .catch((e: any) => {
-          console.error("[App] Error in getAccessTokenSilently:", e);
-          console.error("Error obtaining Auth0 token:", e);
-          authToken("");
-          userObj(null);
-          authStatusVar("ANONYMOUS");
-          toast.error("Unable to login: " + e.message);
-        });
-    } else {
-      console.warn(
-        "[App] User is not authenticated or missing; cleaning auth state"
-      );
-      // Not authenticated, clean up state.
-      authToken("");
-      userObj(null);
-      authStatusVar("ANONYMOUS");
-    }
-  }, [
-    isLoading,
-    isAuthenticated,
-    user,
-    getAccessTokenSilently,
-    REACT_APP_USE_AUTH0,
-    REACT_APP_AUDIENCE,
-  ]);
+  // Auth logic has been moved to AuthGate component to ensure it completes
+  // before any components that need authentication are rendered
 
   console.log("Cookie Accepted: ", show_cookie_modal);
 
@@ -217,11 +145,6 @@ export const App = () => {
 
   // Central bidirectional sync between Router <-> reactive vars
   useRouteStateSync();
-
-  // Immediately mark auth ready for builds without Auth0
-  if (!REACT_APP_USE_AUTH0 && authStatusVar() === "LOADING") {
-    authStatusVar("ANONYMOUS");
-  }
 
   /* ---------------------------------------------------------------------- */
   /* Cookie consent initialization                                          */
@@ -260,21 +183,13 @@ export const App = () => {
       )}
       {knowledge_base_modal.isOpen &&
         knowledge_base_modal.documentId &&
-        knowledge_base_modal.corpusId && (
+        knowledge_base_modal.documentId !== "" && (
           <DocumentKnowledgeBase
             documentId={knowledge_base_modal.documentId}
-            corpusId={knowledge_base_modal.corpusId}
+            corpusId={knowledge_base_modal.corpusId ?? undefined}
             initialAnnotationIds={
               knowledge_base_modal.annotationIds ?? undefined
             }
-            onClose={handleKnowledgeBaseModalClose}
-          />
-        )}
-      {knowledge_base_modal.isOpen &&
-        knowledge_base_modal.documentId &&
-        !knowledge_base_modal.corpusId && (
-          <DocumentViewer
-            documentId={knowledge_base_modal.documentId}
             onClose={handleKnowledgeBaseModalClose}
           />
         )}
@@ -331,32 +246,56 @@ export const App = () => {
               }}
               corpusId={opened_corpus?.id || null}
             />
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  isLoading ? <div /> : <Navigate to="/corpuses" replace />
-                }
-              />
-              <Route
-                path="/corpus/:corpusId/document/:documentId"
-                element={<DocumentKBRoute />}
-              />
-              <Route path="/corpuses" element={<Corpuses />} />
-              <Route path="/corpuses/:corpusId" element={<Corpuses />} />
-              <Route path="/corpus/:corpusId" element={<Corpuses />} />
-              {!REACT_APP_USE_AUTH0 ? (
-                <Route path="/login" element={<Login />} />
-              ) : (
-                <></>
-              )}
-              <Route path="/documents" element={<Documents />} />
-              <Route path="/label_sets" element={<Labelsets />} />
-              <Route path="/annotations" element={<Annotations />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/terms_of_service" element={<TermsOfService />} />
-              <Route path="/extracts" element={<Extracts />} />
-            </Routes>
+            <AuthGate
+              useAuth0={REACT_APP_USE_AUTH0}
+              audience={REACT_APP_AUDIENCE}
+            >
+              <Routes>
+                <Route
+                  path="/"
+                  element={
+                    isLoading ? <div /> : <Navigate to="/corpuses" replace />
+                  }
+                />
+                {/* Simple declarative routes with explicit prefixes */}
+
+                {/* Document routes */}
+                <Route
+                  path="/d/:userIdent/:corpusIdent/:docIdent"
+                  element={<DocumentLandingRoute />}
+                />
+                <Route
+                  path="/d/:userIdent/:docIdent"
+                  element={<DocumentLandingRoute />}
+                />
+
+                {/* Corpus routes */}
+                <Route
+                  path="/c/:userIdent/:corpusIdent"
+                  element={<CorpusLandingRoute />}
+                />
+
+                {/* List views */}
+                <Route path="/corpuses" element={<Corpuses />} />
+                <Route path="/documents" element={<Documents />} />
+
+                {/* Auth */}
+                {!REACT_APP_USE_AUTH0 ? (
+                  <Route path="/login" element={<Login />} />
+                ) : (
+                  <></>
+                )}
+                <Route path="/label_sets" element={<Labelsets />} />
+                <Route path="/annotations" element={<Annotations />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms_of_service" element={<TermsOfService />} />
+                <Route path="/extracts" element={<Extracts />} />
+
+                {/* 404 explicit route and catch-all */}
+                <Route path="/404" element={<NotFound />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AuthGate>
           </Container>
           <Footer />
         </div>

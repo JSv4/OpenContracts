@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { MemoryRouter } from "react-router-dom";
-import { render } from "@testing-library/react";
+import { renderWithProviders } from "../test-utils/test-utils";
 import {
   openedCorpus,
   openedDocument,
@@ -15,11 +14,11 @@ const SyncHelper = () => {
 };
 
 const renderWithRoute = (initialPath: string) =>
-  render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <SyncHelper />
-    </MemoryRouter>
-  );
+  renderWithProviders(<SyncHelper />, {
+    routerProps: {
+      initialEntries: [initialPath],
+    },
+  });
 
 const resetVars = () => {
   openedCorpus(null);
@@ -33,7 +32,7 @@ describe("RouteStateSync", () => {
   afterEach(resetVars);
 
   it("initialises corpus-only route", async () => {
-    const corpusId = "corpus123";
+    const corpusId = "Q29ycHVzVHlwZToxMjM="; // Base64 encoded ID
     renderWithRoute(`/corpus/${corpusId}`);
     expect(openedCorpus()).toEqual({ id: corpusId });
     expect(openedDocument()).toBeNull();

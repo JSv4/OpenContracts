@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@apollo/client";
-import { userObj, authToken } from "../graphql/cache";
+import { userObj, authToken, authStatusVar } from "../graphql/cache";
 import {
   LoginInputs,
   LoginOutputs,
@@ -104,6 +104,7 @@ export const Login = () => {
       onCompleted: (data) => {
         authToken(data.tokenAuth.token);
         userObj(data.tokenAuth.user);
+        authStatusVar("AUTHENTICATED");
         navigate("/");
       },
     });

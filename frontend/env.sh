@@ -27,7 +27,7 @@
 #
 # Note: This script assumes the presence of standard Unix utilities (echo, awk, grep, etc.)
 
-# Start the JavaScript object in env-config.js
+# Start the JavaScript object at the web root so index.html can load /env-config.js
 # This line overwrites any existing content in env-config.js
 echo "window._env_ = {" > ./env-config.js
 
@@ -37,17 +37,19 @@ if [ -f ./.env ]; then
     # Process existing .env file
     # ==================================
     #
-    # Use awk to read the .env file and process each line:
-    # - Set field separator to '='
-    # - For each line, print the key (before '=') followed by a colon
-    # - Check if an environment variable with the same name exists
-    #   - If it does, use its value
-    #   - If not, use the value from the .env file
-    # - Format the output as a JavaScript object property
-    # - Append the result to env-config.js
-    awk -F '=' '{
-        print $1 ": \"" (ENVIRON[$1] ? ENVIRON[$1] : $2) "\","
-    }' ./.env >> ./env-config.js
+    # Read the .env file and process each line, stripping OPEN_CONTRACTS_ prefix if present
+    # and allowing environment variables to override values from the file.
+    while IFS='=' read -r key value; do
+        [ -z "$key" ] && continue
+        # Determine the effective value: env var overrides, else .env value
+        effective_value=${!key}
+        if [ -z "$effective_value" ]; then
+            effective_value=$value
+        fi
+        # Remove OPEN_CONTRACTS_ prefix for keys if present
+        cleaned_key=${key#OPEN_CONTRACTS_}
+        echo "  $cleaned_key: \"$effective_value\"," >> ./env-config.js
+    done < ./.env
 else
     echo "Debug: No .env file found, checking environment variables"
     # =======================================

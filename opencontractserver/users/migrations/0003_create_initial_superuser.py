@@ -12,10 +12,9 @@ class Migration(migrations.Migration):
     ]
 
     def generate_superuser(apps, schema_editor):
-
-        from django.contrib.auth import get_user_model
-
-        User = get_user_model()
+        # Use historical model from apps to avoid referencing fields
+        # that might not yet exist in the database (e.g., newly added columns).
+        User = apps.get_model('users', 'User')
 
         DJANGO_SU_NAME = os.environ.get('DJANGO_SUPERUSER_USERNAME', None)
         DJANGO_SU_EMAIL = os.environ.get('DJANGO_SUPERUSER_EMAIL', None)

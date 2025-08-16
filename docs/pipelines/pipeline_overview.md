@@ -20,7 +20,6 @@ graph TD
 
     subgraph "Pipeline Components"
         B --> B1[DoclingParser]
-        B --> B2[NlmIngestParser]
         B --> B3[TxtParser]
 
         C --> C1[PdfThumbnailer]
@@ -80,7 +79,6 @@ class BaseParser(ABC):
 
 Current implementations:
 - **DoclingParser**: Advanced PDF parser using machine learning
-- **NlmIngestParser**: Alternative PDF parser using NLM ingestor
 - **TxtParser**: Simple text file parser
 
 ### Thumbnailers

@@ -2,8 +2,11 @@ from collections.abc import Sequence
 from typing import Any
 
 from django.contrib.auth import get_user_model
-from factory import Faker, post_generation
+from factory import Faker, LazyAttribute, post_generation
 from factory.django import DjangoModelFactory
+
+from opencontractserver.annotations.models import TOKEN_LABEL, Annotation
+from opencontractserver.documents.models import Document
 
 
 class UserFactory(DjangoModelFactory):
@@ -31,3 +34,46 @@ class UserFactory(DjangoModelFactory):
     class Meta:
         model = get_user_model()
         django_get_or_create = ["username"]
+
+
+class DocumentFactory(DjangoModelFactory):
+    """Factory for creating realistic `Document` instances for tests.
+
+    This intentionally keeps file-related fields empty to avoid filesystem I/O
+    in most unit tests. When needed, tests should set these explicitly or rely
+    on `BaseFixtureTestCase` which copies fixture files into `MEDIA_ROOT`.
+    """
+
+    title = Faker("sentence", nb_words=3)
+    description = Faker("paragraph", nb_sentences=2)
+    file_type = "application/pdf"
+    page_count = 3
+    creator = LazyAttribute(lambda o: UserFactory())
+    is_public = False
+
+    class Meta:
+        model = Document
+
+
+class AnnotationFactory(DjangoModelFactory):
+    """Factory for creating realistic `Annotation` instances.
+
+    Defaults to a token-level annotation on page 1 with minimal geometry and
+    JSON payload. A `document` is required; if not provided, a fresh
+    `Document` with a new `creator` will be created.
+    """
+
+    page = 1
+    raw_text = Faker("sentence")
+    tokens_jsons = []
+    bounding_box = {"top": 0.1, "left": 0.1, "right": 0.9, "bottom": 0.2}
+    json = {}
+    annotation_type = TOKEN_LABEL
+    annotation_label = None
+    document = LazyAttribute(lambda o: DocumentFactory())
+    corpus = None
+    structural = False
+    creator = LazyAttribute(lambda o: o.document.creator)
+
+    class Meta:
+        model = Annotation

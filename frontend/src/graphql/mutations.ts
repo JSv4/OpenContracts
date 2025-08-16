@@ -93,6 +93,8 @@ export interface UpdateCorpusInputs {
   filename?: string;
   preferredEmbedder?: string;
   labelSet?: string;
+  slug?: string;
+  isPublic?: boolean;
 }
 
 export interface UpdateCorpusOutputs {
@@ -117,6 +119,8 @@ export const UPDATE_CORPUS = gql`
     $labelSet: String
     $title: String
     $preferredEmbedder: String
+    $slug: String
+    $isPublic: Boolean
   ) {
     updateCorpus(
       id: $id
@@ -125,6 +129,8 @@ export const UPDATE_CORPUS = gql`
       labelSet: $labelSet
       title: $title
       preferredEmbedder: $preferredEmbedder
+      slug: $slug
+      isPublic: $isPublic
     ) {
       ok
       message
@@ -212,6 +218,7 @@ export const CREATE_CORPUS = gql`
     $labelSet: String
     $title: String
     $preferredEmbedder: String
+    $slug: String
   ) {
     createCorpus(
       description: $description
@@ -219,6 +226,7 @@ export const CREATE_CORPUS = gql`
       labelSet: $labelSet
       title: $title
       preferredEmbedder: $preferredEmbedder
+      slug: $slug
     ) {
       ok
       message
@@ -627,6 +635,7 @@ export interface UploadDocumentInputProps {
   description?: string;
   title?: string;
   addToCorpusId?: string;
+  slug?: string;
 }
 
 export interface UploadDocumentOutputProps {
@@ -659,6 +668,7 @@ export const UPLOAD_DOCUMENT = gql`
     $makePublic: Boolean!
     $addToCorpusId: ID
     $addToExtractId: ID
+    $slug: String
   ) {
     uploadDocument(
       base64FileString: $base64FileString
@@ -669,6 +679,7 @@ export const UPLOAD_DOCUMENT = gql`
       makePublic: $makePublic
       addToCorpusId: $addToCorpusId
       addToExtractId: $addToExtractId
+      slug: $slug
     ) {
       document {
         id
@@ -696,6 +707,7 @@ export interface UpdateDocumentInputs {
   description?: string;
   pdfFile?: string;
   customMeta?: Record<string, any>;
+  slug?: string;
 }
 
 export interface UpdateDocumentOutputs {
@@ -710,6 +722,7 @@ export const UPDATE_DOCUMENT = gql`
     $customMeta: GenericScalar
     $description: String
     $title: String
+    $slug: String
   ) {
     updateDocument(
       id: $id
@@ -717,9 +730,65 @@ export const UPDATE_DOCUMENT = gql`
       customMeta: $customMeta
       description: $description
       title: $title
+      slug: $slug
     ) {
       ok
       message
+    }
+  }
+`;
+
+// ---------------- User profile updates ----------------
+export interface UpdateMeInputs {
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  slug?: string;
+}
+
+export interface UpdateMeOutputs {
+  updateMe: {
+    ok: boolean;
+    message?: string;
+    user?: {
+      id: string;
+      username: string;
+      slug?: string;
+      name?: string;
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+    };
+  };
+}
+
+export const UPDATE_ME = gql`
+  mutation (
+    $name: String
+    $firstName: String
+    $lastName: String
+    $phone: String
+    $slug: String
+  ) {
+    updateMe(
+      name: $name
+      firstName: $firstName
+      lastName: $lastName
+      phone: $phone
+      slug: $slug
+    ) {
+      ok
+      message
+      user {
+        id
+        username
+        slug
+        name
+        firstName
+        lastName
+        phone
+      }
     }
   }
 `;
@@ -1209,7 +1278,6 @@ export interface RequestCreateColumnInputType {
   limitToLabel?: string;
   instructions?: string;
   taskName: string;
-  agentic: boolean;
   name: string;
 }
 
@@ -1231,7 +1299,6 @@ export const REQUEST_CREATE_COLUMN = gql`
     $limitToLabel: String
     $instructions: String
     $taskName: String
-    $agentic: Boolean
   ) {
     createColumn(
       fieldsetId: $fieldsetId
@@ -1241,7 +1308,6 @@ export const REQUEST_CREATE_COLUMN = gql`
       limitToLabel: $limitToLabel
       instructions: $instructions
       taskName: $taskName
-      agentic: $agentic
       name: $name
     ) {
       message
@@ -1255,7 +1321,6 @@ export const REQUEST_CREATE_COLUMN = gql`
         limitToLabel
         instructions
         taskName
-        agentic
       }
     }
   }
@@ -1347,7 +1412,6 @@ export interface RequestUpdateColumnInputType {
   limitToLabel?: string;
   instructions?: string;
   taskName?: string;
-  agentic?: boolean;
 }
 
 export interface RequestUpdateColumnOutputType {
@@ -1368,7 +1432,6 @@ export const REQUEST_UPDATE_COLUMN = gql`
     $limitToLabel: String
     $instructions: String
     $taskName: String
-    $agentic: Boolean
   ) {
     updateColumn(
       id: $id
@@ -1379,7 +1442,6 @@ export const REQUEST_UPDATE_COLUMN = gql`
       limitToLabel: $limitToLabel
       instructions: $instructions
       taskName: $taskName
-      agentic: $agentic
     ) {
       message
       ok
@@ -1392,7 +1454,6 @@ export const REQUEST_UPDATE_COLUMN = gql`
         limitToLabel
         instructions
         taskName
-        agentic
       }
     }
   }
@@ -1475,6 +1536,12 @@ export const REQUEST_APPROVE_DATACELL = gql`
         completed
         stacktrace
         correctedData
+        column {
+          id
+        }
+        document {
+          id
+        }
         approvedBy {
           id
           username
@@ -1512,6 +1579,12 @@ export const REQUEST_REJECT_DATACELL = gql`
         completed
         stacktrace
         correctedData
+        column {
+          id
+        }
+        document {
+          id
+        }
         approvedBy {
           id
           username
@@ -1663,7 +1736,7 @@ export interface StartDocumentExtractInput {
 }
 
 export interface StartDocumentExtractOutput {
-  startDocumentExtract: {
+  startExtractForDoc: {
     ok: boolean;
     message: string;
     obj: ExtractType;
@@ -1676,7 +1749,7 @@ export const START_DOCUMENT_EXTRACT = gql`
     $fieldsetId: ID!
     $corpusId: ID
   ) {
-    startDocumentExtract(
+    startExtractForDoc(
       documentId: $documentId
       fieldsetId: $fieldsetId
       corpusId: $corpusId

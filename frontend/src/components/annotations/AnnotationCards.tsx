@@ -3,6 +3,7 @@ import { useReactiveVar } from "@apollo/client";
 import { useNavigate } from "react-router-dom";
 import _ from "lodash";
 import styled from "styled-components";
+import { getDocumentUrl } from "../../utils/navigationUtils";
 import { Card, Dimmer, Loader, Label, Header, Popup } from "semantic-ui-react";
 import {
   Tags,
@@ -189,9 +190,15 @@ export const AnnotationCards: React.FC<AnnotationCardProps> = ({
       if (targetAnnotation.selected_annotation.analysis?.id) {
         selectedAnalysesIds([targetAnnotation.selected_annotation.analysis.id]);
       }
-      navigate(
-        `/corpus/${targetAnnotation.selected_corpus.id}/document/${targetAnnotation.selected_document.id}?ann=${targetAnnotation.selected_annotation.id}`
+      const url = getDocumentUrl(
+        targetAnnotation.selected_document,
+        targetAnnotation.selected_corpus
       );
+      if (url !== "#") {
+        navigate(`${url}?ann=${targetAnnotation.selected_annotation.id}`);
+      } else {
+        console.warn("Cannot navigate - missing slugs:", targetAnnotation);
+      }
       setTargetAnnotation(undefined);
     }
   }, [targetAnnotation]);

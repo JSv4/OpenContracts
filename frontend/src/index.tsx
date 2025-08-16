@@ -10,43 +10,37 @@ import {
 } from "@apollo/client";
 import { cache, authToken } from "./graphql/cache";
 import { LooseObject } from "./components/types";
+import { getRuntimeEnv } from "./utils/env";
+import { HelmetProvider } from "react-helmet-async";
 
 import "./index.css";
 import reportWebVitals from "./reportWebVitals";
 
-// Can't use useEnv hook here...
-console.log("Window env", window._env_);
-const REACT_APP_APPLICATION_DOMAIN = window._env_
-  ? window._env_.REACT_APP_APPLICATION_DOMAIN || ""
-  : "";
-const REACT_APP_APPLICATION_CLIENT_ID = window._env_
-  ? window._env_.REACT_APP_APPLICATION_CLIENT_ID || ""
-  : "";
-const REACT_APP_AUDIENCE = window._env_
-  ? window._env_.REACT_APP_AUDIENCE || ""
-  : "";
-const REACT_APP_API_ROOT_URL = window._env_
-  ? window._env_.REACT_APP_API_ROOT_URL || "http://localhost:8000"
-  : "";
-const REACT_APP_USE_AUTH0 = window._env_
-  ? window._env_.REACT_APP_USE_AUTH0 === "true"
-  : false;
+// Can't use useEnv hook here; use the pure utility instead
+const {
+  REACT_APP_APPLICATION_DOMAIN,
+  REACT_APP_APPLICATION_CLIENT_ID,
+  REACT_APP_AUDIENCE,
+  REACT_APP_API_ROOT_URL,
+  REACT_APP_USE_AUTH0,
+} = getRuntimeEnv();
 
-const api_root_url = REACT_APP_API_ROOT_URL
-  ? REACT_APP_API_ROOT_URL
-  : "http://localhost:8000";
+const api_root_url = REACT_APP_API_ROOT_URL || "http://localhost:8000";
 
 console.log("OpenContracts is using Auth0: ", REACT_APP_USE_AUTH0);
 console.log("OpenContracts frontend target api root", api_root_url);
 
 const authLink = new ApolloLink((operation, forward) => {
-  const token = authToken();
-  operation.setContext(({ headers }: { headers: LooseObject }) => ({
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...headers,
-    },
-  }));
+  // Get the token fresh on each request
+  operation.setContext(({ headers }: { headers: LooseObject }) => {
+    const token = authToken();
+    return {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+        ...headers,
+      },
+    };
+  });
   return forward(operation);
 });
 
@@ -80,23 +74,27 @@ if (REACT_APP_USE_AUTH0) {
   console.log("[index.tsx] window.location.origin:", window.location.origin);
 
   root.render(
-    <BrowserRouter>
-      <Auth0ProviderWithHistory {...providerConfig}>
-        <ApolloProvider client={client}>
-          <App />
-        </ApolloProvider>
-      </Auth0ProviderWithHistory>
-    </BrowserRouter>
+    <HelmetProvider>
+      <BrowserRouter>
+        <Auth0ProviderWithHistory {...providerConfig}>
+          <ApolloProvider client={client}>
+            <App />
+          </ApolloProvider>
+        </Auth0ProviderWithHistory>
+      </BrowserRouter>
+    </HelmetProvider>
   );
 } else {
   console.log("Rendering with NO AUTH0");
 
   root.render(
-    <ApolloProvider client={client}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </ApolloProvider>
+    <HelmetProvider>
+      <ApolloProvider client={client}>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ApolloProvider>
+    </HelmetProvider>
   );
 }
 

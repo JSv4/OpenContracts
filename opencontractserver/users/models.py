@@ -9,8 +9,14 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from guardian.models import GroupObjectPermissionBase, UserObjectPermissionBase
 
+from opencontractserver.shared.db_utils import table_has_column
 from opencontractserver.shared.defaults import jsonfield_default_value
 from opencontractserver.shared.fields import NullableJSONField
+from opencontractserver.shared.slug_utils import (
+    generate_unique_slug,
+    sanitize_slug,
+    validate_user_slug_or_raise,
+)
 from opencontractserver.shared.utils import calc_oc_file_path
 from opencontractserver.types.enums import ExportType
 from opencontractserver.users.validators import UserUnicodeUsernameValidator
@@ -53,6 +59,18 @@ class User(AbstractUser):
     )
     last_ip = django.db.models.CharField("Last IP Address", blank=True, max_length=255)
 
+    # Slug for public/profile URLs (case-sensitive)
+    slug = django.db.models.CharField(
+        "Slug",
+        max_length=64,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text=(
+            "Case-sensitive URL slug. Allowed characters: A-Z, a-z, 0-9, and hyphen (-)."
+        ),
+    )
+
     def __str__(self):
         return f"{self.username}: {self.email}"
 
@@ -71,6 +89,33 @@ class User(AbstractUser):
         return reverse("users:detail", kwargs={"username": self.username})
 
     def save(self, *args, **kwargs):
+        # Avoid referencing the slug column before it exists in initial migrations
+        slug_column_exists = table_has_column(self._meta.db_table, "slug")
+
+        if slug_column_exists:
+            # Ensure slug exists and is valid
+            if not self.slug or not isinstance(self.slug, str) or not self.slug.strip():
+                # Generate a unique slug from username
+                base_value = self.username or self.email or "user"
+                # We cannot query without saving if no PK yet; use all users for uniqueness
+                scope_qs = get_user_model().objects.all()
+                self.slug = generate_unique_slug(
+                    base_value=base_value,
+                    scope_qs=scope_qs.exclude(pk=self.pk) if self.pk else scope_qs,
+                    slug_field="slug",
+                    max_length=64,
+                    fallback_prefix="user",
+                )
+            else:
+                # Sanitize and validate provided slug
+                sanitized = sanitize_slug(self.slug, max_length=64)
+                if not sanitized:
+                    from django.core.exceptions import ValidationError
+
+                    raise ValidationError({"slug": "Slug cannot be empty."})
+                validate_user_slug_or_raise(sanitized)
+                self.slug = sanitized
+
         created = self.id is None
         super().save(*args, **kwargs)
 

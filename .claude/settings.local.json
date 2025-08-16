@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yarn install)",
+      "Bash(yarn run test:ct:*)",
+      "Bash(find:*)",
+      "Bash(mv:*)",
+      "Bash(yarn playwright test:*)",
+      "Bash(yarn lint)",
+      "Bash(yarn prettier:*)",
+      "Bash(yarn:*)",
+      "Bash(rm:*)",
+      "Bash(grep:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)",
+      "Bash(git log:*)",
+      "Bash(docker compose:*)"
+    ],
+    "deny": [],
+    "defaultMode": "acceptEdits"
+  }
+}

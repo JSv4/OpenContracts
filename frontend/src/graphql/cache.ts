@@ -829,8 +829,8 @@ export const showBulkUploadModal = makeVar<boolean>(false);
 export const backendUserObj = makeVar<UserType | null>(null);
 
 /**
- * Authentication status lifecycle: LOADING until Auth0 SDK resolves (or immediate for no-auth builds),
- * then AUTHENTICATED when we have a bearer token, otherwise ANONYMOUS.
+ * LOADING while credentials and backend identity are being checked;
+ * AUTHENTICATED only after the backend returns a user; otherwise ANONYMOUS.
  */
 export type AuthStatus = "LOADING" | "AUTHENTICATED" | "ANONYMOUS";
 export const authStatusVar = makeVar<AuthStatus>("LOADING");
@@ -849,28 +849,8 @@ export const authStatusVar = makeVar<AuthStatus>("LOADING");
 export const isReconnectingVar = makeVar<boolean>(false);
 
 /**
- * Tracks whether auth initialization is fully complete, including any cache operations.
- *
- * This is separate from authStatusVar because:
- * - authStatusVar is set BEFORE cache clear (to ensure credentials are available for any refetches)
- * - authInitCompleteVar is set AFTER cache clear (to signal safe to make new queries)
- *
- * Components like App.tsx that make queries (e.g., GET_ME) should wait for this to be true
- * to avoid their queries being aborted by the cache clear operation.
- *
- * Flow:
- * 1. authStatusVar changes to AUTHENTICATED/ANONYMOUS
- * 2. Cache clear happens (if needed)
- * 3. authInitCompleteVar set to true
- * 4. Components can now safely query
- *
- * This flow assumes authInitCompleteVar is the gate that's still false when the
- * cache clear starts (true for AuthGate.tsx's Auth0 path). The local username/
- * password login in Login.tsx is a deliberate exception: in non-Auth0
- * deployments AuthGate already latches authInitCompleteVar(true) at mount (there's
- * no Auth0 SDK to wait on), so by the time Login.tsx's mutation resolves,
- * authToken() alone gates GET_ME. Login.tsx therefore delays authStatusVar (and
- * authToken) — not authInitCompleteVar — until after the cache clear. See
- * Login.tsx's onCompleted comment for the full race it avoids (issue #2104).
+ * True once credential acquisition, cache clearing and backend identity
+ * validation have settled. Routing and subscriptions wait for this signal.
+ * A failed identity check offers retry/sign-out without leaving this latched.
  */
 export const authInitCompleteVar = makeVar<boolean>(false);

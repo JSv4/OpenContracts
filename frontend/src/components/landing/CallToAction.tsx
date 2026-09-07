@@ -1,7 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuthLogin } from "../../hooks/useAuthLogin";
 import {
   OS_LEGAL_COLORS,
   OS_LEGAL_TYPOGRAPHY,
@@ -128,12 +128,12 @@ export const CallToAction: React.FC<CallToActionProps> = ({
 }) => {
   const navigate = useNavigate();
   const { REACT_APP_USE_AUTH0 } = useEnv();
-  const { loginWithRedirect } = useAuth0();
+  const { doLogin } = useAuthLogin();
   const { callToAction } = useLandingContent();
 
   const handleGetStarted = () => {
     if (REACT_APP_USE_AUTH0) {
-      loginWithRedirect();
+      void doLogin();
     } else {
       navigate("/login");
     }

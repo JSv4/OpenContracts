@@ -1,3 +1,4 @@
+import { useAuthenticated } from "../hooks/useAuthenticated";
 import React, {
   useState,
   useMemo,
@@ -43,7 +44,6 @@ import {
   selectedExtractIds,
   showCreateExtractModal,
   showDeleteExtractModal,
-  userObj,
 } from "../graphql/cache";
 import {
   ExtractListItem,
@@ -97,13 +97,11 @@ const TableIcon = () => (
 );
 
 export const Extracts = () => {
-  const currentUser = useReactiveVar(userObj);
+  const isAuthenticated = useAuthenticated();
   const extract_search_term = useReactiveVar(extractSearchTerm);
   const show_create_extract_modal = useReactiveVar(showCreateExtractModal);
   const show_delete_extract_modal = useReactiveVar(showDeleteExtractModal);
   const selected_extract_ids = useReactiveVar(selectedExtractIds);
-  // Use userObj for auth check - consistent with NavMenu pattern
-  const isAuthenticated = Boolean(currentUser);
 
   // Local state
   const [searchCache, setSearchCache] = useState<string>(extract_search_term);

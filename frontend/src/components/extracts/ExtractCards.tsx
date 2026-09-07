@@ -1,3 +1,4 @@
+import { useAuthenticated } from "../../hooks/useAuthenticated";
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import styled from "styled-components";
 import { NetworkStatus, useMutation, useReactiveVar } from "@apollo/client";
@@ -15,7 +16,6 @@ import { ExtractType, CorpusType, PageInfo } from "../../types/graphql-api";
 import {
   showCreateExtractModal,
   selectedExtractIds,
-  userObj,
 } from "../../graphql/cache";
 import {
   REQUEST_DELETE_EXTRACT,
@@ -85,10 +85,8 @@ export const ExtractCards = ({
 }: ExtractCardsProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const currentUser = useReactiveVar(userObj);
+  const isAuthenticated = useAuthenticated();
   const selected_extract_ids = useReactiveVar(selectedExtractIds);
-  // Use userObj for auth check - consistent with NavMenu pattern
-  const isAuthenticated = Boolean(currentUser);
 
   // Filter extracts based on active filter
   const filteredExtracts = useMemo(() => {

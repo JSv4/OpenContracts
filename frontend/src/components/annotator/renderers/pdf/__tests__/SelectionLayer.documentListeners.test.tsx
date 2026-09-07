@@ -11,7 +11,7 @@
  */
 import React from "react";
 import { render, fireEvent, act } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi, MockInstance } from "vitest";
 import { Provider as JotaiProvider } from "jotai";
 import { MemoryRouter } from "react-router-dom";
 
@@ -90,8 +90,8 @@ const mountLayer = () => {
 };
 
 describe("SelectionLayer document-level mouseup fallback", () => {
-  let addSpy: ReturnType<typeof vi.spyOn>;
-  let removeSpy: ReturnType<typeof vi.spyOn>;
+  let addSpy: MockInstance<typeof document.addEventListener>;
+  let removeSpy: MockInstance<typeof document.removeEventListener>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -106,8 +106,7 @@ describe("SelectionLayer document-level mouseup fallback", () => {
     // armed the global handlers. The escape-key handler is also conditional
     // on localPageSelection so it should not fire here either.
     const armed = addSpy.mock.calls.filter(
-      ([type]: [string, ...unknown[]]) =>
-        type === "mouseup" || type === "mousemove"
+      ([type]) => type === "mouseup" || type === "mousemove"
     );
     expect(armed).toHaveLength(0);
 
@@ -115,8 +114,7 @@ describe("SelectionLayer document-level mouseup fallback", () => {
     // No leaks on unmount when no selection was started — the cleanup
     // returns from the useEffect early before binding anything.
     const leaked = removeSpy.mock.calls.filter(
-      ([type]: [string, ...unknown[]]) =>
-        type === "mouseup" || type === "mousemove"
+      ([type]) => type === "mouseup" || type === "mousemove"
     );
     expect(leaked).toHaveLength(0);
   });
@@ -155,7 +153,7 @@ describe("SelectionLayer document-level mouseup fallback", () => {
       });
     });
 
-    const types = addSpy.mock.calls.map(([t]: [string, ...unknown[]]) => t);
+    const types = addSpy.mock.calls.map(([t]) => t);
     expect(types).toContain("mouseup");
     expect(types).toContain("mousemove");
     // Plus the keydown for escape handling (also gated on localPageSelection)
@@ -198,9 +196,7 @@ describe("SelectionLayer document-level mouseup fallback", () => {
       fireEvent.mouseUp(document);
     });
 
-    const removedTypes = removeSpy.mock.calls.map(
-      ([t]: [string, ...unknown[]]) => t
-    );
+    const removedTypes = removeSpy.mock.calls.map(([t]) => t);
     expect(removedTypes).toContain("mouseup");
     expect(removedTypes).toContain("mousemove");
   });

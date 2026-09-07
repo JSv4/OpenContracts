@@ -6,6 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import { Extracts } from "../src/views/Extracts";
 import {
   authToken,
+  authStatusVar,
   userObj,
   backendUserObj,
   extractSearchTerm,
@@ -203,10 +204,12 @@ const ReactiveVarInitializer: React.FC<{
       authToken("test-token");
       userObj({ email: userEmail } as any);
       backendUserObj({ isUsageCapped: false } as any);
+      authStatusVar("AUTHENTICATED");
     } else {
       authToken("");
       userObj(null);
       backendUserObj(null);
+      authStatusVar("ANONYMOUS");
     }
 
     // Reset other state
@@ -224,6 +227,7 @@ const ReactiveVarInitializer: React.FC<{
       authToken("");
       userObj(null);
       backendUserObj(null);
+      authStatusVar("ANONYMOUS");
       extractSearchTerm("");
       selectedExtractIds([]);
       showCreateExtractModal(false);

@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@apollo/client";
-import { userObj, authToken, authStatusVar } from "../graphql/cache";
+import { userObj, authStatusVar, backendUserObj } from "../graphql/cache";
 import {
   LoginInputs,
   LoginOutputs,
@@ -12,6 +12,8 @@ import { toast } from "react-toastify";
 import { User, Lock } from "lucide-react";
 import { CiteMark } from "../components/brand/CiteMark";
 import { CiteWordmark } from "../components/brand/CiteWordmark";
+import { saveLocalAuthSession } from "../utils/localAuthSession";
+import { beginAuthSession, getAuthSessionEpoch } from "../utils/authSession";
 import { useCacheManager } from "../hooks/useCacheManager";
 import { OS_LEGAL_COLORS } from "../assets/configurations/osLegalStyles";
 
@@ -108,44 +110,59 @@ export const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const loginEpoch = useRef(getAuthSessionEpoch());
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const { resetOnAuthChange } = useCacheManager();
 
-  const [tryLogin, { loading: login_loading, error: login_error }] =
-    useMutation<LoginOutputs, LoginInputs>(LOGIN_MUTATION, {
-      onCompleted: async (data) => {
-        // Clear the anonymous cache BEFORE flipping auth state. App.tsx's
-        // GET_ME query is only skipped while authToken() is falsy (in local/
-        // non-Auth0 deployments authInitCompleteVar is already true by the
-        // time this fires), so setting authToken() first lets GET_ME start
-        // fetching immediately and race with clearStore() below, which
-        // cancels any in-flight query with an Apollo "store reset while
-        // query was in flight" invariant violation (issue #2104). Awaiting
-        // the reset first, then setting auth state, mirrors the ordering
-        // AuthGate.tsx already uses to avoid the same race for Auth0 login.
-        try {
-          await resetOnAuthChange({
-            reason: "user_login",
-            refetchActive: false,
-          });
-        } catch (cacheError) {
-          console.warn("[Login] Cache reset failed on login:", cacheError);
-        }
+  const [tryLogin, { loading: login_loading }] = useMutation<
+    LoginOutputs,
+    LoginInputs
+  >(LOGIN_MUTATION, {
+    onCompleted: async (data) => {
+      if (!mounted.current || loginEpoch.current !== getAuthSessionEpoch())
+        return;
+      if (!data.tokenAuth?.token || !data.tokenAuth.user?.id) {
+        toast.error("Could not log you in. Please try again.");
+        return;
+      }
+      // Clear anonymous data before publishing credentials, so AuthGate's
+      // identity check cannot be aborted by this reset.
+      try {
+        await resetOnAuthChange({
+          reason: "user_login",
+          refetchActive: false,
+        });
+      } catch (cacheError) {
+        console.warn("[Login] Cache reset failed on login:", cacheError);
+      }
 
-        authToken(data.tokenAuth.token);
-        userObj(data.tokenAuth.user);
-        authStatusVar("AUTHENTICATED");
+      if (!mounted.current || loginEpoch.current !== getAuthSessionEpoch())
+        return;
+      saveLocalAuthSession(data.tokenAuth.token);
+      backendUserObj(data.tokenAuth.user);
+      beginAuthSession(data.tokenAuth.token);
+      userObj(data.tokenAuth.user);
+      authStatusVar("AUTHENTICATED");
 
-        navigate("/");
-      },
-    });
-
-  if (login_error) {
-    toast.error("ERROR!\nCould not log you in!");
-  }
+      navigate("/");
+    },
+    onError: () =>
+      toast.error(
+        "Could not log you in. Check your credentials and try again."
+      ),
+  });
 
   const handleLoginClick = (e: React.FormEvent) => {
     e.preventDefault();
-    tryLogin({ variables: { username, password } });
+    if (login_loading) return;
+    loginEpoch.current = getAuthSessionEpoch();
+    void tryLogin({ variables: { username, password } }).catch(() => {});
   };
 
   return (
@@ -168,6 +185,9 @@ export const Login = () => {
             <Input
               type="text"
               placeholder="Username"
+              aria-label="Username"
+              autoComplete="username"
+              required
               value={username}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setUsername(e.target.value)
@@ -181,6 +201,9 @@ export const Login = () => {
             <Input
               type="password"
               placeholder="Password"
+              aria-label="Password"
+              autoComplete="current-password"
+              required
               value={password}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setPassword(e.target.value)

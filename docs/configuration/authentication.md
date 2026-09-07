@@ -144,8 +144,11 @@ This is used by the React frontend to authenticate users via PKCE.
     ```
 
 6. Scroll to **Refresh Token Rotation** and enable **Rotation**. This is required
-   because the frontend SDK uses `useRefreshTokens: true` to avoid cross-origin
-   iframe issues on localhost. Optionally enable **Refresh Token Expiration** for
+   because the frontend SDK uses `useRefreshTokens: true` for renewal during
+   the current page session. Tokens remain in memory; after reload, silent SSO
+   depends on browser cookie policy, with same-tab Login available if restoration
+   fails. See [frontend authentication flow](../frontend/auth_flow.md).
+   Optionally enable **Refresh Token Expiration** for
    additional security (recommended for production).
 7. Save changes
 

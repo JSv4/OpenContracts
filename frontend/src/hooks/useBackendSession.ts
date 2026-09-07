@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApolloClient, useReactiveVar } from "@apollo/client";
+import isEqual from "lodash/isEqual";
 import {
   authToken,
   authStatusVar,
@@ -10,8 +11,10 @@ import {
 import { GET_ME, GetMeOutputs } from "../graphql/queries";
 import {
   clearAuthSession,
+  replaceAuthSession,
   getAuthSessionEpoch,
   authSessionEpochVar,
+  authSessionCleanupPendingVar,
   isAuth0SessionError,
 } from "../utils/authSession";
 import { getAccessTokenForRequest } from "../graphql/authLink";
@@ -23,12 +26,13 @@ export function useBackendSession(credentialsReady: boolean) {
   const client = useApolloClient();
   const token = useReactiveVar(authToken);
   const epoch = useReactiveVar(authSessionEpochVar);
+  const cleanupPending = useReactiveVar(authSessionCleanupPendingVar);
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState(false);
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
 
   useEffect(() => {
-    if (!credentialsReady) return;
+    if (!credentialsReady || cleanupPending) return;
     setError(false);
     if (!token) {
       backendUserObj(null);
@@ -84,9 +88,19 @@ export function useBackendSession(credentialsReady: boolean) {
       if (!isCurrent()) return;
       if (data?.me === null) {
         clearAuthSession(token);
+        return;
       } else if (data?.me?.id) {
-        backendUserObj(data.me);
-        userObj(data.me);
+        const currentUser = backendUserObj();
+        if (currentUser && currentUser.id !== data.me.id) {
+          // Invalidate the old viewer's requests, cache and route entities.
+          // A new epoch validates this credential after cleanup has settled.
+          replaceAuthSession(token);
+          return;
+        }
+        // No-cache checks return new objects even for an unchanged profile.
+        // Preserve references so open forms retain their unsaved edits.
+        if (!isEqual(currentUser, data.me)) backendUserObj(data.me);
+        if (!isEqual(userObj(), data.me)) userObj(data.me);
         authStatusVar("AUTHENTICATED");
       } else {
         fail();
@@ -105,7 +119,7 @@ export function useBackendSession(credentialsReady: boolean) {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [client, token, epoch, credentialsReady, attempt]);
+  }, [client, token, epoch, credentialsReady, cleanupPending, attempt]);
 
   // Recheck revoked/deactivated sessions when returning to the application.
   useEffect(() => {

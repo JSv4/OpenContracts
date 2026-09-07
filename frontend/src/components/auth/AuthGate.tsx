@@ -11,6 +11,7 @@ import {
   getAuthSessionEpoch,
   isAuth0SessionError,
   registerAuthCleanup,
+  authSessionCleanupPendingVar,
 } from "../../utils/authSession";
 import { useBackendSession } from "../../hooks/useBackendSession";
 import { registerAccessTokenProvider } from "../../graphql/authLink";
@@ -36,18 +37,21 @@ export const AuthGate: React.FC<AuthGateProps> = ({
   } = useAuth0();
   const [credentialsReady, setCredentialsReady] = useState(false);
   const status = useReactiveVar(authStatusVar);
+  const cleanupPending = useReactiveVar(authSessionCleanupPendingVar);
   const { error, retry } = useBackendSession(credentialsReady);
 
   useEffect(
     () =>
       registerAuthCleanup(async (reason) => {
-        // State is already anonymous before either asynchronous cleanup starts.
-        await Promise.all([
+        // Routing and validation stay gated until every cleanup has settled.
+        const results = await Promise.allSettled([
           client.clearStore(),
-          ...(enabled && reason !== "logout"
+          ...(enabled && reason === "invalid"
             ? [logout({ openUrl: false })]
             : []),
         ]);
+        const failure = results.find((result) => result.status === "rejected");
+        if (failure?.status === "rejected") throw failure.reason;
       }),
     [client, enabled, logout]
   );
@@ -125,7 +129,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({
     sdkError,
   ]);
 
-  if (!credentialsReady || status === "LOADING") {
+  if (!credentialsReady || cleanupPending || status === "LOADING") {
     return (
       <ModernLoadingDisplay
         type="auth"

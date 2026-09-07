@@ -27,6 +27,12 @@ button remains available after failure. Background checks on reconnection and ta
 visibility preserve mounted editors and the last validated identity during outages.
 A later `me: null` still clears the session.
 
+An unchanged background response preserves the identity object's reference, so
+open profile forms keep unsaved edits. If silent SSO returns a different backend
+user ID, the application advances the session epoch and clears the old identity,
+cache, dialogs, and route entities before validating the replacement account.
+The SDK keeps the replacement account signed in during this transition.
+
 ## Storage and refresh behavior
 
 Auth0 uses the SDK's built-in memory cache. Access and refresh tokens are not
@@ -73,6 +79,11 @@ Login/logout generations prevent late requests and identity checks from reviving
 an older session or caching its data. The route manager clears route entities
 before paint and fetches fresh data for the new viewer; it does not reuse a lazy
 query's previous result from an earlier login.
+
+Cleanup closes `authInitCompleteVar` before advancing the session epoch. Routing,
+identity validation, and gated content wait for all asynchronous cleanup handlers
+to settle, including overlapping invalidations. Document modals live inside
+`AuthGate` so their initial queries cannot be canceled by the startup cache reset.
 
 Login return paths preserve application queries and fragments. They must resolve
 to this origin, cannot contain backslashes/control characters, and exclude OAuth

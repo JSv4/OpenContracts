@@ -11,7 +11,7 @@
  */
 import React from "react";
 import { render, fireEvent, act } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi, MockInstance } from "vitest";
 import { Provider as JotaiProvider } from "jotai";
 import { MemoryRouter } from "react-router-dom";
 
@@ -90,8 +90,8 @@ const mountLayer = () => {
 };
 
 describe("SelectionLayer document-level mouseup fallback", () => {
-  let addSpy: ReturnType<typeof vi.spyOn>;
-  let removeSpy: ReturnType<typeof vi.spyOn>;
+  let addSpy: MockInstance<typeof document.addEventListener>;
+  let removeSpy: MockInstance<typeof document.removeEventListener>;
 
   beforeEach(() => {
     vi.clearAllMocks();

@@ -95,6 +95,9 @@ describe("route identity changes", () => {
       clearAuthSession();
     });
     expect(openedCorpus()).toBeNull();
+    // AuthGate owns reopening the route gate after session cleanup. This
+    // isolated route-manager test supplies that completion explicitly.
+    act(() => authInitCompleteVar(true));
     await waitFor(() => expect(requested).toHaveBeenCalledTimes(2));
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith("/404", { replace: true })

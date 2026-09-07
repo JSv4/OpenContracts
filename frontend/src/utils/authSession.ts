@@ -1,6 +1,7 @@
 import {
   authToken,
   authStatusVar,
+  authInitCompleteVar,
   backendUserObj,
   userObj,
   cache,
@@ -11,8 +12,10 @@ import { clearLocalAuthSession } from "./localAuthSession";
 import { makeVar } from "@apollo/client";
 
 export const authSessionEpochVar = makeVar(0);
-type ClearReason = "logout" | "invalid";
+export const authSessionCleanupPendingVar = makeVar(false);
+type ClearReason = "logout" | "invalid" | "identity-change";
 const cleanupHandlers = new Set<(reason: ClearReason) => Promise<unknown>>();
+let pendingCleanups = 0;
 export const getAuthSessionEpoch = () => authSessionEpochVar();
 
 /** A new login is distinct from the SDK renewing the same user's token. */
@@ -37,23 +40,41 @@ export function clearAuthSession(
 ): boolean {
   if (expectedToken !== undefined && authToken() !== expectedToken)
     return false;
+  resetAuthSession("", reason);
+  clearLocalAuthSession();
+  return true;
+}
+
+/** Silent SSO may renew credentials for a different account without logging out. */
+export function replaceAuthSession(expectedToken: string): void {
+  if (authToken() !== expectedToken) return;
+  resetAuthSession(expectedToken, "identity-change");
+}
+
+function resetAuthSession(token: string, reason: ClearReason): void {
+  // Close the routing gate before advancing the epoch or clearing the store.
+  // Overlapping invalidations must all settle before requests can restart.
+  authInitCompleteVar(false);
+  authSessionCleanupPendingVar(true);
+  pendingCleanups++;
   authSessionEpochVar(authSessionEpochVar() + 1);
-  authToken("");
+  authToken(token);
   userObj(null);
   backendUserObj(null);
-  authStatusVar("ANONYMOUS");
-  clearLocalAuthSession();
+  authStatusVar(token ? "LOADING" : "ANONYMOUS");
   // Open account/edit dialogs live outside Apollo's cache. The route manager
   // observes the session epoch to clear and re-resolve route entities.
   editingDocument(null);
   showUserSettingsModal(false);
   cache.restore({});
-  for (const cleanup of cleanupHandlers) {
-    void cleanup(reason).catch(() => {
+  void Promise.allSettled(
+    Array.from(cleanupHandlers, async (cleanup) => cleanup(reason))
+  ).then((results) => {
+    if (results.some((result) => result.status === "rejected")) {
       console.warn("Unable to finish clearing the authentication cache");
-    });
-  }
-  return true;
+    }
+    if (--pendingCleanups === 0) authSessionCleanupPendingVar(false);
+  });
 }
 
 export function isAuth0SessionError(error: unknown): boolean {

@@ -281,11 +281,11 @@ export const App = () => {
       footer={<Footer />}
       showFooter={!opened_corpus}
     >
-      <AppDocumentModals handleUpdateDocument={handleUpdateDocument} />
       {/* Central routing state manager - handles ALL URL ↔ State sync */}
       <CentralRouteManager />
 
       <AuthGate useAuth0={REACT_APP_USE_AUTH0} audience={REACT_APP_AUDIENCE}>
+        <AppDocumentModals handleUpdateDocument={handleUpdateDocument} />
         <Routes>
           {/* Landing/Discovery Page - Main entry point */}
           <Route

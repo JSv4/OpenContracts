@@ -16,5 +16,13 @@ logout. Use it as the authoritative implementation guide.
   sufficient.
 - `authInitCompleteVar` means credential acquisition, cache clearing, and identity
   validation have settled. `useAuthReady()` also becomes true for anonymous users.
+- Session cleanup closes the route gate before advancing the epoch. Validation
+  and gated content wait for all cleanup handlers, including overlapping clears.
+- A different backend user ID during silent renewal starts a new session epoch,
+  clears the previous account's state, and revalidates after cleanup. It does not
+  log the new account out of the SDK. Unchanged profiles retain their references
+  so background validation does not reset open forms.
+- Mount document modals inside `AuthGate` so their queries (including supported
+  upload formats) start after initialization has finished clearing the cache.
 - A 200 response with `me: null` invalidates a candidate session; an outage does not.
   Permission-denied responses, including 403, do not imply invalid credentials.

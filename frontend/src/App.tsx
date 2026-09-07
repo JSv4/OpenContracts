@@ -14,24 +14,18 @@ import _ from "lodash";
 
 import { toast, ToastContainer } from "react-toastify";
 
-import { useMutation, useQuery, useReactiveVar } from "@apollo/client";
+import { useMutation, useReactiveVar } from "@apollo/client";
 
 import {
-  authToken,
-  authStatusVar,
-  authInitCompleteVar,
   showAnnotationLabels,
   showExportModal,
-  userObj,
   showCookieAcceptModal,
   openedCorpus,
   uploadModalPreloadedFiles,
   showUploadNewDocumentsModal,
   showKnowledgeBaseModal,
-  backendUserObj,
   editingDocument,
 } from "./graphql/cache";
-import { GET_ME, GetMeOutputs } from "./graphql/queries";
 import {
   UPDATE_DOCUMENT,
   UpdateDocumentInputs,
@@ -102,13 +96,10 @@ import { useRefetchOnAuthChange } from "./hooks/useRefetchOnAuthChange";
 
 export const App = () => {
   const { REACT_APP_USE_AUTH0, REACT_APP_AUDIENCE } = useEnv();
-  const auth_token = useReactiveVar(authToken);
   const show_export_modal = useReactiveVar(showExportModal);
   const show_cookie_modal = useReactiveVar(showCookieAcceptModal);
   const knowledge_base_modal = useReactiveVar(showKnowledgeBaseModal);
   const opened_corpus = useReactiveVar(openedCorpus);
-  // Track when auth initialization (including cache clear) is complete
-  const auth_init_complete = useReactiveVar(authInitCompleteVar);
 
   // useAuth0() must be called unconditionally (React hooks rules), but
   // its return values are only meaningful when Auth0 is enabled. Without
@@ -157,48 +148,6 @@ export const App = () => {
 
   // Track if we've applied mobile display settings to prevent infinite loop
   const mobileSettingsAppliedRef = useRef(false);
-
-  // Track if we've shown the user fetch error toast to prevent duplicates
-  // This can happen on mobile where network is slower and query may fail initially
-  const meErrorShownRef = useRef(false);
-
-  const {
-    data: meData,
-    loading: meLoading,
-    error: meError,
-  } = useQuery<GetMeOutputs>(GET_ME, {
-    // Skip until BOTH: we have a token AND auth initialization (including cache clear) is complete.
-    // This prevents the query from being aborted by clearStore() during auth initialization.
-    skip: !auth_token || !auth_init_complete,
-    fetchPolicy: "network-only",
-  });
-
-  // Reset error shown flag when auth_token changes (new login session)
-  useEffect(() => {
-    meErrorShownRef.current = false;
-  }, [auth_token]);
-
-  useEffect(() => {
-    if (isLoading) return; // wait until Auth0 SDK has decided
-
-    if (meData?.me) {
-      backendUserObj(meData.me);
-      // Clear error flag if we successfully got user data
-      meErrorShownRef.current = false;
-    } else if (
-      !meLoading &&
-      auth_token &&
-      meError &&
-      !meErrorShownRef.current
-    ) {
-      // Only show error once per session, and only if we don't already have user data
-      console.error("Error fetching backend user:", meError);
-      toast.error("Could not get user details from server");
-      meErrorShownRef.current = true;
-    } else if (!auth_token) {
-      backendUserObj(null);
-    }
-  }, [isLoading, meData, meLoading, meError, auth_token]);
 
   // Badge notification system (real-time via WebSocket)
   const { newBadges } = useBadgeNotifications();
@@ -396,11 +345,12 @@ export const App = () => {
           <Route path="/badges" element={<Navigate to="/profile" replace />} />
 
           {/* Auth */}
-          {!REACT_APP_USE_AUTH0 ? (
-            <Route path="/login" element={<Login />} />
-          ) : (
-            <></>
-          )}
+          <Route
+            path="/login"
+            element={
+              REACT_APP_USE_AUTH0 ? <Navigate to="/" replace /> : <Login />
+            }
+          />
           {/* LabelSet routes */}
           <Route
             path="/label_sets/:labelsetId"

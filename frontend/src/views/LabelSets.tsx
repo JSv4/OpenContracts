@@ -1,3 +1,4 @@
+import { useAuthenticated } from "../hooks/useAuthenticated";
 import React, {
   useState,
   useMemo,
@@ -42,7 +43,6 @@ import { LabelSetType } from "../types/graphql-api";
 import {
   labelsetSearchTerm,
   showNewLabelsetModal,
-  userObj,
   backendUserObj,
   deletingLabelset,
   editingLabelset,
@@ -110,13 +110,11 @@ const TagsIcon = () => (
 
 export const Labelsets = () => {
   const navigate = useNavigate();
-  const currentUser = useReactiveVar(userObj);
+  const isAuthenticated = useAuthenticated();
   const backendUser = useReactiveVar(backendUserObj);
   const labelset_search_term = useReactiveVar(labelsetSearchTerm);
   const show_new_label_modal = useReactiveVar(showNewLabelsetModal);
   const labelset_to_delete = useReactiveVar(deletingLabelset);
-  // Use userObj for auth check - consistent with NavMenu pattern
-  const isAuthenticated = Boolean(currentUser);
   // Ownership and "mine" filtering keys off the backend user id (the public
   // GraphQL UserType). Email is no longer reliable because the privacy
   // contract redacts non-self emails to null.

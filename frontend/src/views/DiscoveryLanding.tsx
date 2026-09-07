@@ -1,3 +1,4 @@
+import { useAuthenticated } from "../hooks/useAuthenticated";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { OS_LEGAL_COLORS } from "../assets/configurations/osLegalStyles";
@@ -9,7 +10,6 @@ import {
 } from "../components/layout/PageLayout";
 import { gql, useQuery, useReactiveVar } from "@apollo/client";
 import { RefreshCw, X, AlertCircle } from "lucide-react";
-import { userObj } from "../graphql/cache";
 import {
   // New components using OS-Legal-Style library
   NewHeroSection,
@@ -190,12 +190,11 @@ interface DiscoveryLandingProps {
 export const DiscoveryLanding: React.FC<DiscoveryLandingProps> = ({
   isAuthenticatedOverride,
 }) => {
-  const currentUser = useReactiveVar(userObj);
-  // Use userObj for auth check - consistent with NavMenu pattern
+  const authenticated = useAuthenticated();
   const isAuthenticated =
     isAuthenticatedOverride !== undefined
       ? isAuthenticatedOverride
-      : Boolean(currentUser);
+      : authenticated;
 
   // State for error banner dismiss
   const [errorDismissed, setErrorDismissed] = useState(false);
@@ -266,7 +265,7 @@ export const DiscoveryLanding: React.FC<DiscoveryLandingProps> = ({
     }
     // Auth state changed (login/logout) - refetch to get updated data
     refetch();
-  }, [currentUser, refetch]);
+  }, [isAuthenticated, refetch]);
 
   // Handle retry with loading state
   const handleRetry = useCallback(async () => {

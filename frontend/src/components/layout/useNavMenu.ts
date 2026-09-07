@@ -2,15 +2,15 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useReactiveVar } from "@apollo/client";
 import {
-  authToken,
   authStatusVar,
-  userObj,
   backendUserObj,
   showExportModal,
 } from "../../graphql/cache";
 import { header_menu_items } from "../../assets/configurations/menus";
 import { useEnv } from "../hooks/UseEnv";
-import { useCacheManager } from "../../hooks/useCacheManager";
+import { clearAuthSession } from "../../utils/authSession";
+import { useAuthLogin } from "../../hooks/useAuthLogin";
+import { toast } from "react-toastify";
 
 /**
  * Shared navigation menu logic for both desktop and mobile nav components.
@@ -18,28 +18,16 @@ import { useCacheManager } from "../../hooks/useCacheManager";
  */
 export const useNavMenu = () => {
   const { REACT_APP_USE_AUTH0, REACT_APP_AUDIENCE } = useEnv();
-  const {
-    loginWithRedirect,
-    loginWithPopup,
-    logout,
-    user: auth0_user,
-    isLoading: auth0Loading,
-  } = useAuth0();
-  const cache_user = useReactiveVar(userObj);
+  const { logout } = useAuth0();
   const backendUser = useReactiveVar(backendUserObj);
+  const authStatus = useReactiveVar(authStatusVar);
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { resetOnAuthChange } = useCacheManager();
-
-  const user = REACT_APP_USE_AUTH0 ? auth0_user : cache_user;
-  // ``useAuth0()`` must be called unconditionally (hooks rules), but without a
-  // mounted Auth0Provider it returns the default context whose ``isLoading`` is
-  // permanently true. Consumers gate the whole auth surface on this flag
-  // (``hideAuth``, ``hideUserMenu``, and the anonymous login button), so
-  // passing it through unguarded hid the entire user menu AND the login button
-  // in every ``REACT_APP_USE_AUTH0=false`` deployment. Same guard App.tsx
-  // applies for the same reason.
-  const isLoading = REACT_APP_USE_AUTH0 ? auth0Loading : false;
+  const { doLogin, isLoggingIn } = useAuthLogin();
+  const user = authStatus === "AUTHENTICATED" ? backendUser : null;
+  // Backend validation has a timeout and retry UI; identity absence never
+  // latches the navigation into a permanent loading state.
+  const isLoading = authStatus === "LOADING" || isLoggingIn;
   const show_export_modal = useReactiveVar(showExportModal);
 
   // Filter menu items based on authentication
@@ -63,79 +51,24 @@ export const useNavMenu = () => {
     return pathname === route || pathname.startsWith(`${route}/`);
   };
 
-  /**
-   * Logs out the user. Uses Auth0 logout if Auth0 is enabled, otherwise
-   * clears local auth state and redirects to home.
-   * CentralRouteManager will automatically clear entity state when navigating to "/".
-   *
-   * IMPORTANT: Clears the Apollo cache on logout to ensure:
-   * 1. Security: Previous user's data is not accessible
-   * 2. Data freshness: Next login starts with clean cache
-   *
-   * Order of operations: Clear auth state FIRST (prevents new authenticated
-   * queries), then fire-and-forget cache clear (removes cached data).
-   * We don't await cache clear since logout shouldn't block on it.
-   */
   const requestLogout = () => {
-    // IMPORTANT: Clear auth state BEFORE calling resetOnAuthChange().
-    // The useRefetchOnAuthChange hook (App.tsx) checks authToken() inside its
-    // onClearStore callback — an empty token signals "logout" and skips the
-    // refetch. If this ordering is reversed, the hook would re-issue all
-    // active queries with the still-valid token before it's cleared.
-    // See: useRefetchOnAuthChange.ts lines 31-36.
-    authToken("");
-    userObj(null);
-    authStatusVar("ANONYMOUS");
-
-    // Fire-and-forget cache clear (don't block logout on this).
-    resetOnAuthChange({ reason: "user_logout", refetchActive: false }).catch(
-      (error) =>
-        console.warn("[useNavMenu] Cache reset failed on logout:", {
-          error: error instanceof Error ? error.message : error,
-          userId: user?.sub || cache_user?.id,
-          timestamp: new Date().toISOString(),
-        })
-    );
-
+    clearAuthSession(undefined, "logout");
     if (REACT_APP_USE_AUTH0) {
-      logout({
-        logoutParams: {
-          returnTo: window.location.origin,
-        },
-      });
+      void logout({ logoutParams: { returnTo: window.location.origin } }).catch(
+        () => {
+          toast.error(
+            "You are signed out locally. Sign-out from Auth0 could not be completed."
+          );
+        }
+      );
     } else {
       navigate("/");
     }
   };
 
-  /**
-   * Initiates login flow. Tries popup first, falls back to redirect if popup fails.
-   */
-  const doLogin = async () => {
-    try {
-      await loginWithPopup({
-        authorizationParams: {
-          audience: REACT_APP_AUDIENCE || undefined,
-          scope: "openid profile email",
-          redirect_uri: window.location.origin,
-        },
-      });
-    } catch (error) {
-      await loginWithRedirect({
-        appState: {
-          returnTo: window.location.pathname + window.location.search,
-        },
-        authorizationParams: {
-          audience: REACT_APP_AUDIENCE || undefined,
-          scope: "openid profile email",
-        },
-      });
-    }
-  };
-
   // isSuperuser is sourced from backendUserObj (populated by GET_ME query),
   // not from Auth0 user or cache_user which don't carry this field.
-  const isSuperuser = backendUser?.isSuperuser === true;
+  const isSuperuser = Boolean(user?.isSuperuser);
 
   return {
     // Auth state
@@ -157,8 +90,6 @@ export const useNavMenu = () => {
     isActive,
     requestLogout,
     doLogin,
-    loginWithPopup,
-    loginWithRedirect,
 
     // Navigation
     navigate,

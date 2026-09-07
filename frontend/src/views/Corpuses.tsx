@@ -1,3 +1,4 @@
+import { useAuthenticated } from "../hooks/useAuthenticated";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import _ from "lodash";
 import { toast } from "react-toastify";
@@ -50,7 +51,6 @@ import {
   editingCorpus,
   viewingCorpus,
   documentSearchTerm,
-  userObj,
   annotationContentSearchTerm,
   openedDocument,
   selectedMetaAnnotationId,
@@ -198,7 +198,7 @@ export const Corpuses = () => {
   const opened_document = useReactiveVar(openedDocument);
   const filter_to_label_id = useReactiveVar(filterToLabelId);
 
-  const currentUser = useReactiveVar(userObj);
+  const isAuthenticated = useAuthenticated();
   const backendUser = useReactiveVar(backendUserObj);
   const annotation_search_term = useReactiveVar(annotationContentSearchTerm);
   const show_create_extract_modal = useReactiveVar(showCreateExtractModal);
@@ -618,7 +618,7 @@ export const Corpuses = () => {
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Handle metadata refetch when auth changes and corpus is open
   useEffect(() => {
-    if (currentUser && metadata_called && opened_corpus?.id) {
+    if (isAuthenticated && metadata_called && opened_corpus?.id) {
       // Only refetch if we have previously called the query successfully
       if (metadata_data || metadata_loading) {
         refetchMetadata();
@@ -630,7 +630,7 @@ export const Corpuses = () => {
         }
       }
     }
-  }, [currentUser]); // Re-run when user changes
+  }, [isAuthenticated]); // Re-run when user changes
 
   // Search term effect - needed because fetchPolicy is "network-only"
   useEffect(() => {
@@ -992,7 +992,7 @@ export const Corpuses = () => {
   };
 
   let corpus_actions: DropdownActionProps[] = [];
-  if (currentUser) {
+  if (isAuthenticated) {
     corpus_actions = [
       ...corpus_actions,
       {
@@ -1020,7 +1020,7 @@ export const Corpuses = () => {
   }
 
   let contract_actions: DropdownActionProps[] = [];
-  if (selected_document_ids.length > 0 && currentUser) {
+  if (selected_document_ids.length > 0 && isAuthenticated) {
     contract_actions.push({
       icon: "remove circle",
       title: "Remove Contract(s)",
@@ -1032,7 +1032,7 @@ export const Corpuses = () => {
 
   // Actions for analyzer pane (if user is signed in)
   if (
-    currentUser &&
+    isAuthenticated &&
     raw_permissions?.includes(PermissionTypes.CAN_UPDATE) &&
     raw_permissions?.includes(PermissionTypes.CAN_READ)
   ) {
@@ -1113,7 +1113,7 @@ export const Corpuses = () => {
             onSourceNavigate={handleSourceNavigate}
             isPowerUserMode={isPowerUserMode}
             onModeToggle={
-              currentUser
+              isAuthenticated
                 ? () =>
                     updateModeParam(
                       location,

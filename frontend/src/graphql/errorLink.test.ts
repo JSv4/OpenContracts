@@ -5,11 +5,11 @@
  * terminating mock link that emits synthetic errors through the real
  * `errorLink`. This exercises every catch/return branch:
  *
- *  - GraphQL 401 / 403 / UNAUTHENTICATED → clears auth state + warn toast
- *  - Expired-JWT message variants → warn toast + window.location.reload
+ *  - GraphQL 401 / UNAUTHENTICATED → clears auth state + warn toast
+ *  - Expired-JWT message variants → warn toast without reloading
  *  - Message-based unauthorized / not-authenticated detection
  *  - Non-auth GraphQL errors → logged but auth state untouched
- *  - Network 401/403 → clears auth state + warn toast
+ *  - Network 401 → clears auth state + warn toast
  *  - Generic network error → error toast, auth state untouched
  */
 
@@ -24,8 +24,12 @@ import {
 } from "@apollo/client";
 import { toast } from "react-toastify";
 
+import {
+  saveLocalAuthSession,
+  loadLocalAuthSession,
+} from "../utils/localAuthSession";
 import { errorLink } from "./errorLink";
-import { authToken, authStatusVar, userObj } from "./cache";
+import { authToken, authStatusVar, userObj, backendUserObj } from "./cache";
 
 // --- Mocks ------------------------------------------------------------------
 
@@ -76,10 +80,14 @@ function networkErrorLink(err: unknown): ApolloLink {
  * promise that resolves once the observable completes or errors, so
  * tests can assert on side effects after the link chain has run.
  */
-async function runOperation(terminating: ApolloLink): Promise<void> {
+async function runOperation(
+  terminating: ApolloLink,
+  context = {}
+): Promise<void> {
   await new Promise<void>((resolve) => {
     execute(ApolloLink.from([errorLink, terminating]), {
       query: TEST_QUERY,
+      context,
     }).subscribe({
       next: () => {},
       error: () => resolve(),
@@ -146,16 +154,16 @@ describe("errorLink", () => {
       expect(reloadSpy).not.toHaveBeenCalled();
     });
 
-    it("clears auth state on 403", async () => {
+    it("preserves auth state on 403", async () => {
       const err = new GraphQLError("Forbidden", {
         extensions: { status: 403 },
       });
 
       await runOperation(graphQLErrorLink([err]));
 
-      expect(authToken()).toBe("");
-      expect(authStatusVar()).toBe("ANONYMOUS");
-      expect(toast.warning).toHaveBeenCalledOnce();
+      expect(authToken()).toBe("test-token");
+      expect(authStatusVar()).toBe("AUTHENTICATED");
+      expect(toast.warning).not.toHaveBeenCalled();
     });
 
     it("clears auth state on UNAUTHENTICATED extension code", async () => {
@@ -169,13 +177,13 @@ describe("errorLink", () => {
       expect(authStatusVar()).toBe("ANONYMOUS");
     });
 
-    it("detects 'unauthorized' in the error message", async () => {
+    it("preserves auth on ambiguous resource authorization messages", async () => {
       const err = new GraphQLError("User is Unauthorized for this resource");
 
       await runOperation(graphQLErrorLink([err]));
 
-      expect(authToken()).toBe("");
-      expect(authStatusVar()).toBe("ANONYMOUS");
+      expect(authToken()).toBe("test-token");
+      expect(authStatusVar()).toBe("AUTHENTICATED");
     });
 
     it("detects 'not authenticated' in the error message", async () => {
@@ -187,21 +195,37 @@ describe("errorLink", () => {
       expect(authStatusVar()).toBe("ANONYMOUS");
     });
 
-    it("handles expired JWT with a reload and dedicated toast", async () => {
+    it("handles expired JWT without reloading", async () => {
       const err = new GraphQLError("Signature has expired");
 
       await runOperation(graphQLErrorLink([err]));
 
       expect(toast.warning).toHaveBeenCalledWith(
-        expect.stringContaining("session has expired. Refreshing"),
-        expect.objectContaining({ toastId: "token-expired" })
+        expect.stringContaining("session has expired. Please log in"),
+        expect.objectContaining({ toastId: "auth-error" })
       );
       expect(authToken()).toBe("");
       expect(reloadSpy).not.toHaveBeenCalled();
 
-      // The link schedules reload via setTimeout(_, 1000)
+      // Expiry must not schedule a reload loop.
       vi.advanceTimersByTime(1000);
-      expect(reloadSpy).toHaveBeenCalledTimes(1);
+      expect(reloadSpy).not.toHaveBeenCalled();
+    });
+
+    it("clears the session when the backend JWT library rejects a disabled user", async () => {
+      saveLocalAuthSession("test-token");
+      backendUserObj({ id: "disabled-user" } as any);
+
+      await runOperation(
+        graphQLErrorLink([new GraphQLError("User is disabled")])
+      );
+
+      expect(authToken()).toBe("");
+      expect(userObj()).toBeNull();
+      expect(backendUserObj()).toBeNull();
+      expect(authStatusVar()).toBe("ANONYMOUS");
+      expect(loadLocalAuthSession()).toBeNull();
+      expect(reloadSpy).not.toHaveBeenCalled();
     });
 
     it("leaves auth state untouched for non-auth GraphQL errors", async () => {
@@ -226,6 +250,39 @@ describe("errorLink", () => {
     });
   });
 
+  it("does not invalidate a newer session for an old request's 401", async () => {
+    await runOperation(
+      graphQLErrorLink([
+        new GraphQLError("Expired", { extensions: { code: 401 } }),
+      ]),
+      { authSessionToken: "previous-token" }
+    );
+    expect(authToken()).toBe("test-token");
+  });
+
+  it("clears saved credentials and backend privileges on authentication failure", async () => {
+    saveLocalAuthSession("test-token");
+    backendUserObj({ id: "1", isSuperuser: true } as NonNullable<
+      ReturnType<typeof backendUserObj>
+    >);
+    await runOperation(
+      graphQLErrorLink([new GraphQLError("Signature verification failed")])
+    );
+    expect(backendUserObj()).toBeNull();
+    expect(loadLocalAuthSession()).toBeNull();
+  });
+
+  it("does not mistake an explicit 403 with auth-like text for session expiry", async () => {
+    await runOperation(
+      graphQLErrorLink([
+        new GraphQLError("User is not authenticated", {
+          extensions: { status: 403 },
+        }),
+      ])
+    );
+    expect(authToken()).toBe("test-token");
+  });
+
   // --- Network errors -------------------------------------------------------
 
   describe("Network errors", () => {
@@ -244,15 +301,15 @@ describe("errorLink", () => {
       );
     });
 
-    it("clears auth state on 403 network error", async () => {
+    it("preserves auth state on 403 network error", async () => {
       const netErr = Object.assign(new Error("Forbidden"), {
         statusCode: 403,
       });
 
       await runOperation(networkErrorLink(netErr));
 
-      expect(authToken()).toBe("");
-      expect(authStatusVar()).toBe("ANONYMOUS");
+      expect(authToken()).toBe("test-token");
+      expect(authStatusVar()).toBe("AUTHENTICATED");
     });
 
     it("shows network error toast for non-auth network failures", async () => {

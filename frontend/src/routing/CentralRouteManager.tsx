@@ -10,7 +10,8 @@
  * Components consume state via reactive vars and never touch URLs directly.
  */
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useLayoutEffect } from "react";
+import { authSessionEpochVar } from "../utils/authSession";
 import { unstable_batchedUpdates } from "react-dom";
 import { useLazyQuery, useApolloClient } from "@apollo/client";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -239,21 +240,46 @@ export function CentralRouteManager() {
   // PHASE 1: URL Path → Entity Resolution
   // ═══════════════════════════════════════════════════════════════
   const authStatus = useReactiveVar(authStatusVar);
+  const authSessionEpoch = useReactiveVar(authSessionEpochVar);
   const authInitComplete = useReactiveVar(authInitCompleteVar);
+  const previousAuthEpoch = useRef(authSessionEpoch);
+  const queryAuthEpochs = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    if (previousAuthEpoch.current === authSessionEpoch) return;
+    previousAuthEpoch.current = authSessionEpoch;
+    // Clear the previous viewer's entities before paint. Phase 1 resolves
+    // the same URL again with the new credentials (or anonymously).
+    openedCorpus(null);
+    openedDocument(null);
+    openedExtract(null);
+    openedResearchReport(null);
+    openedThread(null);
+    openedLabelset(null);
+    openedUser(null);
+  }, [authSessionEpoch]);
 
   // Extract version param as stable value for Phase 1 dependency.
   // Changing ?v= must trigger re-resolution to load the correct document version.
   const urlVersionParam = searchParams.get("v");
 
   useEffect(() => {
+    // Apollo lazy queries retain their last result across store clears.
+    // The first use of each query by a new viewer must fetch from the server.
+    const authQueryOptions = (query: string) => {
+      if (queryAuthEpochs.current.get(query) === authSessionEpoch) return {};
+      queryAuthEpochs.current.set(query, authSessionEpoch);
+      return {
+        fetchPolicy: "network-only" as const,
+        context: { queryDeduplication: false },
+      };
+    };
     const currentPath = location.pathname;
     const route = parseRoute(currentPath);
 
-    // Include version param in the processed-path key so version changes
-    // trigger re-resolution even when the path itself hasn't changed.
-    const pathKey = urlVersionParam
-      ? `${currentPath}?v=${urlVersionParam}`
-      : currentPath;
+    // Re-resolve the same URL for a new viewer, as well as version changes.
+    const pathKey = `${authSessionEpoch}:${currentPath}?v=${
+      urlVersionParam ?? ""
+    }`;
 
     // Browse routes - no entity fetch needed
     if (route.type === "browse" || route.type === "unknown") {
@@ -360,7 +386,7 @@ export function CentralRouteManager() {
       // /users/:slug routes get a per-slug key — without it, every user
       // resolution would dedupe to the same key and rapid profile switches
       // would silently drop all but the first request.
-      const requestKey = buildRequestKey(
+      const requestKey = `${authSessionEpoch}:${buildRequestKey(
         route.type as
           | "document"
           | "corpus"
@@ -377,7 +403,7 @@ export function CentralRouteManager() {
         route.labelsetIdent,
         route.userSlug,
         route.researchSlug
-      );
+      )}`;
 
       // Prevent duplicate simultaneous requests
       if (requestTracker.isPending(requestKey)) {
@@ -421,7 +447,9 @@ export function CentralRouteManager() {
                 documentSlug: route.documentIdent,
                 ...(versionNumber != null && { versionNumber }),
               },
+              ...authQueryOptions("resolveDocumentInCorpus"),
             });
+            if (authSessionEpochVar() !== authSessionEpoch) return;
 
             if (error) {
               console.error(
@@ -476,7 +504,9 @@ export function CentralRouteManager() {
               );
               const { data: idData } = await resolveDocumentById({
                 variables: { id: route.documentIdent },
+                ...authQueryOptions("resolveDocumentById"),
               });
+              if (authSessionEpochVar() !== authSessionEpoch) return;
 
               if (idData?.document) {
                 // Redirect to canonical slug URL
@@ -525,7 +555,9 @@ export function CentralRouteManager() {
                 userSlug: route.userIdent!,
                 documentSlug: route.documentIdent,
               },
+              ...authQueryOptions("resolveDocumentOnly"),
             });
+            if (authSessionEpochVar() !== authSessionEpoch) return;
             routingLogger.debug(
               "[GraphQL] ✅ CentralRouteManager: RESOLVE_DOCUMENT_BY_SLUGS_FULL completed",
               {
@@ -574,7 +606,9 @@ export function CentralRouteManager() {
               );
               const { data: idData } = await resolveDocumentById({
                 variables: { id: route.documentIdent },
+                ...authQueryOptions("resolveDocumentById"),
               });
+              if (authSessionEpochVar() !== authSessionEpoch) return;
 
               if (idData?.document) {
                 const canonicalPath = buildCanonicalPath(idData.document);
@@ -602,7 +636,9 @@ export function CentralRouteManager() {
                 userSlug: route.userIdent!,
                 corpusSlug: route.corpusIdent,
               },
+              ...authQueryOptions("resolveCorpus"),
             });
+            if (authSessionEpochVar() !== authSessionEpoch) return;
 
             if (error) {
               console.error(
@@ -644,7 +680,9 @@ export function CentralRouteManager() {
               );
               const { data: idData } = await resolveCorpusById({
                 variables: { id: route.corpusIdent },
+                ...authQueryOptions("resolveCorpusById"),
               });
+              if (authSessionEpochVar() !== authSessionEpoch) return;
 
               if (idData?.corpus) {
                 // Type assertion: redirect query doesn't include analyses field,
@@ -676,7 +714,9 @@ export function CentralRouteManager() {
               variables: {
                 extractId: route.extractIdent,
               },
+              ...authQueryOptions("resolveExtract"),
             });
+            if (authSessionEpochVar() !== authSessionEpoch) return;
 
             if (error) {
               console.error(
@@ -726,7 +766,9 @@ export function CentralRouteManager() {
               variables: {
                 slug: route.researchSlug,
               },
+              ...authQueryOptions("resolveResearchReport"),
             });
+            if (authSessionEpochVar() !== authSessionEpoch) return;
 
             if (error) {
               console.error(
@@ -786,7 +828,9 @@ export function CentralRouteManager() {
                   corpusSlug: route.corpusIdent,
                 },
                 fetchPolicy: "cache-and-network", // Use cache if available, refresh in background
+                ...authQueryOptions("resolveCorpus"),
               });
+            if (authSessionEpochVar() !== authSessionEpoch) return;
 
             if (corpusError) {
               routingLogger.warn(
@@ -800,7 +844,9 @@ export function CentralRouteManager() {
               variables: {
                 conversationId: route.threadIdent,
               },
+              ...authQueryOptions("resolveThread"),
             });
+            if (authSessionEpochVar() !== authSessionEpoch) return;
 
             if (error) {
               routingLogger.warn(
@@ -848,7 +894,9 @@ export function CentralRouteManager() {
               variables: {
                 id: route.labelsetIdent,
               },
+              ...authQueryOptions("resolveLabelset"),
             });
+            if (authSessionEpochVar() !== authSessionEpoch) return;
 
             if (error) {
               console.error(
@@ -896,7 +944,9 @@ export function CentralRouteManager() {
 
             const { data, error } = await resolveUser({
               variables: { slug: route.userSlug },
+              ...authQueryOptions("resolveUser"),
             });
+            if (authSessionEpochVar() !== authSessionEpoch) return;
 
             if (error) {
               console.error(
@@ -957,6 +1007,7 @@ export function CentralRouteManager() {
 
         performanceMonitor.endMetric(metricKey, { success: true });
       } catch (error) {
+        if (authSessionEpochVar() !== authSessionEpoch) return;
         console.error("[RouteManager] Resolution failed:", error);
         performanceMonitor.endMetric(metricKey, { success: false });
         routeError(error as Error);
@@ -965,7 +1016,13 @@ export function CentralRouteManager() {
     };
 
     resolveEntity();
-  }, [location.pathname, urlVersionParam, authStatus, authInitComplete]); // Re-run when path, version param, auth status, or init complete changes
+  }, [
+    location.pathname,
+    urlVersionParam,
+    authStatus,
+    authInitComplete,
+    authSessionEpoch,
+  ]);
 
   // ═══════════════════════════════════════════════════════════════
   // PHASE 2: URL Query Params → Reactive Vars

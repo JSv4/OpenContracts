@@ -1,947 +1,367 @@
+import React from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { screen, fireEvent } from "@testing-library/react";
 import {
-  describe,
-  it,
-  expect,
-  vi,
-  beforeEach,
-  type MockedFunction,
-} from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { useAuth0 } from "@auth0/auth0-react";
-import { toast } from "react-toastify";
+  ApolloClient,
+  ApolloProvider,
+  ApolloLink,
+  InMemoryCache,
+  Observable,
+} from "@apollo/client";
+import { renderHook, act, cleanup, waitFor } from "../../test-utils/renderHook";
 import { AuthGate } from "./AuthGate";
 import {
   authToken,
   authStatusVar,
   userObj,
+  backendUserObj,
   authInitCompleteVar,
 } from "../../graphql/cache";
+import {
+  saveLocalAuthSession,
+  loadLocalAuthSession,
+} from "../../utils/localAuthSession";
+import { clearAuthSession } from "../../utils/authSession";
+import { authLink } from "../../graphql/authLink";
+import { errorLink } from "../../graphql/errorLink";
+import { SESSION_CHECK_TIMEOUT_MS } from "../../hooks/useBackendSession";
+import { useAuthenticated } from "../../hooks/useAuthenticated";
 
-// Mock Auth0
-vi.mock("@auth0/auth0-react");
-
-// Mock getRuntimeEnv to return a consistent domain for testing
-vi.mock("../../utils/env", () => ({
-  getRuntimeEnv: () => ({
-    REACT_APP_APPLICATION_DOMAIN: "test-tenant.auth0.com",
-    REACT_APP_APPLICATION_CLIENT_ID: "test-client-id",
-    REACT_APP_AUDIENCE: "test-audience",
-    REACT_APP_API_ROOT_URL: "http://localhost:8000",
-    REACT_APP_USE_AUTH0: true,
-  }),
-}));
-
-// Mock useCacheManager - we don't need to test cache behavior here
-vi.mock("../../hooks/useCacheManager", () => ({
-  useCacheManager: () => ({
-    resetOnAuthChange: vi.fn().mockResolvedValue({ success: true }),
-    refreshActiveQueries: vi.fn().mockResolvedValue({ success: true }),
-    invalidateEntityQueries: vi.fn().mockResolvedValue({ success: true }),
-    invalidateDocumentQueries: vi.fn().mockResolvedValue({ success: true }),
-    invalidateCorpusQueries: vi.fn().mockResolvedValue({ success: true }),
-    logCacheSize: vi.fn(),
-  }),
-}));
-
-// Mock toast
-vi.mock("react-toastify", () => ({
-  toast: {
-    error: vi.fn(),
-    info: vi.fn(),
-  },
-}));
-
-// Helper for Auth0 mock properties (required in newer @auth0/auth0-react versions)
-const baseAuth0Props = {
+const sdk = vi.hoisted(() => ({
+  isLoading: false,
+  isAuthenticated: false,
   getAccessTokenSilently: vi.fn(),
-  loginWithRedirect: vi.fn(),
   logout: vi.fn(),
-  getIdTokenClaims: vi.fn(),
-  loginWithPopup: vi.fn(),
-  getAccessTokenWithPopup: vi.fn(),
-  handleRedirectCallback: vi.fn(),
-  connectAccountWithRedirect: vi.fn(),
-  getDpopNonce: vi.fn(),
-  setDpopNonce: vi.fn(),
-  generateDpopProof: vi.fn(),
-  createFetcher: vi.fn(),
-  error: undefined,
-  isReadOnly: false,
+  error: undefined as Error | undefined,
+}));
+vi.mock("@auth0/auth0-react", () => ({ useAuth0: () => sdk }));
+vi.mock("react-toastify", () => ({
+  toast: { error: vi.fn(), info: vi.fn(), warning: vi.fn() },
+}));
+vi.mock("../widgets/ModernLoadingDisplay", () => ({
+  ModernLoadingDisplay: () => <div>Initializing OpenContracts</div>,
+}));
+
+const me = {
+  id: "1",
+  username: "alice",
+  email: "alice@example.test",
+  name: "Alice",
+  isSuperuser: false,
 };
-
-// Keys used by AuthGate to track if user has authenticated before
-const HAS_AUTHENTICATED_KEY = "oc_has_authenticated";
-const AUTH_DOMAIN_KEY = "oc_auth0_domain";
-
-describe("AuthGate", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Reset reactive vars
-    authToken("");
-    authStatusVar("LOADING");
-    userObj(null);
-    authInitCompleteVar(false);
-    // Clear localStorage before each test
-    localStorage.removeItem(HAS_AUTHENTICATED_KEY);
-    localStorage.removeItem(AUTH_DOMAIN_KEY);
-  });
-
-  describe("Auth0 Mode", () => {
-    it("shows loading screen while Auth0 is loading", () => {
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        ...baseAuth0Props,
-        isLoading: true,
-        isAuthenticated: false,
-        user: undefined,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      expect(
-        screen.getByText("Initializing OpenContracts")
-      ).toBeInTheDocument();
-      expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
-    });
-
-    it("fetches token and renders children when authenticated", async () => {
-      const mockToken = "test-token-123";
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockGetAccessTokenSilently = vi.fn().mockResolvedValue(mockToken);
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        ...baseAuth0Props,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      // Wait for auth to complete
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // Verify auth state was set correctly
-      expect(authToken()).toBe(mockToken);
-      expect(authStatusVar()).toBe("AUTHENTICATED");
-      expect(userObj()).toEqual(mockUser);
-
-      // Verify token was fetched with correct params
-      expect(mockGetAccessTokenSilently).toHaveBeenCalledWith({
-        authorizationParams: {
-          audience: "test-audience",
-          scope: "openid profile email",
-        },
-      });
-    });
-
-    it("sets anonymous status when not authenticated", async () => {
-      // Mock getAccessTokenSilently to reject - simulates truly anonymous user
-      const mockGetAccessTokenSilently = vi.fn().mockRejectedValue({
-        error: "login_required",
-        message: "Login required",
-      });
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        isLoading: false,
-        isAuthenticated: false,
-        user: undefined,
-        ...baseAuth0Props,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      // Wait for auth to complete
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // Verify anonymous state
-      expect(authToken()).toBe("");
-      expect(authStatusVar()).toBe("ANONYMOUS");
-      expect(userObj()).toBeNull();
-    });
-
-    it("handles token fetch errors gracefully", async () => {
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockGetAccessTokenSilently = vi
-        .fn()
-        .mockRejectedValue(new Error("Token fetch failed"));
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        ...baseAuth0Props,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      // Wait for auth to complete (even with error)
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // Verify it falls back to anonymous on error
-      expect(authToken()).toBe("");
-      expect(authStatusVar()).toBe("ANONYMOUS");
-      expect(userObj()).toBeNull();
-    });
-
-    it("falls back to anonymous on session error (does not auto-redirect)", async () => {
-      // When isAuthenticated is true but getAccessTokenSilently fails with
-      // login_required, we should fall back to anonymous mode instead of
-      // auto-redirecting to login. This allows users who logged out to
-      // stay anonymous if they want.
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockLoginWithRedirect = vi.fn();
-      const mockGetAccessTokenSilently = vi.fn().mockRejectedValue({
-        error: "login_required",
-        message: "Login required",
-      });
-
-      // Set flag indicating user has previously authenticated on this tenant
-      localStorage.setItem(HAS_AUTHENTICATED_KEY, "true");
-      localStorage.setItem(AUTH_DOMAIN_KEY, "test-tenant.auth0.com");
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        ...baseAuth0Props,
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-        loginWithRedirect: mockLoginWithRedirect,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      // Should render content as anonymous (not redirect to login)
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // loginWithRedirect should NOT be called - we allow anonymous access
-      expect(mockLoginWithRedirect).not.toHaveBeenCalled();
-
-      // Verify anonymous state
-      expect(authToken()).toBe("");
-      expect(authStatusVar()).toBe("ANONYMOUS");
-      expect(userObj()).toBeNull();
-    });
-
-    it("defaults first-time visitor to anonymous on login_required error", async () => {
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockLoginWithRedirect = vi.fn();
-      const mockGetAccessTokenSilently = vi.fn().mockRejectedValue({
-        error: "login_required",
-        message: "Login required",
-      });
-
-      // Ensure no previous auth flag exists (first-time visitor)
-      localStorage.removeItem(HAS_AUTHENTICATED_KEY);
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        ...baseAuth0Props,
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-        loginWithRedirect: mockLoginWithRedirect,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      // Wait for auth to complete - should render content as anonymous
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // Verify loginWithRedirect was NOT called for first-time visitor
-      expect(mockLoginWithRedirect).not.toHaveBeenCalled();
-
-      // Verify anonymous state
-      expect(authToken()).toBe("");
-      expect(authStatusVar()).toBe("ANONYMOUS");
-      expect(userObj()).toBeNull();
-    });
-
-    it("sets auth flag on successful authentication", async () => {
-      const mockToken = "test-token-123";
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockGetAccessTokenSilently = vi.fn().mockResolvedValue(mockToken);
-
-      // Ensure no previous auth flag exists
-      localStorage.removeItem(HAS_AUTHENTICATED_KEY);
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        ...baseAuth0Props,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // Verify auth flag and domain were set
-      expect(localStorage.getItem(HAS_AUTHENTICATED_KEY)).toBe("true");
-      expect(localStorage.getItem(AUTH_DOMAIN_KEY)).toBe(
-        "test-tenant.auth0.com"
-      );
-    });
-  });
-
-  describe("Session Expiry Handling", () => {
-    it("clears stale Auth0 session and falls back to anonymous on invalid refresh token", async () => {
-      // Production scenario: refresh token expired/revoked server-side
-      // (Auth0 `fertft` — "Token could not be decoded or is missing in DB")
-      // while the localstorage cache still reports isAuthenticated=true.
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockLogout = vi.fn().mockResolvedValue(undefined);
-      const mockGetAccessTokenSilently = vi.fn().mockRejectedValue({
-        error: "invalid_grant",
-        message: "Unknown or invalid refresh token.",
-      });
-
-      localStorage.setItem(HAS_AUTHENTICATED_KEY, "true");
-      localStorage.setItem(AUTH_DOMAIN_KEY, "test-tenant.auth0.com");
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        ...baseAuth0Props,
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-        logout: mockLogout,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // Falls back to anonymous
-      expect(authToken()).toBe("");
-      expect(authStatusVar()).toBe("ANONYMOUS");
-      expect(userObj()).toBeNull();
-
-      // Clears the stale SDK cache locally (no redirect) so the failure
-      // doesn't replay on every subsequent page load
-      expect(mockLogout).toHaveBeenCalledWith({ openUrl: false });
-      expect(localStorage.getItem(HAS_AUTHENTICATED_KEY)).toBeNull();
-
-      // Informs the user quietly — no scary error toast
-      expect(toast.info).toHaveBeenCalled();
-      expect(toast.error).not.toHaveBeenCalled();
-    });
-
-    it("quietly clears a missing refresh token during verification", async () => {
-      // Returning user (has-authenticated flag set) whose SDK cache no longer
-      // holds a refresh token: getAccessTokenSilently throws
-      // missing_refresh_token because useRefreshTokensFallback is disabled.
-      const mockLogout = vi.fn().mockResolvedValue(undefined);
-      const mockGetAccessTokenSilently = vi.fn().mockRejectedValue({
-        error: "missing_refresh_token",
-        message:
-          "Missing Refresh Token (audience: 'test-audience', scope: 'openid')",
-      });
-
-      localStorage.setItem(HAS_AUTHENTICATED_KEY, "true");
-      localStorage.setItem(AUTH_DOMAIN_KEY, "test-tenant.auth0.com");
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        ...baseAuth0Props,
-        isLoading: false,
-        isAuthenticated: false,
-        user: undefined,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-        logout: mockLogout,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      expect(authToken()).toBe("");
-      expect(authStatusVar()).toBe("ANONYMOUS");
-
-      // Cache + fast-path flag cleared so future boots skip the doomed
-      // verification round; user was never shown as logged in, so no toast
-      expect(mockLogout).toHaveBeenCalledWith({ openUrl: false });
-      expect(localStorage.getItem(HAS_AUTHENTICATED_KEY)).toBeNull();
-      expect(toast.info).not.toHaveBeenCalled();
-      expect(toast.error).not.toHaveBeenCalled();
-    });
-
-    it("classifies a known refresh-token message without an error code as session expiry", async () => {
-      // Some error paths surface Auth0's message text without a structured
-      // `error` code — the message fallback must still catch the exact
-      // production string.
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockLogout = vi.fn().mockResolvedValue(undefined);
-      const mockGetAccessTokenSilently = vi
-        .fn()
-        .mockRejectedValue(new Error("Unknown or invalid refresh token."));
-
-      localStorage.setItem(HAS_AUTHENTICATED_KEY, "true");
-      localStorage.setItem(AUTH_DOMAIN_KEY, "test-tenant.auth0.com");
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        ...baseAuth0Props,
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-        logout: mockLogout,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      expect(authStatusVar()).toBe("ANONYMOUS");
-      expect(mockLogout).toHaveBeenCalledWith({ openUrl: false });
-      expect(localStorage.getItem(HAS_AUTHENTICATED_KEY)).toBeNull();
-      expect(toast.info).toHaveBeenCalled();
-      expect(toast.error).not.toHaveBeenCalled();
-    });
-
-    it("does not wipe the session for a transient error that merely mentions the refresh token", async () => {
-      // The message fallback is deliberately narrow: an unrelated failure
-      // whose text happens to contain "refresh token" must NOT be treated
-      // as terminal session expiry — the cached session may still be valid.
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockLogout = vi.fn().mockResolvedValue(undefined);
-      const mockGetAccessTokenSilently = vi
-        .fn()
-        .mockRejectedValue(
-          new Error("Network error while exchanging refresh token")
-        );
-
-      localStorage.setItem(HAS_AUTHENTICATED_KEY, "true");
-      localStorage.setItem(AUTH_DOMAIN_KEY, "test-tenant.auth0.com");
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        ...baseAuth0Props,
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-        logout: mockLogout,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // Falls back to anonymous for this load, but the SDK cache and
-      // has-authenticated flag survive so the session can recover on reload
-      expect(authStatusVar()).toBe("ANONYMOUS");
-      expect(mockLogout).not.toHaveBeenCalled();
-      expect(localStorage.getItem(HAS_AUTHENTICATED_KEY)).toBe("true");
-      expect(toast.error).toHaveBeenCalled();
-      expect(toast.info).not.toHaveBeenCalled();
-    });
-
-    it("treats a login-required message without an error code as quiet session expiry", async () => {
-      // Some SDK paths surface "Login required" as message text only —
-      // handled silently (no toast) and without touching the cache.
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockLogout = vi.fn().mockResolvedValue(undefined);
-      const mockGetAccessTokenSilently = vi
-        .fn()
-        .mockRejectedValue(new Error("Login required"));
-
-      localStorage.setItem(HAS_AUTHENTICATED_KEY, "true");
-      localStorage.setItem(AUTH_DOMAIN_KEY, "test-tenant.auth0.com");
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        ...baseAuth0Props,
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-        logout: mockLogout,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      expect(authStatusVar()).toBe("ANONYMOUS");
-      expect(mockLogout).not.toHaveBeenCalled();
-      expect(localStorage.getItem(HAS_AUTHENTICATED_KEY)).toBe("true");
-      expect(toast.info).not.toHaveBeenCalled();
-      expect(toast.error).not.toHaveBeenCalled();
-    });
-
-    it("survives a rejected logout call while clearing the stale session", async () => {
-      // clearStaleAuth0Session's logout() promise is best-effort: a rejection
-      // must be swallowed (warn only), never crash the anonymous fallback.
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockLogout = vi.fn().mockRejectedValue(new Error("logout failed"));
-      const mockGetAccessTokenSilently = vi.fn().mockRejectedValue({
-        error: "invalid_grant",
-        message: "Unknown or invalid refresh token.",
-      });
-
-      localStorage.setItem(HAS_AUTHENTICATED_KEY, "true");
-      localStorage.setItem(AUTH_DOMAIN_KEY, "test-tenant.auth0.com");
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        ...baseAuth0Props,
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-        logout: mockLogout,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      expect(authStatusVar()).toBe("ANONYMOUS");
-      expect(mockLogout).toHaveBeenCalledWith({ openUrl: false });
-      await waitFor(() => {
-        expect(warnSpy).toHaveBeenCalledWith(
-          "[AuthGate] Failed to clear stale Auth0 session:",
-          expect.any(Error)
-        );
-      });
-
-      warnSpy.mockRestore();
-    });
-
-    it("logs unexpected verification errors without touching the cached session", async () => {
-      // isAuthenticated:false verification path with an error that is neither
-      // a refresh-token failure nor a known session-expiry code: log it,
-      // go anonymous, keep the SDK cache and flag intact.
-      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const mockLogout = vi.fn().mockResolvedValue(undefined);
-      const mockGetAccessTokenSilently = vi.fn().mockRejectedValue({
-        error: "server_error",
-        message: "Internal server error",
-      });
-
-      localStorage.setItem(HAS_AUTHENTICATED_KEY, "true");
-      localStorage.setItem(AUTH_DOMAIN_KEY, "test-tenant.auth0.com");
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        ...baseAuth0Props,
-        isLoading: false,
-        isAuthenticated: false,
-        user: undefined,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-        logout: mockLogout,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      expect(authStatusVar()).toBe("ANONYMOUS");
-      expect(mockLogout).not.toHaveBeenCalled();
-      expect(localStorage.getItem(HAS_AUTHENTICATED_KEY)).toBe("true");
-      expect(errorSpy).toHaveBeenCalledWith(
-        "[AuthGate] Unexpected error from getAccessTokenSilently:",
-        expect.objectContaining({ error: "server_error" })
-      );
-
-      errorSpy.mockRestore();
-    });
-
-    it("still surfaces unexpected token errors and keeps the SDK cache", async () => {
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockLogout = vi.fn().mockResolvedValue(undefined);
-      const mockGetAccessTokenSilently = vi
-        .fn()
-        .mockRejectedValue(new Error("Network failure"));
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        ...baseAuth0Props,
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-        logout: mockLogout,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      expect(authStatusVar()).toBe("ANONYMOUS");
-
-      // Transient/unknown errors must NOT wipe the cache — the session may
-      // recover on the next load — and the user still gets an error toast
-      expect(mockLogout).not.toHaveBeenCalled();
-      expect(toast.error).toHaveBeenCalled();
-    });
-  });
-
-  describe("Non-Auth0 Mode", () => {
-    it("immediately sets anonymous status and renders children", async () => {
-      // Mock useAuth0 to return minimal values for non-Auth0 mode
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        isLoading: false,
-        isAuthenticated: false,
-        user: undefined,
-        ...baseAuth0Props,
-      });
-
-      render(
-        <AuthGate useAuth0={false}>
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      // Should immediately render children in non-Auth0 mode
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // Verify anonymous state
-      expect(authStatusVar()).toBe("ANONYMOUS");
-      expect(authToken()).toBe("");
-      expect(userObj()).toBeNull();
-    });
-  });
-
-  describe("Race Condition Prevention", () => {
-    it("blocks rendering until auth is fully initialized", async () => {
-      // Use fake timers to prevent timer pollution between tests
-      vi.useFakeTimers();
-
-      const mockToken = "test-token-123";
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockGetAccessTokenSilently = vi.fn().mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            // Simulate async token fetch
-            setTimeout(() => resolve(mockToken), 100);
+function Content() {
+  const authenticated = useAuthenticated();
+  return <div>{authenticated ? "Signed in" : "Public content"}</div>;
+}
+function setup(enabled = false, strict = false) {
+  let respond: (value: typeof me | null) => void = () => {
+    throw new Error("No request");
+  };
+  let reject: () => void = () => {
+    throw new Error("No request");
+  };
+  const requested = vi.fn();
+  const client = new ApolloClient({
+    cache: new InMemoryCache(),
+    link: ApolloLink.from([
+      errorLink,
+      authLink,
+      new ApolloLink(
+        (operation) =>
+          new Observable((observer) => {
+            requested(operation.getContext().headers?.Authorization);
+            respond = (user) => {
+              observer.next({ data: { me: user } });
+              observer.complete();
+            };
+            reject = () => observer.error(new Error("Offline"));
           })
-      );
+      ),
+    ]),
+  });
+  const element = () => (
+    <ApolloProvider client={client}>
+      <AuthGate useAuth0={enabled}>
+        <Content />
+      </AuthGate>
+    </ApolloProvider>
+  );
+  const view = renderHook(() => null, {
+    wrapper: () =>
+      strict ? <React.StrictMode>{element()}</React.StrictMode> : element(),
+  });
+  return {
+    requested,
+    respond: (user: typeof me | null) => act(() => respond(user)),
+    reject: () => act(reject),
+    ...view,
+    rerender: () => view.rerender(),
+  };
+}
 
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        ...baseAuth0Props,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-      });
+beforeEach(() => {
+  vi.clearAllMocks();
+  clearAuthSession();
+  sessionStorage.clear();
+  authStatusVar("LOADING");
+  authInitCompleteVar(false);
+  sdk.isLoading = false;
+  sdk.isAuthenticated = false;
+  sdk.error = undefined;
+  sdk.logout.mockResolvedValue(undefined);
+  sdk.getAccessTokenSilently.mockResolvedValue("auth0-token");
+});
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      // Initially should show loading
-      expect(
-        screen.getByText("Initializing OpenContracts")
-      ).toBeInTheDocument();
-      expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
-
-      // Advance timers to trigger the token fetch
-      await vi.advanceTimersByTimeAsync(100);
-
-      // Wait for token fetch to complete
-      await waitFor(() => {
-        expect(
-          screen.queryByText("Initializing OpenContracts")
-        ).not.toBeInTheDocument();
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // Verify auth state is correct
-      expect(authToken()).toBe(mockToken);
-      expect(authStatusVar()).toBe("AUTHENTICATED");
-
-      // Restore real timers to prevent pollution of subsequent tests
-      vi.useRealTimers();
+describe("AuthGate backend validation", () => {
+  it("renders public content without touching the disabled SDK", async () => {
+    sdk.isLoading = true;
+    const app = setup();
+    await waitFor(() =>
+      expect(screen.getByText("Public content")).toBeInTheDocument()
+    );
+    expect(app.requested).not.toHaveBeenCalled();
+    expect(sdk.getAccessTokenSilently).not.toHaveBeenCalled();
+  });
+  it("validates restored credentials before showing signed-in controls", async () => {
+    saveLocalAuthSession("local-jwt");
+    const app = setup();
+    await waitFor(() =>
+      expect(app.requested).toHaveBeenCalledWith("Bearer local-jwt")
+    );
+    expect(screen.queryByText("Signed in")).not.toBeInTheDocument();
+    expect(backendUserObj()).toBeNull();
+    app.respond(me);
+    await waitFor(() =>
+      expect(screen.getByText("Signed in")).toBeInTheDocument()
+    );
+    expect(userObj()).toEqual(me);
+    expect(backendUserObj()).toEqual(me);
+    expect(authInitCompleteVar()).toBe(true);
+  });
+  it("revokes a restored token when the backend returns 200/me:null", async () => {
+    saveLocalAuthSession("revoked");
+    const app = setup();
+    await waitFor(() => expect(app.requested).toHaveBeenCalled());
+    app.respond(null);
+    await waitFor(() =>
+      expect(screen.getByText("Public content")).toBeInTheDocument()
+    );
+    expect(authToken()).toBe("");
+    expect(loadLocalAuthSession()).toBeNull();
+    expect(userObj()).toBeNull();
+    expect(backendUserObj()).toBeNull();
+  });
+  it("keeps credentials on an outage and offers a working retry", async () => {
+    saveLocalAuthSession("local-jwt");
+    const app = setup();
+    await waitFor(() => expect(app.requested).toHaveBeenCalled());
+    app.reject();
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(authToken()).toBe("local-jwt");
+    expect(authStatusVar()).toBe("ANONYMOUS");
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(app.requested).toHaveBeenCalledTimes(2));
+    app.respond(me);
+    await waitFor(() =>
+      expect(screen.getByText("Signed in")).toBeInTheDocument()
+    );
+  });
+  it("times out a hung identity check and allows sign-out", async () => {
+    vi.useFakeTimers();
+    saveLocalAuthSession("local-jwt");
+    const app = setup();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
     });
-
-    it("ensures token is set before marking as authenticated", async () => {
-      const mockToken = "test-token-123";
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockGetAccessTokenSilently = vi.fn().mockResolvedValue(mockToken);
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        ...baseAuth0Props,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // The critical test: token should be set when status is AUTHENTICATED
-      const token = authToken();
-      const status = authStatusVar();
-
-      expect(token).toBeTruthy();
-      expect(status).toBe("AUTHENTICATED");
-
-      // They should both be set (no race condition where status is AUTHENTICATED but token is empty)
-      if (status === "AUTHENTICATED") {
-        expect(token).not.toBe("");
-      }
+    expect(app.requested).toHaveBeenCalled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SESSION_CHECK_TIMEOUT_MS);
     });
-
-    it("sets authInitCompleteVar after cache operations complete", async () => {
-      const mockToken = "test-token-123";
-      const mockUser = { email: "test@example.com", sub: "user123" };
-      const mockGetAccessTokenSilently = vi.fn().mockResolvedValue(mockToken);
-
-      // Verify initial state
-      expect(authInitCompleteVar()).toBe(false);
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        isLoading: false,
-        isAuthenticated: true,
-        user: mockUser,
-        ...baseAuth0Props,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // After auth completes, authInitCompleteVar should be true
-      expect(authInitCompleteVar()).toBe(true);
-      expect(authToken()).toBe(mockToken);
-      expect(authStatusVar()).toBe("AUTHENTICATED");
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Continue signed out" })
+    );
+    vi.useRealTimers();
+    await waitFor(() =>
+      expect(screen.getByText("Public content")).toBeInTheDocument()
+    );
+    expect(authToken()).toBe("");
+  });
+  it("does not restore identity from a response arriving after logout", async () => {
+    saveLocalAuthSession("old-jwt");
+    const app = setup();
+    await waitFor(() => expect(app.requested).toHaveBeenCalled());
+    act(() => {
+      clearAuthSession();
     });
-
-    it("sets authInitCompleteVar for anonymous users", async () => {
-      // Verify initial state
-      expect(authInitCompleteVar()).toBe(false);
-
-      // Mock getAccessTokenSilently to reject - simulates truly anonymous user
-      const mockGetAccessTokenSilently = vi.fn().mockRejectedValue({
-        error: "login_required",
-        message: "Login required",
-      });
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        isLoading: false,
-        isAuthenticated: false,
-        user: undefined,
-        ...baseAuth0Props,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // After auth completes (even as anonymous), authInitCompleteVar should be true
-      expect(authInitCompleteVar()).toBe(true);
-      expect(authStatusVar()).toBe("ANONYMOUS");
+    app.respond(me);
+    await waitFor(() =>
+      expect(screen.getByText("Public content")).toBeInTheDocument()
+    );
+    expect(backendUserObj()).toBeNull();
+    expect(authToken()).toBe("");
+  });
+  it("survives corrupt storage with blocked cleanup", async () => {
+    sessionStorage.setItem("oc_local_auth_session", "{");
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new Error("blocked");
     });
+    setup();
+    await waitFor(() =>
+      expect(screen.getByText("Public content")).toBeInTheDocument()
+    );
+    expect(authInitCompleteVar()).toBe(true);
+  });
+  it("keeps editors mounted during background checks and transient failures", async () => {
+    saveLocalAuthSession("local-jwt");
+    const app = setup();
+    await waitFor(() => expect(app.requested).toHaveBeenCalled());
+    app.respond(me);
+    await waitFor(() =>
+      expect(screen.getByText("Signed in")).toBeInTheDocument()
+    );
+    const content = screen.getByText("Signed in");
+    act(() => window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(app.requested).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("Signed in")).toBe(content);
+    app.reject();
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(screen.getByText("Signed in")).toBe(content);
+    expect(authToken()).toBe("local-jwt");
+  });
 
-    it("sets authInitCompleteVar in non-Auth0 mode", async () => {
-      // Verify initial state
-      expect(authInitCompleteVar()).toBe(false);
+  it("revokes an active session when a background identity check returns null", async () => {
+    saveLocalAuthSession("local-jwt");
+    const app = setup();
+    await waitFor(() => expect(app.requested).toHaveBeenCalled());
+    app.respond(me);
+    await waitFor(() =>
+      expect(screen.getByText("Signed in")).toBeInTheDocument()
+    );
+    act(() => window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(app.requested).toHaveBeenCalledTimes(2));
+    app.respond(null);
+    await waitFor(() =>
+      expect(screen.getByText("Public content")).toBeInTheDocument()
+    );
+    expect(authToken()).toBe("");
+  });
 
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        isLoading: false,
-        isAuthenticated: false,
-        user: undefined,
-        ...baseAuth0Props,
-      });
+  it("finishes initialization under StrictMode", async () => {
+    saveLocalAuthSession("local-jwt");
+    const app = setup(false, true);
+    await waitFor(() => expect(app.requested).toHaveBeenCalled());
+    app.respond(me);
+    await waitFor(() =>
+      expect(screen.getByText("Signed in")).toBeInTheDocument()
+    );
+  });
+});
 
-      render(
-        <AuthGate useAuth0={false}>
-          <div>Protected Content</div>
-        </AuthGate>
+describe("Auth0 SDK coordination", () => {
+  it("waits for SDK callback processing and uses backend identity without an SDK profile", async () => {
+    sdk.isLoading = true;
+    const app = setup(true);
+    expect(screen.getByText("Initializing OpenContracts")).toBeInTheDocument();
+    expect(sdk.getAccessTokenSilently).not.toHaveBeenCalled();
+    sdk.isLoading = false;
+    sdk.isAuthenticated = true;
+    app.rerender();
+    await waitFor(() =>
+      expect(app.requested).toHaveBeenCalledWith("Bearer auth0-token")
+    );
+    app.respond(me);
+    await waitFor(() =>
+      expect(screen.getByText("Signed in")).toBeInTheDocument()
+    );
+    expect(userObj()).toEqual(me);
+  });
+  it("handles the SDK becoming authenticated after an anonymous render without a latch", async () => {
+    const app = setup(true);
+    await waitFor(() =>
+      expect(screen.getByText("Public content")).toBeInTheDocument()
+    );
+    sdk.isAuthenticated = true;
+    app.rerender();
+    await waitFor(() => expect(app.requested).toHaveBeenCalled());
+    app.respond(me);
+    await waitFor(() =>
+      expect(screen.getByText("Signed in")).toBeInTheDocument()
+    );
+  });
+  it.each(["invalid_grant", "missing_refresh_token", "login_required"])(
+    "recovers from %s through the SDK without auto-redirect",
+    async (error) => {
+      sdk.isAuthenticated = true;
+      sdk.getAccessTokenSilently.mockRejectedValue({ error });
+      setup(true);
+      await waitFor(() =>
+        expect(screen.getByText("Public content")).toBeInTheDocument()
       );
+      expect(sdk.logout).toHaveBeenCalledWith({ openUrl: false });
+      expect(authToken()).toBe("");
+    }
+  );
+  it("renews an expired access token before the tab-resume identity check", async () => {
+    sdk.isAuthenticated = true;
+    const app = setup(true);
+    await waitFor(() =>
+      expect(app.requested).toHaveBeenCalledWith("Bearer auth0-token")
+    );
+    app.respond(me);
+    await waitFor(() =>
+      expect(screen.getByText("Signed in")).toBeInTheDocument()
+    );
+    sdk.getAccessTokenSilently.mockResolvedValue("renewed-token");
+    act(() => window.dispatchEvent(new Event("online")));
+    await waitFor(() =>
+      expect(app.requested).toHaveBeenLastCalledWith("Bearer renewed-token")
+    );
+    app.respond(me);
+    await waitFor(() => expect(authToken()).toBe("renewed-token"));
+    expect(sdk.logout).not.toHaveBeenCalled();
+    expect(screen.getByText("Signed in")).toBeInTheDocument();
+  });
 
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-      });
-
-      // Should be set immediately in non-Auth0 mode
-      expect(authInitCompleteVar()).toBe(true);
-      expect(authStatusVar()).toBe("ANONYMOUS");
+  it("clears the SDK session when the backend rejects its token with me:null", async () => {
+    sdk.isAuthenticated = true;
+    const app = setup(true);
+    await waitFor(() => expect(app.requested).toHaveBeenCalled());
+    app.respond(null);
+    await waitFor(() =>
+      expect(screen.getByText("Public content")).toBeInTheDocument()
+    );
+    expect(sdk.logout).toHaveBeenCalledWith({ openUrl: false });
+  });
+  it("ignores a token acquired after logout", async () => {
+    sdk.isAuthenticated = true;
+    let resolve: (token: string) => void = () => {};
+    sdk.getAccessTokenSilently.mockReturnValue(
+      new Promise<string>((done) => {
+        resolve = done;
+      })
+    );
+    setup(true);
+    act(() => {
+      clearAuthSession();
     });
-
-    it("handles Auth0 callback race condition - isAuthenticated false but tokens exist", async () => {
-      // Simulate the race condition during Auth0 callback:
-      // isAuthenticated is false (SDK state not updated yet)
-      // but getAccessTokenSilently succeeds (tokens are in cache)
-      const mockToken = "race-condition-token";
-      const mockGetAccessTokenSilently = vi.fn().mockResolvedValue(mockToken);
-
-      // Simulate OAuth callback URL so the fast-path doesn't skip verification
-      const originalSearch = window.location.search;
-      Object.defineProperty(window, "location", {
-        writable: true,
-        value: { ...window.location, search: "?code=abc&state=xyz" },
-      });
-
-      const mockUseAuth0 = useAuth0 as MockedFunction<typeof useAuth0>;
-      mockUseAuth0.mockReturnValue({
-        isLoading: false,
-        isAuthenticated: false, // SDK state not yet updated
-        user: undefined,
-        ...baseAuth0Props,
-        getAccessTokenSilently: mockGetAccessTokenSilently,
-      });
-
-      render(
-        <AuthGate useAuth0={true} audience="test-audience">
-          <div>Protected Content</div>
-        </AuthGate>
-      );
-
-      // Should render children after detecting we have tokens, and auth
-      // state should be set correctly despite isAuthenticated being false.
-      // All assertions in one waitFor to avoid reading stale reactive vars
-      // between async promise resolutions.
-      await waitFor(() => {
-        expect(screen.getByText("Protected Content")).toBeInTheDocument();
-        expect(authToken()).toBe(mockToken);
-        expect(authStatusVar()).toBe("AUTHENTICATED");
-        expect(authInitCompleteVar()).toBe(true);
-      });
-
-      // Verify getAccessTokenSilently was called to verify auth state
-      expect(mockGetAccessTokenSilently).toHaveBeenCalled();
-
-      // Restore original location
-      Object.defineProperty(window, "location", {
-        writable: true,
-        value: { ...window.location, search: originalSearch },
-      });
-    });
+    await act(async () => resolve("late-token"));
+    await waitFor(() =>
+      expect(screen.getByText("Public content")).toBeInTheDocument()
+    );
+    expect(authToken()).toBe("");
+  });
+  it("offers sign-in after a callback error", async () => {
+    sdk.error = new Error("Invalid state");
+    setup(true);
+    await waitFor(() =>
+      expect(screen.getByText("Public content")).toBeInTheDocument()
+    );
+    expect(authStatusVar()).toBe("ANONYMOUS");
   });
 });

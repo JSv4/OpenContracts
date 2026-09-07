@@ -8,6 +8,7 @@ import {
   backendUserObj,
   userObj,
   authToken,
+  authStatusVar,
   showExportModal,
 } from "../src/graphql/cache";
 import { NavMenu } from "../src/components/layout/NavMenu";
@@ -48,6 +49,7 @@ export const NavMenuTestWrapper: React.FC<NavMenuTestWrapperProps> = ({
     userObj(mockUser);
     backendUserObj(mockUser);
     authToken(mockUser ? "mock-token" : "");
+    authStatusVar(mockUser ? "AUTHENTICATED" : "ANONYMOUS");
     showExportModal(false);
     // Small delay to ensure reactive vars propagate
     const timer = setTimeout(() => setIsReady(true), 10);

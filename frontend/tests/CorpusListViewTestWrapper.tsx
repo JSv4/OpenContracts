@@ -4,7 +4,12 @@ import { InMemoryCache } from "@apollo/client";
 import { Provider } from "jotai";
 import { MemoryRouter } from "react-router-dom";
 import { CorpusListView } from "../src/components/corpuses/CorpusListView";
-import { authToken, userObj, backendUserObj } from "../src/graphql/cache";
+import {
+  authToken,
+  authStatusVar,
+  userObj,
+  backendUserObj,
+} from "../src/graphql/cache";
 import { CorpusType, PageInfo } from "../src/types/graphql-api";
 import { START_FORK_CORPUS } from "../src/graphql/mutations";
 
@@ -127,10 +132,12 @@ export const CorpusListViewTestWrapper: React.FC<WrapperProps> = ({
           : `user-${userEmail.split("@")[0]}`;
       userObj({ id: userId, email: userEmail } as any);
       backendUserObj({ id: userId, email: userEmail } as any);
+      authStatusVar("AUTHENTICATED");
     } else {
       authToken("");
       userObj(null);
       backendUserObj(null);
+      authStatusVar("ANONYMOUS");
     }
   }, [isAuthenticated, userEmail]);
 

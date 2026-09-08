@@ -48,7 +48,9 @@ jobs:
   e2e-extract:
     name: Extract pipeline (PDF upload → run → CSV)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Allow image/service startup, Playwright's 25-minute global budget,
+    # and diagnostic uploads to finish before the job is terminated.
+    timeout-minutes: 45
     permissions:
       contents: read
 
@@ -201,6 +203,7 @@ jobs:
       # merge those JSON files into an lcov report for Codecov.
       # ────────────────────────────────────────────────────────────────
       - name: Run Playwright extract spec with coverage
+        timeout-minutes: 30
         working-directory: ./frontend
         env:
           CI: "true"
@@ -214,7 +217,11 @@ jobs:
           E2E_TEST_PASSWORD: Openc0ntracts_def@ult
         run: |
           set +e
-          yarn playwright test --grep "Extract PDF workflow" --reporter=list
+          # The spec already polls slow ingestion/extraction steps. Replaying
+          # the whole pipeline on failure can consume the job budget before
+          # Playwright reports the first error. Keep the configured reporters
+          # and retain the first attempt's trace for the failure upload below.
+          yarn playwright test --grep "Extract PDF workflow" --retries=0 --trace=retain-on-failure
           E2E_EXIT=$?
           mkdir -p coverage/e2e/.nyc_output
           yarn nyc report --all \
@@ -246,25 +253,27 @@ jobs:
           ls -la coverage-backend-e2e-extract.xml || true
 
       - name: Capture backend logs on failure
-        if: failure()
+        if: failure() || cancelled()
         run: |
           mkdir -p artifacts
           docker compose -f local.yml ps > artifacts/docker-ps.txt || true
           docker compose -f local.yml logs --no-color > artifacts/docker-compose-logs.txt || true
 
       - name: Upload backend logs on failure
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: e2e-extract-backend-logs
           path: artifacts/
 
       - name: Upload Playwright HTML report on failure
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: e2e-extract-playwright-report
-          path: frontend/playwright-report-e2e/
+          path: |
+            frontend/playwright-report-e2e/
+            frontend/test-results/
           if-no-files-found: ignore
 
       # ────────────────────────────────────────────────────────────────

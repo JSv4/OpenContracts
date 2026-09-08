@@ -91,6 +91,18 @@ test.describe("Extract PDF workflow (LLM-gated)", () => {
   test.setTimeout(30 * 60 * 1000);
 
   test("uploads two PDFs, runs an extract, exports CSV", async ({ page }) => {
+    // Background corpus actions can award badges at any point in this flow.
+    // Dismiss the celebration as a user would before continuing an action;
+    // its modal overlay otherwise blocks clicks such as "New Extract".
+    await page.addLocatorHandler(
+      page.getByRole("dialog", { name: "Badge awarded", exact: true }),
+      async (dialog) => {
+        await dialog
+          .getByRole("button", { name: "Close", exact: true })
+          .click();
+      }
+    );
+
     await test.step("login", async () => {
       await loginViaUI(page, TEST_USER.username, TEST_USER.password);
     });

@@ -1348,7 +1348,7 @@ export function markDocumentPublicViaDocker(documentTitle: string): void {
 export function getDocumentGlobalIdViaDocker(documentTitle: string): string {
   const out = runDjangoShell(`
     from opencontractserver.documents.models import Document
-    from graphql_relay import to_global_id
+    from opencontractserver.utils.ids import to_global_id
     d = Document.objects.get(title='${documentTitle}')
     print(to_global_id('DocumentType', d.id))
   `);
@@ -1367,7 +1367,7 @@ export function getDocumentGlobalIdViaDocker(documentTitle: string): string {
 export function issueJwtForUserViaDocker(username: string): string {
   const out = runDjangoShell(`
     from django.contrib.auth import get_user_model
-    from graphql_jwt.shortcuts import get_token
+    from config.jwt_auth.shortcuts import get_token
     User = get_user_model()
     u = User.objects.get(username='${username}')
     print(get_token(u))

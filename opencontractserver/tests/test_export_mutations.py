@@ -5,13 +5,13 @@ Tests the StartCorpusExport mutation functionality including analysis filtering.
 
 from django.contrib.auth import get_user_model
 from django.test import override_settings
-from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
 from opencontractserver.annotations.models import AnnotationLabel, LabelSet
 from opencontractserver.tests.base import BaseFixtureTestCase
 from opencontractserver.types.enums import ExportType, PermissionTypes
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()

@@ -3,14 +3,16 @@
 The GraphQL API was migrated from **graphene / graphene-django** to
 **strawberry-graphql** with a machine-verified guarantee of **zero
 query-shape change**. This doc is a map of where things live and the
-invariants that keep the wire contract stable.
+invariants that keep the wire contract stable. Graphene, graphene-django,
+django-graphql-jwt, and graphql-relay are no longer runtime or test dependencies.
 
 ## The wire contract (do not break)
 
 - `config/graphql/schema.graphql` — the **golden SDL**, captured from the
   graphene schema at migration time. It is the source of truth for every
   type, field, argument (name/type/nullability/default), interface, and enum
-  member the API exposes.
+  member the API exposes. Root operation types, union membership, input-field
+  defaults, and directive definitions are also checked.
 - `opencontractserver/tests/test_schema_parity.py` — structurally compares
   the served strawberry schema against the golden SDL and **fails on any
   drift**. Field ordering and descriptions are not part of the contract;
@@ -21,8 +23,11 @@ invariants that keep the wire contract stable.
 
 Reproduces graphene / graphene-django behaviours on top of strawberry:
 
-- `core/relay.py` — relay global IDs (`base64("TypeName:pk")`), the `Node`
-  interface, a **type registry** (`register_type`) mapping type names →
+- `opencontractserver/utils/ids.py` — opaque global IDs
+  (`base64("TypeName:pk")`) and `arrayconnection` cursors, shared by GraphQL,
+  WebSockets, tasks, and services without importing the schema. Malformed-ID
+  decoding and GraphQL ID coercion preserve the existing contract.
+- `core/relay.py` — the `Node` interface, a **type registry** (`register_type`) mapping type names →
   Django model + per-type `get_queryset`/`get_node` hooks,
   countable/PDF-page-aware connection factories, and
   `resolve_django_connection` (a faithful port of graphene-django's
@@ -47,10 +52,8 @@ Reproduces graphene / graphene-django behaviours on top of strawberry:
     `get_node`/`get_queryset` visibility hook — reproducing graphene-django's
     auto-converted-FK `CustomField`, so an invisible FK target resolves to
     `null` rather than leaking its fields across a permission boundary.
-  - `register_type` also installs graphene-compat `resolve_<field>`
-    staticmethod aliases (delegating to the `_resolve_<Type>_<field>` module
-    functions) so unit tests that call resolvers directly keep working. These
-    are inert for schema execution.
+  - Resolver unit tests import the module-level functions directly; type
+    registration no longer installs test-only methods on schema classes.
 - `core/scalars.py` — `GenericScalar` / `JSONString` / `BigInt` (graphene
   wire behaviour).
 - `core/filtering.py` — django-filter FilterSet ↔ GraphQL argument-name
@@ -84,15 +87,32 @@ Per-request authentication happens once in
 graphene-era `JSONWebTokenMiddleware` + API-key middleware are gone. The
 `tokenAuth` / `verifyToken` / `refreshToken` mutations are strawberry-native
 ports (`config/graphql/jwt_auth.py`, `user_mutations.py`) preserving
-long-running refresh-token laziness. `django-graphql-jwt` remains only as a
-JWT signing/backend utility.
+long-running refresh-token laziness. `config/jwt_auth/` owns signing, claim
+validation, credential extraction, exceptions, backend, and refresh helpers,
+using Django and PyJWT. REST, MCP, and WebSockets use the same code.
+
+The existing `GRAPHQL_JWT` settings, Bearer headers, cookie fallback, payload
+claims (`username`, `exp`, `origIat`), handler overrides, and error messages
+remain supported. Explicit old default handler paths are translated to the
+new implementations. Auth0 and API-key backend behavior is unchanged.
+
+Refresh storage remains **optional**, just as before. Deployments that used
+`graphql_jwt.refresh_token` in `INSTALLED_APPS` must replace that entry with
+`config.jwt_auth.refresh_token`. Its app label (`refresh_token`), table,
+fields, and migration names are preserved, so existing rows and migration
+history carry over without a data migration. Custom `JWT_REFRESH_TOKEN_MODEL`
+and handler settings still work. Default deployments do not install this app;
+requesting only an access token never evaluates the lazy refresh-token value.
+Python integrations importing JWT helpers or signals should now import from
+`config.jwt_auth` instead of the removed dependency.
 
 ## Security hardening
 
 `DepthLimitValidationRule` + `DisableIntrospection` (production) attach via
 strawberry's `AddValidationRules` extension, which **appends** to graphql-core's
 full spec rule set — the graphene-era "custom rules replace spec rules" trap is
-structurally impossible now. The GCS file-URL pre-warm middleware became
+structurally impossible now. The extension is passed as a factory, so each
+request gets an independent execution context. The GCS file-URL pre-warm middleware became
 `config/graphql/file_url_prewarm.py::FileUrlPrewarmExtension` (installed only
 when `FILE_URL_SHARED_CACHE_TTL > 0`).
 
@@ -102,5 +122,13 @@ when `FILE_URL_SHARED_CACHE_TTL > 0`).
 replacement (`Client`, same result-dict shape) plus a `GraphQLTestCase` port
 for endpoint-level tests. `schema.execute(...)` → `schema.execute_sync(...)`
 (strawberry uses `variable_values=`, not graphene's `variables=`).
-`schema.graphql_schema` is aliased to the underlying graphql-core schema for
-compat.
+Schema inspection tools use Strawberry's underlying `schema._schema`; the
+Graphene `schema.graphql_schema` alias has been removed.
+
+`test_api_id_contract.py` pins ID/cursor bytes and connection windows.
+`test_jwt_auth_contract.py` and `test_jwt_refresh_contract.py` exercise real
+HTTP authentication, old claim layouts, error payloads, lazy refresh creation,
+rotation, and persistent model compatibility. Existing auth test assertions
+remain unchanged; their imports and patch targets point to the owned runtime.
+`tests/architecture/test_graphql_dependencies.py` rejects removed imports and
+dependency declarations and checks extension instances are request-scoped.

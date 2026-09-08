@@ -9,9 +9,9 @@ import requests
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.utils.translation import gettext as _
-from graphql_jwt import exceptions
 
 from config.graphql_auth0_auth.settings import auth0_settings
+from config.jwt_auth import exceptions
 from opencontractserver.constants import TOKEN_LOG_PREFIX_LENGTH
 
 logger = logging.getLogger(__name__)

@@ -2,13 +2,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.files.base import ContentFile
 from django.test import TestCase
-from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
 from opencontractserver.conversations.models import ChatMessage, Conversation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import (
     PermissionTypes,
     set_permissions_for_obj_to_user,

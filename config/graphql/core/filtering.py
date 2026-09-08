@@ -25,7 +25,8 @@ from django_filters.filterset import (
     BaseFilterSet,
     FilterSet,
 )
-from graphql_relay import from_global_id
+
+from opencontractserver.utils.ids import from_global_id
 
 
 def to_camel_case(snake_str: str) -> str:
@@ -102,7 +103,7 @@ class GlobalIDMultipleChoiceFilter(MultipleChoiceFilter):
         return super().filter(qs, gids)
 
 
-GRAPHENE_FILTER_SET_OVERRIDES = {
+FILTER_SET_OVERRIDES = {
     models.AutoField: {"filter_class": GlobalIDFilter},
     models.OneToOneField: {"filter_class": GlobalIDFilter},
     models.ForeignKey: {"filter_class": GlobalIDFilter},
@@ -117,7 +118,7 @@ class GrapheneFilterSetMixin(BaseFilterSet):
 
     FILTER_DEFAULTS = dict(
         itertools.chain(
-            FILTER_FOR_DBFIELD_DEFAULTS.items(), GRAPHENE_FILTER_SET_OVERRIDES.items()
+            FILTER_FOR_DBFIELD_DEFAULTS.items(), FILTER_SET_OVERRIDES.items()
         )
     )
 

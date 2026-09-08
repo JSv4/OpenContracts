@@ -35,7 +35,6 @@ from django.core.exceptions import (
     PermissionDenied,
     ValidationError,
 )
-from graphql_jwt.exceptions import JSONWebTokenError, JSONWebTokenExpired
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
 from mcp.server.stdio import stdio_server
@@ -46,6 +45,8 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Mount, Route
+
+from config.jwt_auth.exceptions import JSONWebTokenError, JSONWebTokenExpired
 
 # Module-level import so test-time patching of this symbol is stable
 # (see MCPAsgiAppAuthTest for the patch sites).

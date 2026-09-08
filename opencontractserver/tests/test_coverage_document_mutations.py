@@ -29,7 +29,6 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.utils import timezone
-from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
@@ -47,6 +46,7 @@ from opencontractserver.tests.base import BaseFixtureTestCase
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.users.models import UserExport
 from opencontractserver.utils.files import base_64_encode_bytes
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()

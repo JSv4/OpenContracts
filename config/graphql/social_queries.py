@@ -35,7 +35,6 @@ import strawberry
 from django.core.cache import cache
 from django.db.models import Q
 from graphql import GraphQLError
-from graphql_relay import from_global_id
 
 from config.graphql import enums
 from config.graphql._util import strip_unset
@@ -69,6 +68,7 @@ from opencontractserver.conversations.models import (
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.notifications.models import Notification
 from opencontractserver.shared.services.base import BaseService
+from opencontractserver.utils.ids import from_global_id
 
 logger = logging.getLogger(__name__)
 

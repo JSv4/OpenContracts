@@ -32,7 +32,6 @@ from typing import Annotated
 
 import strawberry
 from django.db import transaction
-from graphql_relay import from_global_id
 
 from config.graphql._util import strip_unset
 from config.graphql.core.auth import PermissionDenied
@@ -44,6 +43,7 @@ from opencontractserver.annotations.models import AnnotationLabel, LabelSet
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.shared.services.base import BaseService
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import from_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)

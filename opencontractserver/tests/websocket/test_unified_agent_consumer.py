@@ -24,7 +24,6 @@ import pytest
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 from django.test.utils import override_settings
-from graphql_relay import to_global_id
 
 from config.websocket.consumers.unified_agent_conversation import (
     UnifiedAgentConsumer,
@@ -45,6 +44,7 @@ from opencontractserver.llms.agents.core_agents import (
     ThoughtEvent,
 )
 from opencontractserver.tests.base import WebsocketFixtureBaseTestCase
+from opencontractserver.utils.ids import to_global_id
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ class UnifiedAgentConsumerPermissionTestCase(WebsocketFixtureBaseTestCase):
             password="pw123456!",
             email="other_corpus@example.com",
         )
-        from graphql_jwt.shortcuts import get_token
+        from config.jwt_auth.shortcuts import get_token
 
         other_token = await database_sync_to_async(get_token)(user=other_user)
 
@@ -183,7 +183,7 @@ class UnifiedAgentConsumerPermissionTestCase(WebsocketFixtureBaseTestCase):
             password="pw123456!",
             email="other_doc@example.com",
         )
-        from graphql_jwt.shortcuts import get_token
+        from config.jwt_auth.shortcuts import get_token
 
         other_token = await database_sync_to_async(get_token)(user=other_user)
 

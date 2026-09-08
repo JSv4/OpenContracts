@@ -14,7 +14,6 @@ from unittest import mock
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
-from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client as GrapheneClient
@@ -26,6 +25,7 @@ from opencontractserver.conversations.models import (
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()

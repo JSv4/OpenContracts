@@ -19,9 +19,8 @@ import json
 
 from django.test import TestCase
 from django.utils import timezone
-from graphql_relay import to_global_id
 
-from config.graphql.agent_types import AgentConfigurationType
+from config.graphql.agent_types import _get_node_AgentConfigurationType
 from config.graphql.schema import schema
 from config.graphql.testing import Client
 from opencontractserver.agents.models import AgentActionResult, AgentConfiguration
@@ -39,6 +38,7 @@ from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import Extract, Fieldset
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.users.models import User
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 
@@ -479,11 +479,7 @@ class AgentConfigurationFieldResolverTestCase(TestCase):
         this pins the guard clause itself rather than a query-level scenario.
         """
         info = type("Info", (), {"context": _RequestContext(self.user)})()
-        # ``get_node`` is installed onto the class at runtime by
-        # ``register_type``'s aliasing (not statically declared) — see
-        # ``test_doc_annotations_prefetch_n_plus_one.py`` for the same
-        # mypy-invisible-but-real attribute accessed the same way.
-        self.assertIsNone(AgentConfigurationType.get_node(info, None))  # type: ignore[attr-defined]
+        self.assertIsNone(_get_node_AgentConfigurationType(info, None))
 
 
 class AgentActionResultFieldResolverTestCase(TestCase):

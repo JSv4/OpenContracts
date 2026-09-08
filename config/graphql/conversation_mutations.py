@@ -33,7 +33,6 @@ from typing import Annotated
 import strawberry
 from django.db import transaction
 from django.utils import timezone
-from graphql_relay import from_global_id
 
 from config.graphql._util import strip_unset
 from config.graphql.core.auth import PermissionDenied
@@ -52,6 +51,7 @@ from opencontractserver.documents.models import Document
 from opencontractserver.shared.services.base import BaseService
 from opencontractserver.tasks.agent_tasks import trigger_agent_responses_for_message
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import from_global_id
 from opencontractserver.utils.mention_parser import (
     link_message_to_resources,
     parse_mentions_from_content,

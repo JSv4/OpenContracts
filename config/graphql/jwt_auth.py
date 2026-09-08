@@ -27,27 +27,26 @@ carry the ported business logic. See config/graphql_new/manifest.json.
 
 from __future__ import annotations
 
-from calendar import timegm
-from datetime import datetime
 from typing import Annotated
 
 import strawberry
 from django.middleware.csrf import rotate_token
-from graphql_jwt.exceptions import JSONWebTokenError
-from graphql_jwt.refresh_token import signals as refresh_token_signals
-from graphql_jwt.refresh_token.shortcuts import (
-    create_refresh_token,
-    get_refresh_token,
-    refresh_token_lazy,
-)
-from graphql_jwt.settings import jwt_settings
-from graphql_jwt.utils import get_payload
 
 from config.graphql._util import strip_unset
 from config.graphql.core.relay import (
     register_type,
 )
 from config.graphql.core.scalars import GenericScalar
+from config.jwt_auth.exceptions import JSONWebTokenError
+from config.jwt_auth.refresh_token import signals as refresh_token_signals
+from config.jwt_auth.refresh_token.shortcuts import (
+    create_refresh_token,
+    get_refresh_token,
+    refresh_token_lazy,
+)
+from config.jwt_auth.settings import jwt_settings
+from config.jwt_auth.utils import get_payload
+from config.jwt_auth.utils import refresh_expires_in as _refresh_expires_in
 
 
 @strawberry.type(name="Verify")
@@ -76,14 +75,6 @@ def _ensure_token(info, token):
         if token is None:
             raise JSONWebTokenError("Token is required")
     return token
-
-
-def _refresh_expires_in(orig_iat=None):
-    """Port of ``graphql_jwt.decorators.refresh_expiration`` timestamping."""
-    base = (
-        orig_iat if orig_iat is not None else timegm(datetime.utcnow().utctimetuple())
-    )
-    return base + jwt_settings.JWT_REFRESH_EXPIRATION_DELTA.total_seconds()
 
 
 def _maybe_rotate_csrf(info):

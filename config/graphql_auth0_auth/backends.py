@@ -1,10 +1,10 @@
 import logging
 
-import graphql_jwt
 from django.contrib.auth import get_user_model
-from graphql_jwt.exceptions import JSONWebTokenExpired
 
 from config.graphql_auth0_auth.utils import get_user_by_token
+from config.jwt_auth import utils as jwt_utils
+from config.jwt_auth.exceptions import JSONWebTokenExpired
 
 UserModel = get_user_model()
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class Auth0RemoteUserJSONWebTokenBackend:
             )
             return None
 
-        token = graphql_jwt.utils.get_credentials(request, **kwargs)
+        token = jwt_utils.get_credentials(request, **kwargs)
         logger.debug(
             f"Auth0RemoteUserJSONWebTokenBackend.authenticate() - token retrieved: {'Present' if token else 'None'}"
         )

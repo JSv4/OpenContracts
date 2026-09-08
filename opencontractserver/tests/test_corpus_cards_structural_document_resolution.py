@@ -36,9 +36,8 @@ from django.db import connection
 from django.test import RequestFactory, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
-from graphql_relay import from_global_id, to_global_id
 
-from config.graphql.annotation_types import AnnotationType
+from config.graphql.annotation_types import _resolve_AnnotationType_document
 from config.graphql.schema import schema
 from config.graphql.testing import Client
 from opencontractserver.annotations.models import (
@@ -50,6 +49,7 @@ from opencontractserver.annotations.services import AnnotationService
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document, DocumentPath
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import from_global_id, to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()
@@ -464,12 +464,12 @@ class CorpusCardsStructuralDocumentResolutionTests(TestCase):
             fk_uncached._meta.get_field("document").is_cached(fk_uncached),
             "test setup must fetch the annotation without select_related",
         )
-        resolved = AnnotationType.resolve_document(fk_uncached, self._info(self.user))
+        resolved = _resolve_AnnotationType_document(fk_uncached, self._info(self.user))
         self.assertIsNotNone(resolved)
         self.assertEqual(resolved.id, owned_doc.id)
 
         fk_uncached_again = Annotation.objects.get(pk=annotation.id)
-        resolved_for_stranger = AnnotationType.resolve_document(
+        resolved_for_stranger = _resolve_AnnotationType_document(
             fk_uncached_again, self._info(self.other_user)
         )
         self.assertIsNone(
@@ -510,7 +510,7 @@ class CorpusCardsStructuralDocumentResolutionTests(TestCase):
         # Fetched without the corpus/document-scoped prefetch, so
         # resolve_document falls through to resolve_structural_document_fallback.
         fresh = Annotation.objects.get(pk=annotation.id)
-        resolved = AnnotationType.resolve_document(fresh, self._info(self.user))
+        resolved = _resolve_AnnotationType_document(fresh, self._info(self.user))
         self.assertIsNone(resolved)
 
     def test_resolve_document_structural_fallback_resolves_corpus_scoped_document(
@@ -524,7 +524,7 @@ class CorpusCardsStructuralDocumentResolutionTests(TestCase):
         """
         annotation = self._make_structural_annotations(self.corpus_a, "A")[0]
         fresh = Annotation.objects.get(pk=annotation.id)
-        resolved = AnnotationType.resolve_document(fresh, self._info(self.user))
+        resolved = _resolve_AnnotationType_document(fresh, self._info(self.user))
         self.assertIsNotNone(resolved)
         self.assertEqual(resolved.id, self.doc_a.id)
 

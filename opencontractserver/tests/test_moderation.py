@@ -632,7 +632,7 @@ class ModerationMutationIDORTest(TestCase):
 
     def test_add_moderator_idor_prevention(self):
         """Test that AddModeratorMutation prevents corpus enumeration."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         corpus_global_id = to_global_id("CorpusType", self.private_corpus.id)
         user_global_id = to_global_id("UserType", self.moderator_user.id)
@@ -691,9 +691,8 @@ class ModerationMutationIDORTest(TestCase):
 
     def test_remove_moderator_idor_prevention(self):
         """Test that RemoveModeratorMutation prevents corpus enumeration."""
-        from graphql_relay import to_global_id
-
         from opencontractserver.conversations.models import CorpusModerator
+        from opencontractserver.utils.ids import to_global_id
 
         # First add a moderator (as owner)
         CorpusModerator.objects.create(
@@ -734,9 +733,8 @@ class ModerationMutationIDORTest(TestCase):
 
     def test_update_moderator_permissions_idor_prevention(self):
         """Test that UpdateModeratorPermissionsMutation prevents corpus enumeration."""
-        from graphql_relay import to_global_id
-
         from opencontractserver.conversations.models import CorpusModerator
+        from opencontractserver.utils.ids import to_global_id
 
         # First add a moderator (as owner)
         CorpusModerator.objects.create(
@@ -826,7 +824,7 @@ class DeleteRestoreThreadMutationTest(TestCase):
 
     def test_delete_thread_mutation(self):
         """Test deleting a thread via GraphQL mutation."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         conv_global_id = to_global_id("ConversationType", self.conversation.id)
 
@@ -870,7 +868,7 @@ class DeleteRestoreThreadMutationTest(TestCase):
 
     def test_delete_thread_permission_denied(self):
         """Test that non-moderators cannot delete threads."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         conv_global_id = to_global_id("ConversationType", self.conversation.id)
 
@@ -897,7 +895,7 @@ class DeleteRestoreThreadMutationTest(TestCase):
 
     def test_restore_thread_mutation(self):
         """Test restoring a deleted thread via GraphQL mutation."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         # First delete the thread
         self.conversation.soft_delete_thread(self.owner)
@@ -971,7 +969,7 @@ class RollbackModerationActionMutationTest(TestCase):
 
     def test_rollback_lock_action(self):
         """Test rolling back a lock action unlocks the thread."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         # Lock the thread
         lock_action = self.conversation.lock(self.owner, reason="Locked for test")
@@ -1017,7 +1015,7 @@ class RollbackModerationActionMutationTest(TestCase):
 
     def test_rollback_pin_action(self):
         """Test rolling back a pin action unpins the thread."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         # Pin the thread
         pin_action = self.conversation.pin(self.owner, reason="Pinned for test")
@@ -1056,7 +1054,7 @@ class RollbackModerationActionMutationTest(TestCase):
 
     def test_rollback_delete_thread_action(self):
         """Test rolling back a delete action restores the thread."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         # Delete the thread
         delete_action = self.conversation.soft_delete_thread(
@@ -1089,7 +1087,7 @@ class RollbackModerationActionMutationTest(TestCase):
 
     def test_rollback_non_rollbackable_action(self):
         """Test that already-rolled-back actions cannot be rolled back."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         # Create an unlock action (which is a rollback of lock, not rollbackable itself)
         self.conversation.lock(self.owner)
@@ -1120,7 +1118,7 @@ class RollbackModerationActionMutationTest(TestCase):
 
     def test_rollback_permission_denied(self):
         """Test that non-moderators cannot rollback actions."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         lock_action = self.conversation.lock(self.owner)
         action_global_id = to_global_id("ModerationActionType", lock_action.id)
@@ -1148,7 +1146,7 @@ class RollbackModerationActionMutationTest(TestCase):
 
     def test_rollback_nonexistent_action(self):
         """Test rolling back a non-existent action."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         fake_action_id = to_global_id("ModerationActionType", 999999)
 
@@ -1207,7 +1205,7 @@ class ModerationQueriesTest(TestCase):
 
     def test_moderation_actions_query(self):
         """Test querying moderation actions for a corpus."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         corpus_global_id = to_global_id("CorpusType", self.corpus.id)
 
@@ -1243,7 +1241,7 @@ class ModerationQueriesTest(TestCase):
 
     def test_moderation_action_query(self):
         """Test querying a single moderation action by ID."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         action_global_id = to_global_id("ModerationActionType", self.lock_action.id)
 
@@ -1272,7 +1270,7 @@ class ModerationQueriesTest(TestCase):
 
     def test_moderation_metrics_query(self):
         """Test querying moderation metrics for a corpus."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         corpus_global_id = to_global_id("CorpusType", self.corpus.id)
 
@@ -1374,7 +1372,7 @@ class ResolveModerationActionAuthGateTest(TestCase):
         self.client = Client(schema)
 
     def _query(self, action_pk: int, user) -> dict:
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         action_global_id = to_global_id("ModerationActionType", action_pk)
         return self.client.execute(

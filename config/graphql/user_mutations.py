@@ -27,22 +27,11 @@ carry the ported business logic. See config/graphql_new/manifest.json.
 
 from __future__ import annotations
 
-from calendar import timegm as _timegm
-from datetime import datetime as _datetime
 from typing import Annotated
 
 import strawberry
 from django.contrib.auth import authenticate as _dj_authenticate
 from django.middleware.csrf import rotate_token as _rotate_token
-from graphql_jwt import signals as _jwt_signals
-from graphql_jwt.exceptions import JSONWebTokenError as _JWTError
-from graphql_jwt.refresh_token.shortcuts import (
-    create_refresh_token as _create_refresh_token,
-)
-from graphql_jwt.refresh_token.shortcuts import (
-    refresh_token_lazy as _refresh_token_lazy,
-)
-from graphql_jwt.settings import jwt_settings as _jwt_settings
 
 from config.graphql._util import strip_unset
 from config.graphql.core.auth import PermissionDenied
@@ -56,6 +45,16 @@ from config.graphql.ratelimits import (
     graphql_ratelimit,
     graphql_ratelimit_dynamic,
 )
+from config.jwt_auth import signals as _jwt_signals
+from config.jwt_auth.exceptions import JSONWebTokenError as _JWTError
+from config.jwt_auth.refresh_token.shortcuts import (
+    create_refresh_token as _create_refresh_token,
+)
+from config.jwt_auth.refresh_token.shortcuts import (
+    refresh_token_lazy as _refresh_token_lazy,
+)
+from config.jwt_auth.settings import jwt_settings as _jwt_settings
+from config.jwt_auth.utils import refresh_expires_in
 
 
 @strawberry.type(name="ObtainJSONWebTokenWithUser")
@@ -187,10 +186,7 @@ def _mutate_ObtainJSONWebTokenWithUser(
             result.refresh_token = _refresh_token_lazy(user)
 
     # graphql_jwt.decorators.refresh_expiration
-    result.refresh_expires_in = (
-        _timegm(_datetime.utcnow().utctimetuple())
-        + _jwt_settings.JWT_REFRESH_EXPIRATION_DELTA.total_seconds()
-    )
+    result.refresh_expires_in = refresh_expires_in()
 
     # graphql_jwt.decorators.csrf_rotation
     if _jwt_settings.JWT_CSRF_ROTATION:

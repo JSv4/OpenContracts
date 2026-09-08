@@ -32,8 +32,8 @@ from typing import Any
 
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
-from graphql_jwt.exceptions import JSONWebTokenError, JSONWebTokenExpired
 
+from config.jwt_auth.exceptions import JSONWebTokenError, JSONWebTokenExpired
 from config.jwt_utils import get_user_from_jwt_token
 from config.websocket.middleware import (
     WS_CLOSE_PERMISSION_DENIED,

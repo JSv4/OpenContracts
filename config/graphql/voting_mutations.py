@@ -31,7 +31,6 @@ import logging
 from typing import Annotated
 
 import strawberry
-from graphql_relay import from_global_id
 
 from config.graphql._util import strip_unset
 from config.graphql.core.auth import PermissionDenied
@@ -50,6 +49,7 @@ from opencontractserver.corpuses.services import CorpusVoteService
 from opencontractserver.shared.services.base import BaseService
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.auth import is_authenticated_user
+from opencontractserver.utils.ids import from_global_id
 from opencontractserver.utils.permissioning import (
     set_permissions_for_obj_to_user,
 )

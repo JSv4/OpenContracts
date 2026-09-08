@@ -13,16 +13,7 @@ from __future__ import annotations
 from functools import wraps
 from typing import Any, Callable
 
-
-class JSONWebTokenError(Exception):
-    default_message: str = ""
-
-    def __init__(self, message: str | None = None):
-        super().__init__(message or self.default_message)
-
-
-class PermissionDenied(JSONWebTokenError):
-    default_message = "You do not have permission to perform this action"
+from config.jwt_auth.exceptions import JSONWebTokenError, PermissionDenied  # noqa: F401
 
 
 def user_passes_test(

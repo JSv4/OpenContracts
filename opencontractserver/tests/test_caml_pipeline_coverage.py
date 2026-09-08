@@ -6,7 +6,6 @@ filter exclusion, and upload mutation file-type detection.
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
-from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
@@ -15,6 +14,7 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document, DocumentProcessingStatus
 from opencontractserver.documents.signals import process_doc_on_create_atomic
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()

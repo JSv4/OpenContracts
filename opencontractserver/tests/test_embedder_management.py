@@ -150,7 +150,7 @@ class TestUpdateCorpusEmbedderImmutability(TestCase):
 
     def test_embedder_change_allowed_on_empty_corpus(self):
         """Changing preferred_embedder is allowed when corpus has no documents."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         global_id = to_global_id("CorpusType", self.corpus.pk)
         mutation = """
@@ -173,9 +173,8 @@ class TestUpdateCorpusEmbedderImmutability(TestCase):
 
     def test_embedder_change_rejected_with_documents(self):
         """Changing preferred_embedder is rejected when corpus has documents."""
-        from graphql_relay import to_global_id
-
         from opencontractserver.documents.models import Document, DocumentPath
+        from opencontractserver.utils.ids import to_global_id
 
         # Add a document to the corpus
         doc = Document.objects.create(title="Test Doc", creator=self.user)
@@ -212,9 +211,8 @@ class TestUpdateCorpusEmbedderImmutability(TestCase):
 
     def test_same_embedder_value_allowed_with_documents(self):
         """Setting preferred_embedder to same value is allowed even with docs."""
-        from graphql_relay import to_global_id
-
         from opencontractserver.documents.models import Document, DocumentPath
+        from opencontractserver.utils.ids import to_global_id
 
         doc = Document.objects.create(title="Test Doc", creator=self.user)
         DocumentPath.objects.create(
@@ -274,7 +272,7 @@ class TestReEmbedCorpusMutation(TestCase):
     @patch("opencontractserver.pipeline.utils.get_component_by_name")
     def test_reembed_dispatches_task(self, mock_get_component, mock_delay):
         """ReEmbedCorpus locks corpus and dispatches background task."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         mock_get_component.return_value = type(
             "FakeEmbedder", (BaseEmbedder,), {"vector_size": 384}
@@ -306,7 +304,7 @@ class TestReEmbedCorpusMutation(TestCase):
     @patch("opencontractserver.pipeline.utils.get_component_by_name")
     def test_reembed_rejects_non_creator(self, mock_get_component):
         """Only the corpus creator can trigger re-embedding."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         mock_get_component.return_value = type(
             "FakeEmbedder", (BaseEmbedder,), {"vector_size": 384}
@@ -335,7 +333,7 @@ class TestReEmbedCorpusMutation(TestCase):
     @patch("opencontractserver.pipeline.utils.get_component_by_name")
     def test_reembed_noop_when_same_embedder(self, mock_get_component):
         """ReEmbedCorpus is a no-op when the embedder hasn't changed."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         mock_get_component.return_value = type(
             "FakeEmbedder", (BaseEmbedder,), {"vector_size": 384}
@@ -364,7 +362,7 @@ class TestReEmbedCorpusMutation(TestCase):
     @patch("opencontractserver.pipeline.utils.get_component_by_name")
     def test_reembed_rejects_locked_corpus(self, mock_get_component):
         """ReEmbedCorpus rejects when corpus is already locked."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         mock_get_component.return_value = type(
             "FakeEmbedder", (BaseEmbedder,), {"vector_size": 384}
@@ -395,7 +393,7 @@ class TestReEmbedCorpusMutation(TestCase):
 
     def test_reembed_rejects_invalid_embedder(self):
         """ReEmbedCorpus rejects when the embedder path is invalid."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         mutation = """
             mutation ReEmbed($corpusId: String!, $newEmbedder: String!) {
@@ -696,7 +694,7 @@ class TestConcurrentReEmbedRejection(TestCase):
         self, mock_get_component, mock_delay
     ):
         """The second re-embed attempt fails when the corpus is already locked."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         mock_get_component.return_value = type(
             "FakeEmbedder", (BaseEmbedder,), {"vector_size": 384}
@@ -813,7 +811,7 @@ class TestForkWithEmbedderOverride(TestCase):
     @patch("opencontractserver.tasks.fork_tasks.fork_corpus.si")
     def test_fork_with_embedder_override(self, mock_fork_si):
         """Forking with preferred_embedder sets the new embedder on the forked corpus."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         # Mock the celery task chain to prevent actual task execution
         mock_task = mock_fork_si.return_value
@@ -849,7 +847,7 @@ class TestForkWithEmbedderOverride(TestCase):
     @patch("opencontractserver.tasks.fork_tasks.fork_corpus.si")
     def test_fork_without_embedder_inherits_source(self, mock_fork_si):
         """Forking without preferred_embedder inherits from source corpus."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         mock_task = mock_fork_si.return_value
         mock_task.apply_async.return_value = None
@@ -979,7 +977,7 @@ class TestReEmbedCorpusResume(TestCase):
     def test_resumes_when_annotations_still_lack_the_embedder(
         self, mock_get_component, mock_delay
     ):
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         mock_get_component.return_value = type(
             "FakeEmbedder", (BaseEmbedder,), {"vector_size": 384}
@@ -1011,10 +1009,9 @@ class TestReEmbedCorpusResume(TestCase):
         outstanding count included them, a fully-migrated corpus would report
         work remaining forever and re-dispatch on every call.
         """
-        from graphql_relay import to_global_id
-
         from opencontractserver.annotations.models import Annotation
         from opencontractserver.documents.models import Document, DocumentPath
+        from opencontractserver.utils.ids import to_global_id
 
         mock_get_component.return_value = type(
             "FakeEmbedder", (BaseEmbedder,), {"vector_size": 384}
@@ -1054,7 +1051,7 @@ class TestReEmbedCorpusResume(TestCase):
         self, mock_get_component, mock_delay
     ):
         """The original no-op behaviour survives for a fully-migrated corpus."""
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         mock_get_component.return_value = type(
             "FakeEmbedder", (BaseEmbedder,), {"vector_size": 384}

@@ -235,7 +235,7 @@ register_type("PdfPageInfoType", PdfPageInfoType, model=None)
 # Module-level helpers preserved from the graphene base_types module.
 # ---------------------------------------------------------------------------
 
-from graphql_relay import to_global_id  # noqa: E402
+from opencontractserver.utils.ids import to_global_id  # noqa: E402
 
 
 def build_flat_tree(

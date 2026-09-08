@@ -14,7 +14,6 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.test import SimpleTestCase, TestCase, override_settings
-from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
@@ -27,6 +26,7 @@ from opencontractserver.llms.vector_stores.core_conversation_vector_stores impor
     CoreConversationVectorStore,
     VectorSearchQuery,
 )
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import (
     PermissionTypes,
     set_permissions_for_obj_to_user,

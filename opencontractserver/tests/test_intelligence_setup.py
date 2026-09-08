@@ -16,7 +16,6 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from graphql_relay import to_global_id
 
 from opencontractserver.constants.corpus_actions import (
     INTELLIGENCE_SETUP_TEMPLATE_NAMES,
@@ -34,6 +33,7 @@ from opencontractserver.documents.models import Document
 from opencontractserver.enrichment import constants as enrichment_constants
 from opencontractserver.shared.services.conventions import ServiceResult
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()

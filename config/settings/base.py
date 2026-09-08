@@ -291,7 +291,7 @@ if USE_AUTH0:
 
 else:
     AUTHENTICATION_BACKENDS += [
-        "graphql_jwt.backends.JSONWebTokenBackend",
+        "config.jwt_auth.backends.JSONWebTokenBackend",
     ]
 
 if USE_API_KEY_AUTH:

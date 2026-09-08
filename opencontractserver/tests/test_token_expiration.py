@@ -14,9 +14,9 @@ import pytest
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from graphql_jwt.exceptions import JSONWebTokenError, JSONWebTokenExpired
 
 from config.graphql_auth0_auth.backends import Auth0RemoteUserJSONWebTokenBackend
+from config.jwt_auth.exceptions import JSONWebTokenError, JSONWebTokenExpired
 from config.websocket.middleware import (
     WS_AUTH_SUBPROTOCOL,
     WS_CLOSE_TOKEN_EXPIRED,
@@ -42,7 +42,7 @@ class Auth0BackendTokenExpirationTestCase(TestCase):
         self.mock_request = mock.MagicMock()
         self.mock_request._jwt_token_auth = False
 
-    @mock.patch("config.graphql_auth0_auth.backends.graphql_jwt.utils.get_credentials")
+    @mock.patch("config.graphql_auth0_auth.backends.jwt_utils.get_credentials")
     @mock.patch("config.graphql_auth0_auth.backends.get_user_by_token")
     def test_expired_token_raises_exception(
         self, mock_get_user_by_token, mock_get_credentials
@@ -57,7 +57,7 @@ class Auth0BackendTokenExpirationTestCase(TestCase):
         with self.assertRaises(JSONWebTokenExpired):
             self.backend.authenticate(request=self.mock_request)
 
-    @mock.patch("config.graphql_auth0_auth.backends.graphql_jwt.utils.get_credentials")
+    @mock.patch("config.graphql_auth0_auth.backends.jwt_utils.get_credentials")
     @mock.patch("config.graphql_auth0_auth.backends.get_user_by_token")
     def test_other_jwt_errors_return_none(
         self, mock_get_user_by_token, mock_get_credentials
@@ -72,7 +72,7 @@ class Auth0BackendTokenExpirationTestCase(TestCase):
         result = self.backend.authenticate(request=self.mock_request)
         self.assertIsNone(result)
 
-    @mock.patch("config.graphql_auth0_auth.backends.graphql_jwt.utils.get_credentials")
+    @mock.patch("config.graphql_auth0_auth.backends.jwt_utils.get_credentials")
     @mock.patch("config.graphql_auth0_auth.backends.get_user_by_token")
     def test_valid_token_returns_user(
         self, mock_get_user_by_token, mock_get_credentials
@@ -88,7 +88,7 @@ class Auth0BackendTokenExpirationTestCase(TestCase):
         result = self.backend.authenticate(request=self.mock_request)
         self.assertEqual(result, mock_user)
 
-    @mock.patch("config.graphql_auth0_auth.backends.graphql_jwt.utils.get_credentials")
+    @mock.patch("config.graphql_auth0_auth.backends.jwt_utils.get_credentials")
     def test_no_token_returns_none(self, mock_get_credentials):
         """
         Verify that when no token is provided, None is returned (anonymous access).

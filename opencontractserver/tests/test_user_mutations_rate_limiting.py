@@ -24,9 +24,9 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase, override_settings
-from graphql_jwt.exceptions import JSONWebTokenError
 
 from config.graphql.user_mutations import m_token_auth, m_update_me
+from config.jwt_auth.exceptions import JSONWebTokenError
 from config.ratelimit.decorators import RateLimitExceeded
 from config.ratelimit.rates import parse_rate
 

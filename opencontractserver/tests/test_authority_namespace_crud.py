@@ -14,7 +14,6 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.test import TestCase
-from graphql_relay import to_global_id
 
 from opencontractserver.annotations.models import (
     AuthorityFrontier,
@@ -26,6 +25,7 @@ from opencontractserver.enrichment.services import AuthorityNamespaceService
 from opencontractserver.enrichment.services.authority_mapping_loader import (
     AuthorityMappingLoader,
 )
+from opencontractserver.utils.ids import to_global_id
 
 User = get_user_model()
 

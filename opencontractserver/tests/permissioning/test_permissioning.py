@@ -7,7 +7,6 @@ from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import Signal
 from django.test import TestCase
-from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
@@ -27,6 +26,7 @@ from opencontractserver.tasks.permissioning_tasks import (
 from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_ONE_PATH
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.users.models import User
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import (
     get_users_permissions_for_obj,
     set_permissions_for_obj_to_user,

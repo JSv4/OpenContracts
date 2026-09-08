@@ -6,9 +6,9 @@ from collections.abc import Iterable
 from typing import Any
 
 from graphql.language import ast as gql_ast
-from graphql_relay import from_global_id
 
 from opencontractserver.constants.annotations import MANUAL_ANNOTATION_SENTINEL
+from opencontractserver.utils.ids import from_global_id
 
 # ``DjangoFilterConnectionField`` delivers filter kwargs to the resolver using
 # the **Django ORM lookup names** declared in ``AnnotationFilter`` — i.e. the

@@ -33,7 +33,6 @@ from typing import Annotated, Any, Literal
 import strawberry
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from graphql_relay import from_global_id
 
 from config.graphql import enums
 from config.graphql._util import strip_unset
@@ -71,6 +70,7 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document, DocumentPath
 from opencontractserver.shared.services.base import BaseService
 from opencontractserver.types.enums import LabelType, PermissionTypes
+from opencontractserver.utils.ids import from_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)

@@ -2,7 +2,6 @@ import logging
 
 from django.db import transaction
 from django.test import TestCase
-from graphql_relay import from_global_id, to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
@@ -10,6 +9,7 @@ from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.users.models import User
+from opencontractserver.utils.ids import from_global_id, to_global_id
 
 logger = logging.getLogger(__name__)
 

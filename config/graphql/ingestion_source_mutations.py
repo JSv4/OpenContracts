@@ -32,7 +32,6 @@ from typing import Annotated, Any
 
 import strawberry
 from django.db import IntegrityError
-from graphql_relay import from_global_id
 
 from config.graphql import enums
 from config.graphql._util import strip_unset
@@ -47,6 +46,7 @@ from opencontractserver.documents.models import (
     IngestionSource,
     IngestionSourceCategory,
 )
+from opencontractserver.utils.ids import from_global_id
 from opencontractserver.utils.permissioning import (
     PermissionTypes,
     set_permissions_for_obj_to_user,

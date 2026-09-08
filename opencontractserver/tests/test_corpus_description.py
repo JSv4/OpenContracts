@@ -12,6 +12,14 @@ in this module cover the new contract end-to-end.
 
 from django.test import TestCase
 
+from config.graphql.corpus_types import (
+    _resolve_CorpusDescriptionRevisionType_author,
+    _resolve_CorpusDescriptionRevisionType_created,
+    _resolve_CorpusDescriptionRevisionType_id,
+    _resolve_CorpusDescriptionRevisionType_snapshot,
+    _resolve_CorpusDescriptionRevisionType_version,
+    _resolve_CorpusType_description_revisions,
+)
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.users.models import User
 
@@ -144,9 +152,8 @@ class DescriptionRevisionsReadsFromVersionTreeTest(TestCase):
         self.corpus.refresh_from_db()
 
     def test_revisions_list_pulls_from_caml_version_tree(self):
-        from config.graphql.corpus_types import CorpusType
 
-        revs = CorpusType.resolve_description_revisions(self.corpus, None)
+        revs = _resolve_CorpusType_description_revisions(self.corpus, None)
         # 3 edits → 3 version-tree siblings
         self.assertEqual(len(revs), 3)
 
@@ -154,9 +161,8 @@ class DescriptionRevisionsReadsFromVersionTreeTest(TestCase):
         """The list is ordered newest-first (matches the frontend
         modal which sorts by version desc but expects the array head
         to be the most recent entry)."""
-        from config.graphql.corpus_types import CorpusType
 
-        revs = CorpusType.resolve_description_revisions(self.corpus, None)
+        revs = _resolve_CorpusType_description_revisions(self.corpus, None)
         timestamps = [rev.created for rev in revs]
         self.assertEqual(timestamps, sorted(timestamps, reverse=True))
 
@@ -165,43 +171,35 @@ class DescriptionRevisionsReadsFromVersionTreeTest(TestCase):
         fields via the ``CorpusDescriptionRevisionType`` facade
         resolvers — id, version, author, snapshot, created — so the
         frontend viewer keeps rendering."""
-        from config.graphql.corpus_types import (
-            CorpusDescriptionRevisionType,
-            CorpusType,
-        )
 
-        revs = CorpusType.resolve_description_revisions(self.corpus, None)
+        revs = _resolve_CorpusType_description_revisions(self.corpus, None)
         # Each rev is a Document — confirm the facade resolvers map the
         # Document attributes onto the legacy field names.
         for rev in revs:
             self.assertEqual(
-                CorpusDescriptionRevisionType.resolve_id(rev, None), rev.pk
+                _resolve_CorpusDescriptionRevisionType_id(rev, None), rev.pk
             )
             self.assertIs(
-                CorpusDescriptionRevisionType.resolve_author(rev, None), rev.creator
+                _resolve_CorpusDescriptionRevisionType_author(rev, None), rev.creator
             )
             self.assertEqual(
-                CorpusDescriptionRevisionType.resolve_created(rev, None),
+                _resolve_CorpusDescriptionRevisionType_created(rev, None),
                 rev.created,
             )
             # version is 1-indexed within the tree; for 3 siblings it
             # must be in {1,2,3}.
             self.assertIn(
-                CorpusDescriptionRevisionType.resolve_version(rev, None),
+                _resolve_CorpusDescriptionRevisionType_version(rev, None),
                 {1, 2, 3},
             )
 
     def test_revision_snapshot_reads_txt_extract_file_body(self):
         """``snapshot`` reads the Document's ``txt_extract_file`` body
         on demand via the shared ``read_caml_body`` helper."""
-        from config.graphql.corpus_types import (
-            CorpusDescriptionRevisionType,
-            CorpusType,
-        )
 
-        revs = CorpusType.resolve_description_revisions(self.corpus, None)
+        revs = _resolve_CorpusType_description_revisions(self.corpus, None)
         bodies = {
-            CorpusDescriptionRevisionType.resolve_snapshot(rev, None) for rev in revs
+            _resolve_CorpusDescriptionRevisionType_snapshot(rev, None) for rev in revs
         }
         # All three edits should be retrievable as snapshots.
         self.assertSetEqual(bodies, {"v1 body", "v2 body", "v3 body"})
@@ -210,16 +208,12 @@ class DescriptionRevisionsReadsFromVersionTreeTest(TestCase):
         """The 1-indexed version counter must mirror the legacy
         ``CorpusDescriptionRevision.version`` semantic — oldest = 1,
         newest = N — so the frontend "Version N" label stays stable."""
-        from config.graphql.corpus_types import (
-            CorpusDescriptionRevisionType,
-            CorpusType,
-        )
 
-        revs = CorpusType.resolve_description_revisions(self.corpus, None)
+        revs = _resolve_CorpusType_description_revisions(self.corpus, None)
         # Revs are newest-first; reverse to get oldest-first.
         oldest_first = list(reversed(revs))
         versions = [
-            CorpusDescriptionRevisionType.resolve_version(rev, None)
+            _resolve_CorpusDescriptionRevisionType_version(rev, None)
             for rev in oldest_first
         ]
         self.assertEqual(versions, [1, 2, 3])
@@ -227,7 +221,6 @@ class DescriptionRevisionsReadsFromVersionTreeTest(TestCase):
     def test_empty_when_corpus_has_no_caml_document(self):
         """A fresh corpus with no Readme.CAML doc returns the empty
         list (must not raise on ``readme_caml_document_id is None``)."""
-        from config.graphql.corpus_types import CorpusType
 
         bare = Corpus.objects.create(title="Bare", creator=self.user)
-        self.assertEqual(CorpusType.resolve_description_revisions(bare, None), [])
+        self.assertEqual(_resolve_CorpusType_description_revisions(bare, None), [])

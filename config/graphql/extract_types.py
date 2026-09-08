@@ -31,7 +31,6 @@ import datetime
 from typing import Annotated, Any
 
 import strawberry
-from graphql_relay import from_global_id
 
 from config.graphql import enums
 from config.graphql._util import coerce_enum, coerce_str, strip_unset
@@ -52,6 +51,7 @@ from opencontractserver.corpuses.models import CorpusAction, CorpusActionExecuti
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.notifications.models import Notification
 from opencontractserver.shared.services.base import BaseService
+from opencontractserver.utils.ids import from_global_id
 
 
 def _get_datacell_qs(extract, user) -> Any:

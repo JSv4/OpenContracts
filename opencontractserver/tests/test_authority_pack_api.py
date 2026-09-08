@@ -13,7 +13,6 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import CommandError
 from django.db import IntegrityError
 from django.test import TestCase
-from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
 from opencontractserver.annotations.models import (
@@ -28,6 +27,7 @@ from opencontractserver.enrichment.services.authority_pack_service import (
     AuthorityPackService,
 )
 from opencontractserver.enrichment.services.authority_permissions import DENIED
+from opencontractserver.utils.ids import to_global_id
 
 User = get_user_model()
 

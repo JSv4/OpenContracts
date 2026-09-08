@@ -26,6 +26,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.db import IntegrityError, transaction
 from django.test import RequestFactory, TestCase, TransactionTestCase
 
+from config.graphql.corpus_types import _resolve_CorpusType_my_vote
 from config.graphql.schema import schema
 from config.graphql.testing import Client
 from opencontractserver.corpuses.models import (
@@ -43,7 +44,7 @@ User = get_user_model()
 
 def _corpus_relay_id(pk: int) -> str:
     """Encode a Corpus pk as the Relay global ID used by the GraphQL surface."""
-    from graphql_relay import to_global_id
+    from opencontractserver.utils.ids import to_global_id
 
     return to_global_id("CorpusType", pk)
 
@@ -672,8 +673,6 @@ class CorpusVoteGraphQLTests(TransactionTestCase):
         """
         from types import SimpleNamespace
 
-        from config.graphql.corpus_types import CorpusType
-
         CorpusVoteService.cast_vote(self.alice, self.public_corpus.pk, "upvote")
 
         # Reload via the ORM directly so ``_viewer_vote`` is NOT set.
@@ -686,7 +685,7 @@ class CorpusVoteGraphQLTests(TransactionTestCase):
             context=self._build_request(self.alice, with_session=False)
         )
 
-        self.assertEqual(CorpusType.resolve_my_vote(unannotated, info), "UPVOTE")
+        self.assertEqual(_resolve_CorpusType_my_vote(unannotated, info), "UPVOTE")
 
         # And the no-vote branch: a viewer with no prior vote should
         # get ``None`` from the fallback (not a crash on the missing
@@ -695,7 +694,7 @@ class CorpusVoteGraphQLTests(TransactionTestCase):
             username="bob-fallback", password="pw", email="b-fb@example.com"
         )
         info_bob = SimpleNamespace(context=self._build_request(bob, with_session=False))
-        self.assertIsNone(CorpusType.resolve_my_vote(unannotated, info_bob))
+        self.assertIsNone(_resolve_CorpusType_my_vote(unannotated, info_bob))
 
     def test_corpuses_list_my_vote_is_not_n_plus_one(self) -> None:
         """The corpus list resolver must annotate ``my_vote`` with a single

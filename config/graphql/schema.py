@@ -201,7 +201,9 @@ _custom_rules: list = [DepthLimitValidationRule]
 if not settings.DEBUG:
     _custom_rules.append(DisableIntrospection)
 
-_extensions: list = [AddValidationRules(_custom_rules)]
+# Strawberry binds execution_context on each extension. Construct it per
+# request so overlapping operations never share validation state.
+_extensions: list = [lambda: AddValidationRules(_custom_rules)]
 if getattr(settings, "FILE_URL_SHARED_CACHE_TTL", 0):
     from config.graphql.file_url_prewarm import FileUrlPrewarmExtension
 
@@ -216,11 +218,3 @@ schema = strawberry.Schema(
     types=_extra_types,
     extensions=_extensions,
 )
-
-# Backwards-compatibility accessor: graphene's ``Schema`` exposed the
-# underlying graphql-core schema as ``.graphql_schema``. A few call sites
-# (frontend-document validation in ``scripts/validate_frontend_graphql.py``
-# and ``test_security_hardening``/``test_authority_mapping_loader``) reach
-# for it directly. Strawberry stores it on the private ``_schema``; alias it
-# so those references keep working across the migration without a rename.
-schema.graphql_schema = schema._schema  # type: ignore[attr-defined]

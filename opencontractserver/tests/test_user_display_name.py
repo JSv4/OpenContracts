@@ -20,7 +20,10 @@ from typing import Any, Optional
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from config.graphql.user_types import UserType
+from config.graphql.user_types import (
+    _resolve_UserType_display_name,
+    _resolve_UserType_email,
+)
 
 User = get_user_model()
 
@@ -47,13 +50,13 @@ def _resolve(user) -> str:
     every call in a self-view ``info`` so those assertions still target
     the same logic after the privacy gate was added.
     """
-    return UserType.resolve_display_name(user, _FakeInfo(user))
+    return _resolve_UserType_display_name(user, _FakeInfo(user))
 
 
 def _resolve_as_other(target, viewer) -> str:
     """Resolve ``displayName`` as ``viewer`` looking at ``target`` — the
     cross-user (non-self) branch. Always returns slug / redacted handle."""
-    return UserType.resolve_display_name(target, _FakeInfo(viewer))
+    return _resolve_UserType_display_name(target, _FakeInfo(viewer))
 
 
 def _resolve_email(user, info) -> Optional[str]:
@@ -62,7 +65,7 @@ def _resolve_email(user, info) -> Optional[str]:
     ``UserType`` is a ``DjangoObjectType`` so its ``self`` is the user model
     at runtime — the cast keeps mypy happy without a per-call ignore.
     """
-    return UserType.resolve_email(user, info)
+    return _resolve_UserType_email(user, info)
 
 
 class DisplayNameResolverTestCase(TestCase):

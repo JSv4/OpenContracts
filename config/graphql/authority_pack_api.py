@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Annotated
 
 import strawberry
-from graphql_relay import to_global_id
 
 from config.graphql.core.scalars import GenericScalar
 from config.graphql.ratelimits import RateLimits, graphql_ratelimit
@@ -13,6 +12,7 @@ from opencontractserver.enrichment.services.authority_pack_service import (
     AuthorityPackPlan,
     AuthorityPackService,
 )
+from opencontractserver.utils.ids import to_global_id
 
 
 @strawberry.type(name="AuthorityPackCorpus")

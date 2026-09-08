@@ -557,7 +557,7 @@ class TestUploadDefaultsToPersonalCorpus(TestCase):
 
         # Get the uploaded document
         doc_id = result["data"]["uploadDocument"]["document"]["id"]
-        from graphql_relay import from_global_id
+        from opencontractserver.utils.ids import from_global_id
 
         _, doc_pk = from_global_id(doc_id)
         document = Document.objects.get(pk=doc_pk)
@@ -577,8 +577,7 @@ class TestUploadDefaultsToPersonalCorpus(TestCase):
 
     def test_upload_with_corpus_goes_to_specified_corpus(self):
         """Upload with addToCorpusId should go to that corpus, not personal."""
-        from graphql_relay import to_global_id
-
+        from opencontractserver.utils.ids import to_global_id
         from opencontractserver.utils.permissioning import (
             set_permissions_for_obj_to_user,
         )
@@ -616,7 +615,7 @@ class TestUploadDefaultsToPersonalCorpus(TestCase):
 
         # Get the uploaded document
         doc_id = result["data"]["uploadDocument"]["document"]["id"]
-        from graphql_relay import from_global_id
+        from opencontractserver.utils.ids import from_global_id
 
         _, doc_pk = from_global_id(doc_id)
         document = Document.objects.get(pk=doc_pk)
@@ -675,7 +674,7 @@ class TestUploadDefaultsToPersonalCorpus(TestCase):
 
         # Get the uploaded document
         doc_id = result["data"]["uploadDocument"]["document"]["id"]
-        from graphql_relay import from_global_id
+        from opencontractserver.utils.ids import from_global_id
 
         _, doc_pk = from_global_id(doc_id)
         document = Document.objects.get(pk=doc_pk)
@@ -966,8 +965,7 @@ class TestPersonalCorpusDeletionProtection(TestCase):
 
     def test_cannot_delete_personal_corpus(self):
         """Deleting a personal corpus via GraphQL should be blocked."""
-        from graphql_relay import to_global_id
-
+        from opencontractserver.utils.ids import to_global_id
         from opencontractserver.utils.permissioning import (
             set_permissions_for_obj_to_user,
         )
@@ -993,8 +991,7 @@ class TestPersonalCorpusDeletionProtection(TestCase):
 
     def test_can_delete_non_personal_corpus(self):
         """Deleting a non-personal corpus should still work normally."""
-        from graphql_relay import to_global_id
-
+        from opencontractserver.utils.ids import to_global_id
         from opencontractserver.utils.permissioning import (
             set_permissions_for_obj_to_user,
         )

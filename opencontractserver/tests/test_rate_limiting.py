@@ -6,7 +6,6 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import Client as DjangoClient
 from django.test import TestCase, override_settings
-from graphql_relay import to_global_id
 
 from config.graphql.ratelimits import (
     RateLimits,
@@ -14,6 +13,7 @@ from config.graphql.ratelimits import (
 )
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.utils.ids import to_global_id
 
 User = get_user_model()
 

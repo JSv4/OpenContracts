@@ -68,7 +68,7 @@ class GraphQLJWTAuthentication(authentication.BaseAuthentication):
         Uses the unified jwt_utils.get_user_from_jwt_token() which automatically
         handles both Auth0 and standard graphql_jwt tokens.
         """
-        from graphql_jwt.exceptions import JSONWebTokenError, JSONWebTokenExpired
+        from config.jwt_auth.exceptions import JSONWebTokenError, JSONWebTokenExpired
 
         try:
             user = get_user_from_jwt_token(token)

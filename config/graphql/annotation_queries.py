@@ -34,7 +34,6 @@ from typing import Annotated
 import strawberry
 from django.db.models import Q
 from graphql import GraphQLError
-from graphql_relay import from_global_id, to_global_id
 
 from config.graphql import enums
 from config.graphql._util import strip_unset
@@ -81,6 +80,7 @@ from opencontractserver.constants.stats import GOVERNANCE_GRAPH_MAX_NODES
 from opencontractserver.documents.models import Document
 from opencontractserver.enrichment import constants as enrichment_constants
 from opencontractserver.shared.services.base import BaseService
+from opencontractserver.utils.ids import from_global_id, to_global_id
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ def _resolve_GeographicAnnotationPinType_sample_document_ids(root, info):
     rather than the service so the service stays decoupled from the
     Relay encoding scheme.
     """
-    from graphql_relay import to_global_id
+    from opencontractserver.utils.ids import to_global_id
 
     return [to_global_id("DocumentType", pk) for pk in root.sample_document_ids]
 

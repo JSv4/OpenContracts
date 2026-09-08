@@ -36,7 +36,6 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from graphql_relay import from_global_id
 
 from config.graphql._util import strip_unset
 from config.graphql.core.auth import PermissionDenied
@@ -53,6 +52,7 @@ from opencontractserver.extracts.models import Column, Datacell, Extract, Fields
 from opencontractserver.shared.services.base import BaseService
 from opencontractserver.tasks.extract_orchestrator_tasks import run_extract
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import from_global_id
 from opencontractserver.utils.permissioning import (
     get_for_user_or_none,
     set_permissions_for_obj_to_user,

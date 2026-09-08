@@ -275,7 +275,7 @@ class AuthorityFrontierGraphQLTests(TestCase):
         self.doc = Document.objects.create(creator=self.superuser, title="Doc")
 
     def _gid(self, row):
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         return to_global_id("AuthorityFrontierNode", row.pk)
 

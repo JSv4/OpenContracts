@@ -109,7 +109,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", self.message.id)
 
@@ -147,7 +147,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", self.message.id)
 
@@ -186,7 +186,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", self.message.id)
 
@@ -214,7 +214,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", self.message.id)
 
@@ -244,7 +244,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", self.message.id)
 
@@ -273,7 +273,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", self.message.id)
 
@@ -311,7 +311,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", self.message.id)
 
@@ -342,7 +342,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", self.message.id)
 
@@ -366,7 +366,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         # Use a non-existent message ID
         message_id = to_global_id("MessageType", 99999)
@@ -429,7 +429,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", self.message.id)
         variables = {"messageId": message_id, "voteType": "upvote"}
@@ -459,7 +459,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", self.message.id)
 
@@ -501,7 +501,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", self.message.id)
         variables = {"messageId": message_id, "voteType": "downvote"}
@@ -543,7 +543,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", self.message.id)
         variables = {"messageId": message_id}
@@ -581,7 +581,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         # Test 1: User without permission trying to vote on existing message
         existing_message_id = to_global_id("MessageType", self.message.id)
@@ -640,7 +640,7 @@ class VotingMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         # Test 1: User without permission on existing message
         existing_message_id = to_global_id("MessageType", self.message.id)

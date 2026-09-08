@@ -26,6 +26,7 @@ from django.db import connection
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 
+from config.graphql.document_types import _resolve_DocumentType_version_count
 from opencontractserver.documents.models import Document
 from opencontractserver.documents.services import DocumentVersionService
 from opencontractserver.types.enums import PermissionTypes
@@ -197,21 +198,20 @@ class ResolveVersionCountIntegrationTestCase(TestCase):
         ``info.context`` should perform the aggregation once — subsequent
         resolutions are dict lookups against the cached result.
         """
-        from config.graphql.document_types import DocumentType
 
         # Fake an ``info`` object whose ``.context`` is a writable namespace,
         # mirroring what graphene provides during a GraphQL request.
         info = SimpleNamespace(context=SimpleNamespace(user=self.owner))
 
         # First call populates the cache.
-        first = DocumentType.resolve_version_count(self.docs[0], info)
+        first = _resolve_DocumentType_version_count(self.docs[0], info)
         self.assertEqual(first, 3)
 
         # Subsequent calls must not issue any version_tree_id queries — the
         # batched aggregation already populated the per-request cache.
         with CaptureQueriesContext(connection) as captured:
             results = [
-                DocumentType.resolve_version_count(doc, info) for doc in self.docs[1:]
+                _resolve_DocumentType_version_count(doc, info) for doc in self.docs[1:]
             ]
         self.assertTrue(all(r == 3 for r in results))
         version_tree_queries = [
@@ -230,7 +230,6 @@ class ResolveVersionCountIntegrationTestCase(TestCase):
         user but somehow reachable from the parent resolver) should resolve
         to 1 — never 0, since the document itself is at minimum one version.
         """
-        from config.graphql.document_types import DocumentType
 
         info = SimpleNamespace(context=SimpleNamespace(user=self.owner))
         # Pre-populate the service's cache with only an unrelated tree so
@@ -239,5 +238,5 @@ class ResolveVersionCountIntegrationTestCase(TestCase):
         cache_key = f"_doc_version_counts_by_tree_{self.owner.id}"
         setattr(info.context, cache_key, {uuid.uuid4(): 99})
 
-        result = DocumentType.resolve_version_count(self.docs[0], info)
+        result = _resolve_DocumentType_version_count(self.docs[0], info)
         self.assertEqual(result, 1)

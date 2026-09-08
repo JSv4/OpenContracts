@@ -10,7 +10,6 @@ Tests cover:
 
 from django.http import HttpRequest
 from django.test import RequestFactory, TestCase
-from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
@@ -18,6 +17,7 @@ from opencontractserver.annotations.models import Annotation, AnnotationLabel, L
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document, DocumentPath
 from opencontractserver.users.models import User
+from opencontractserver.utils.ids import to_global_id
 
 
 class TestCorpusDocumentCountField(TestCase):

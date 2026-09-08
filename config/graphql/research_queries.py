@@ -30,7 +30,6 @@ from __future__ import annotations
 from typing import Annotated
 
 import strawberry
-from graphql_relay import from_global_id
 
 from config.graphql._util import strip_unset
 from config.graphql.core.auth import login_required
@@ -41,6 +40,7 @@ from config.graphql.core.relay import (
 from opencontractserver.research.models import ResearchReport
 from opencontractserver.shared.services.base import BaseService
 from opencontractserver.types.enums import JobStatus
+from opencontractserver.utils.ids import from_global_id
 
 
 def _decode_global_pk(global_id: str) -> int | None:

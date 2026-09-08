@@ -1,7 +1,6 @@
 """Tests for the RunCorpusAction mutation."""
 
 from django.contrib.auth import get_user_model
-from graphql_relay import to_global_id
 
 from config.graphql.testing import GraphQLTestCase
 from opencontractserver.corpuses.models import (
@@ -10,6 +9,7 @@ from opencontractserver.corpuses.models import (
     CorpusActionExecution,
 )
 from opencontractserver.documents.models import Document, DocumentPath
+from opencontractserver.utils.ids import to_global_id
 
 User = get_user_model()
 

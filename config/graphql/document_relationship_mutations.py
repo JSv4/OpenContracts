@@ -31,7 +31,6 @@ import logging
 from typing import Annotated
 
 import strawberry
-from graphql_relay import from_global_id
 
 from config.graphql._util import strip_unset
 from config.graphql.core.auth import login_required
@@ -46,6 +45,7 @@ from opencontractserver.documents.models import Document, DocumentRelationship
 from opencontractserver.documents.services import DocumentRelationshipService
 from opencontractserver.shared.services.base import BaseService
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import from_global_id
 from opencontractserver.utils.permissioning import get_for_user_or_none
 
 logger = logging.getLogger(__name__)

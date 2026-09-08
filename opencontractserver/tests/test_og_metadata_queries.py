@@ -16,7 +16,6 @@ Tests cover:
 
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase
-from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
@@ -28,6 +27,7 @@ from opencontractserver.conversations.models import (
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.extracts.models import Extract, Fieldset
+from opencontractserver.utils.ids import to_global_id
 
 User = get_user_model()
 

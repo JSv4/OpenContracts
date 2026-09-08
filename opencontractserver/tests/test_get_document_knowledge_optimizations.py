@@ -26,6 +26,7 @@ from django.db import connection
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 
+from config.graphql.annotation_types import _resolve_AnnotationType_feedback_count
 from opencontractserver.annotations.models import Annotation, AnnotationLabel
 from opencontractserver.annotations.services import AnnotationService
 from opencontractserver.corpuses.models import Corpus
@@ -203,7 +204,6 @@ class AnnotationFeedbackPrefetchTests(TestCase):
         ``AnnotationType.resolve_feedback_count`` must consult the prefetched
         ``user_feedback`` list rather than firing ``COUNT(*)`` per row.
         """
-        from config.graphql.annotation_types import AnnotationType
 
         qs = AnnotationService.get_document_annotations(
             document_id=self.document.pk,
@@ -214,7 +214,8 @@ class AnnotationFeedbackPrefetchTests(TestCase):
 
         with CaptureQueriesContext(connection) as captured:
             counts = [
-                AnnotationType.resolve_feedback_count(ann, info=None) for ann in results
+                _resolve_AnnotationType_feedback_count(ann, info=None)
+                for ann in results
             ]
         self.assertEqual(counts, [2] * len(results))
         # Zero new queries — every count came from the prefetch cache.

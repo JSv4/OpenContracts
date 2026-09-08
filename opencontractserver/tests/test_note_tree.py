@@ -1,7 +1,6 @@
 import logging
 
 from django.contrib.auth import get_user_model
-from graphql_relay import from_global_id, to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
@@ -13,6 +12,7 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.tests.base import BaseFixtureTestCase
+from opencontractserver.utils.ids import from_global_id, to_global_id
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

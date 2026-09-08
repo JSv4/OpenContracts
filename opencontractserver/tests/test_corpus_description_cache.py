@@ -10,6 +10,10 @@ from django.db import connection
 from django.test import SimpleTestCase, TestCase
 from django.test.utils import CaptureQueriesContext
 
+from config.graphql.corpus_types import (
+    _resolve_CorpusType_md_description,
+    _resolve_CorpusType_readme_caml_document,
+)
 from opencontractserver.constants.truncation import (
     MAX_CORPUS_DESCRIPTION_PREVIEW_LENGTH,
 )
@@ -429,7 +433,6 @@ class MdDescriptionResolverTest(TestCase):
             cls.corpus.refresh_from_db()
 
     def test_md_description_resolves_to_caml_doc_url(self):
-        from config.graphql.corpus_types import CorpusType
 
         class FakeRequest:
             def build_absolute_uri(self, url):
@@ -438,17 +441,16 @@ class MdDescriptionResolverTest(TestCase):
         class FakeInfo:
             context = FakeRequest()
 
-        url = CorpusType.resolve_md_description(self.corpus, FakeInfo())
+        url = _resolve_CorpusType_md_description(self.corpus, FakeInfo())
         self.assertIsNotNone(url)
         # The CAML doc body lives in txt_extract_file → URL should reference
         # the configured storage path for txt-extract files.
         self.assertTrue(url.startswith("https://example.com/"))
 
     def test_md_description_is_none_without_caml_doc(self):
-        from config.graphql.corpus_types import CorpusType
 
         bare = Corpus.objects.create(title="Bare", creator=self.user)
-        result = CorpusType.resolve_md_description(bare, None)
+        result = _resolve_CorpusType_md_description(bare, None)
         self.assertIsNone(result)
 
 
@@ -489,16 +491,14 @@ class ReadmeCamlDocumentFieldTest(TestCase):
             cls.corpus.refresh_from_db()
 
     def test_field_resolves_to_caml_document(self):
-        from config.graphql.corpus_types import CorpusType
 
-        doc = CorpusType.resolve_readme_caml_document(self.corpus, None)
+        doc = _resolve_CorpusType_readme_caml_document(self.corpus, None)
         self.assertIsNotNone(doc)
         self.assertEqual(doc.title, "Readme.CAML")
         self.assertEqual(doc.file_type, "text/markdown")
 
     def test_field_is_none_when_corpus_lacks_caml_doc(self):
-        from config.graphql.corpus_types import CorpusType
 
         bare = Corpus.objects.create(title="Bare", creator=self.user)
-        result = CorpusType.resolve_readme_caml_document(bare, None)
+        result = _resolve_CorpusType_readme_caml_document(bare, None)
         self.assertIsNone(result)

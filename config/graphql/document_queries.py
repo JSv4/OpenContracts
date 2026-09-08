@@ -36,7 +36,6 @@ from django.core.cache import cache
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce
 from graphql import GraphQLError
-from graphql_relay import from_global_id, to_global_id
 
 from config.graphql import enums
 from config.graphql._util import strip_unset
@@ -66,6 +65,7 @@ from opencontractserver.documents.models import (
 )
 from opencontractserver.documents.services import DocumentRelationshipService
 from opencontractserver.shared.services.base import BaseService
+from opencontractserver.utils.ids import from_global_id, to_global_id
 
 logger = logging.getLogger(__name__)
 

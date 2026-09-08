@@ -34,7 +34,6 @@ from typing import Any
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
-from graphql_relay import from_global_id
 
 from config.ratelimit.decorators import check_ws_rate_limit
 from config.websocket.auth_handshake import AuthHandshakeMixin
@@ -67,6 +66,7 @@ from opencontractserver.llms.tools.delegation_tools import (
 )
 from opencontractserver.llms.types import AgentFramework
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import from_global_id
 
 logger = logging.getLogger(__name__)
 

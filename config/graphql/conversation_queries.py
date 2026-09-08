@@ -35,7 +35,6 @@ from typing import Annotated
 import strawberry
 from django.db.models import Count, Prefetch, Q
 from django.utils import timezone
-from graphql_relay import from_global_id
 
 from config.graphql import enums
 from config.graphql._util import strip_unset
@@ -54,6 +53,7 @@ from opencontractserver.conversations.models import (
 )
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.shared.services.base import BaseService
+from opencontractserver.utils.ids import from_global_id
 
 logger = logging.getLogger(__name__)
 

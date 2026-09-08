@@ -34,6 +34,7 @@ from django.test import TestCase
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
+from config.graphql.user_types import _resolve_UserType_display_name
 from opencontractserver.corpuses.models import Corpus
 
 User = get_user_model()
@@ -400,7 +401,6 @@ class UserDisplayNameSlugFallbackTestCase(TestCase):
         # GraphQL layer runs, just without the schema indirection. Lets
         # us exercise the redacted-handle branch without relying on a
         # query that would itself need a slug to find the user.
-        from config.graphql.user_types import UserType
 
         class _Info:
             def __init__(self, ctx):
@@ -409,7 +409,7 @@ class UserDisplayNameSlugFallbackTestCase(TestCase):
         # ``UserType.resolve_display_name`` is typed as a method on the
         # graphene type, but at runtime ``self`` is the underlying Django
         # ``User`` instance — that's how DjangoObjectType binds resolvers.
-        display = UserType.resolve_display_name(target, _Info(_Ctx(viewer)))  # type: ignore[arg-type]
+        display = _resolve_UserType_display_name(target, _Info(_Ctx(viewer)))  # type: ignore[arg-type]
         # Stable redacted handle: never returns the username (which could
         # be an OAuth ``sub``) and never returns ``""`` or ``None``.
         self.assertTrue(display.startswith("user_"))

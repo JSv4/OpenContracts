@@ -266,7 +266,7 @@ class AuthorityMappingGraphQLTests(TestCase):
         row = AuthorityKeyEquivalence.objects.get(from_key="irc:777")
         assert row.created_by_id == self.superuser.id
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         gid = to_global_id("AuthorityKeyEquivalenceNode", row.pk)
         # update
@@ -289,7 +289,7 @@ class AuthorityMappingGraphQLTests(TestCase):
         assert not AuthorityKeyEquivalence.objects.filter(from_key="irc:777").exists()
 
     def test_mutation_on_managed_row_rejected(self):
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         managed = AuthorityKeyEquivalence.objects.create(
             from_key="exchange-act:99", to_key="usc-15:99", source="baseline"

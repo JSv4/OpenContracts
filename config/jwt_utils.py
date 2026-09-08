@@ -64,8 +64,8 @@ def _validate_graphql_jwt_token(token: str) -> "User":
         JSONWebTokenExpired: Token has expired.
         JSONWebTokenError: Token is invalid or user not found.
     """
-    from graphql_jwt.exceptions import JSONWebTokenError
-    from graphql_jwt.utils import get_payload, get_user_by_payload
+    from config.jwt_auth.exceptions import JSONWebTokenError
+    from config.jwt_auth.utils import get_payload, get_user_by_payload
 
     logger.debug(f"Validating graphql_jwt token: {token[:10]}...")
 
@@ -99,9 +99,8 @@ def _validate_auth0_token(token: str) -> "User":
         JSONWebTokenExpired: Token has expired.
         JSONWebTokenError: Token is invalid or user not found.
     """
-    from graphql_jwt.exceptions import JSONWebTokenError
-
     from config.graphql_auth0_auth.utils import get_user_by_token
+    from config.jwt_auth.exceptions import JSONWebTokenError
 
     logger.debug(f"Validating Auth0 token: {token[:10]}...")
 

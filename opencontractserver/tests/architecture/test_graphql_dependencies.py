@@ -1,6 +1,7 @@
 """Prevent the removed schema frameworks from returning via runtime or tests."""
 
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -25,6 +26,27 @@ def test_no_imports_of_removed_graphql_dependencies():
     assert not violations, violations
 
 
+def test_embedded_python_does_not_import_removed_graphql_dependencies():
+    # E2E helpers and workflows execute Python stored in TypeScript/YAML
+    # strings. The Python AST scan above cannot see those imports.
+    imports = re.compile(
+        r"(?m)^[ \t]*(?:from|import)[ \t]+(" + "|".join(sorted(REMOVED)) + r")\b"
+    )
+    paths = [
+        *ROOT.glob("frontend/tests/**/*.ts"),
+        *ROOT.glob("frontend/tests/**/*.tsx"),
+        *ROOT.glob(".github/workflows/*.yml"),
+        *ROOT.glob(".github/workflows/*.yaml"),
+    ]
+    violations = []
+    for path in paths:
+        source = path.read_text()
+        for match in imports.finditer(source):
+            line = source.count("\n", 0, match.start()) + 1
+            violations.append(f"{path.relative_to(ROOT)}:{line}")
+    assert not violations, violations
+
+
 def test_served_schema_does_not_load_removed_frameworks():
     from config.graphql.schema import schema
 
@@ -46,8 +68,6 @@ def test_validation_extensions_are_fresh_for_each_request():
 
 
 def test_dependency_manifests_do_not_reintroduce_removed_packages():
-    import re
-
     paths = [*ROOT.glob("requirements/**/*.txt"), ROOT / ".pre-commit-config.yaml"]
     for path in paths:
         for line in path.read_text().splitlines():

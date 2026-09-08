@@ -7,6 +7,373 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-09-08
+
+### Added
+
+- **An operator can decline to execute in-pack provider code.** Installing an
+  authority pack that ships `<pack>/providers/*.py` or
+  `<pack>/discovery_providers/*.py` imports that Python into the web and
+  worker processes — `tar.extract(..., filter="data")` refuses path traversal
+  and setuid bits, but it cannot refuse code. The new
+  `AUTHORITY_PACK_LOAD_PROVIDERS` setting (`config/settings/base.py`, default
+  `True` — no behavior change for existing installs) lets an operator turn
+  this off; when disabled, `opencontractserver/pipeline/registry.py` skips
+  the modules without importing them and logs the skip once with a count and
+  the module names. Turning it off costs re-fetch and nothing else — the pack
+  contract (authority-packs `SOURCE_PROVIDERS.md`, clause P5) requires a pack
+  to install and serve its sections with `providers/` deleted.
+- **`get_authority_source_provider(class_name)`** (`opencontractserver/pipeline/registry.py`)
+  is the supported delegation seam for an in-pack provider that reuses a core
+  one (CFR, U.S. Code, Federal Register) instead of shipping its own scraper.
+  Accepts a bare class name or a dotted path, refuses an ambiguous leaf rather
+  than picking one, and returns `None` instead of raising so a pack degrades
+  to "cannot re-fetch" rather than crashing registry build.
+- **`install_authority_pack` reports a pack's provider code surface before any
+  DB write.** Lists the provider modules a pack ships and, when present, the
+  classes/prefixes its optional `providers:` manifest declares — by reading
+  files only, never by importing them — and notes when
+  `AUTHORITY_PACK_LOAD_PROVIDERS` is off so `--check` shows that the modules
+  will not run.
+- **Added `backend-ci-gate`, a Backend CI check that branch protection can
+  actually require.** `main` has no `required_status_checks` object at all, so
+  nothing gates a merge on CI having run — PR #2262 merged with Backend CI
+  never having run on its head at all, and the push that merged it then failed
+  its linter, skipping `pytest` entirely. Requiring the `pytest` job is not the
+  fix: GitHub reports a job skipped by its own `if:` as **Success** to branch
+  protection, so a red linter (which skips `pytest`) still reads green —
+  PRs #2260, #2264 and #2265 sit in exactly that state. And requiring any job
+  in this workflow while its `pull_request` trigger carried
+  `paths-ignore: [docs/**]` would have left docs-only PRs permanently Pending,
+  since a workflow skipped by path filtering never reports at all. The new
+  `gate` job always runs and inspects the other jobs' results itself,
+  distinguishing "skipped because this PR touches no backend code" from
+  "skipped because something upstream broke". Its decision table lives in
+  `.github/scripts/backend_ci_gate.sh` and is self-tested (`--self-test`) on
+  every run; `.github/scripts/require_backend_ci_gate.sh` applies the branch
+  protection without clobbering the rest of the object.
+- **`Corpus.default_agent`, plus the two changes that make it mean anything.**
+  A corpus could not have a default agent. A chat opened with no `agent_id`
+  always resolved to the GLOBAL `default-corpus-agent` slug, so an
+  `AgentConfiguration` scoped to a corpus could never be its default however it
+  was configured — and even when one *was* resolved, its `system_instructions`
+  and `available_tools` were discarded, because those apply only on the
+  explicit-`?agent_id=` path. Three things follow:
+  - `Corpus.default_agent` (FK, mirroring `CorpusGroup.default_agent`). An
+    explicit pointer, not "pick a CORPUS-scoped agent": corpora already carry
+    scoped agents for other purposes (the inline moderator), and choosing
+    positionally would silently hand chat to whichever sorted first.
+    `Corpus.save` refuses a pointer at an agent scoped to a *different*
+    corpus — that would serve one corpus's private instructions to another's
+    users.
+  - Resolution priority 3 consults it before the global slug. An inactive
+    target falls back rather than failing, which is what switching an agent
+    off is asking for.
+  - Fallback-resolved configs are applied when `system_instructions_mode` is
+    `EXTEND`. The exclusion was written when REPLACE was the only mode, and
+    its stated reason — a generic default would clobber the corpus persona —
+    is specific to REPLACE. EXTEND appends, so there is nothing to clobber;
+    excluding it only produced a default that resolved and was then silently
+    ignored. REPLACE keeps the original behaviour on the fallback path.
+- **`install_domain_pack --consumer-corpus <pk>` (contract assertion C8).**
+  A domain pack may now declare a `consumer_agent` — instructions, tools, and
+  `mode: EXTEND` — for the corpus that *consumes* the domain. The pack supplies
+  the text, because the group slug it names is the pack's own invention; the
+  operator supplies the corpus, because which corpus consumes a domain is not
+  knowable when the pack is written. `EXTEND` is required rather than
+  preferred: REPLACE would overwrite the consuming corpus's persona with
+  third-party text, which is the coupling `DOMAIN_PACKS.md` forbids. Declaring
+  one without binding it reports that it was not applied (C5) instead of
+  passing silently, and the same group-slug check the orchestrator is held to
+  applies here — `search_across_corpora` takes the slug as a required
+  argument, so an agent never told it cannot call it. `consumer_agent.preferred_llm`
+  gets the same C3-style pre-validation as the orchestrator's, so an unusable
+  model spec fails cleanly instead of surfacing as a bare `ValidationError`
+  traceback from inside `consumer.save()`. And every part of C8 that is
+  decidable from the files — `mode`, `instructions_file`, `tools`, the
+  group-slug check, `preferred_llm` — is now previewed by `--check` too
+  (`_preflight`, shared with the real-install path via
+  `_consumer_agent_violations`), matching what C1-C7 already guaranteed;
+  previously `--check` reported "0 violations" for a `consumer_agent` that
+  would hard-fail the moment `--consumer-corpus` was supplied.
+- **Tier-2a bill-citation grammar** (`opencontractserver/enrichment/grammars.py::_bills`):
+  "H.R. 1234" / "S. 987" / joint, concurrent, and simple resolution forms now
+  extract as congress-unqualified shape keys (`hr:1234`, `s:987`, `hjres:44`, …)
+  with guards against `U.S.` reporter citations, `U.S.C.` cites, `§` sections,
+  UK-style lowercase `s. 987`, and state abbreviations ending in H/S
+  (`N.H. Res. 5`, `U.S. Res. 3` are not federal resolutions). Packs fold
+  these onto congress-qualified
+  keys via equivalences (the ECCN pattern). New classification vocabulary:
+  `AUTHORITY_TYPE_BILL`, `GRAMMAR_BILL_PREFIXES`
+  (`opencontractserver/enrichment/constants.py`) and
+  `AuthorityWeight.PROPOSED` (`opencontractserver/enrichment/authority_sources.py`)
+  for introduced-but-not-enacted instruments. `ALL_AUTHORITY_TYPES` backs the
+  `authority_type` choices on `AuthorityFrontier`/`AuthorityNamespace`/
+  `CorpusReference`, so migration `annotations.0103` restates them (choices-only
+  `AlterField`s — no schema change) to keep migration state in sync.
+- **Authority-section push endpoint** for external harvesters:
+  `POST /api/worker-uploads/authority-sections/` (+ status/list routes) accepts
+  a `parse_section_spec`-shaped JSON batch (+ optional equivalence rows) under
+  an existing `CorpusAccessToken`, stages it in the new
+  `WorkerAuthoritySectionBatch` model (migration `worker_uploads.0005`), and a
+  drain task (`process_pending_section_batches`) feeds
+  `bootstrap_authority_corpus` with `relink_async=True` and upserts
+  equivalences under source `worker:<account>`. Target corpus always comes from
+  the token (IDOR-safe by construction), and the capability is an explicit
+  off-by-default grant — `CorpusAccessToken.can_push_authority_sections`
+  (migration `worker_uploads.0006`, `mint_worker_token
+  --allow-authority-sections`) — so pre-existing document-upload tokens do not
+  silently gain the larger blast radius. Payload cap via new
+  `MAX_AUTHORITY_SECTION_PAYLOAD_BYTES` setting; per-execution drain cap via
+  new `WORKER_AUTHORITY_SECTION_BATCH_CAP` (default 5, self-re-enqueues while
+  more remain, mirroring `process_pending_uploads`) so a backlog cannot
+  monopolise the `worker_uploads` queue; the token is re-validated at drain
+  time (active, unexpired, still capability-bearing), so revoking a token
+  stops batches already staged under it; stalled batches recovered by
+  the existing `recover_stalled_uploads` sweep; periodic drain added to
+  `CELERY_BEAT_SCHEDULE`. Docs: `docs/guides/ingesting-authorities.md` Part 3.
+  This gives any external harvester (legislation feeds, eCFR watchers, caselaw
+  feeds) a continuous remote update path that previously required a full pack
+  re-install or in-container management commands.
+`install_domain_pack` installs a **domain pack**: a named set of base packs plus
+the wiring that belongs to none of them — a corpus group, an orchestrator agent
+bound to it, and cross-pack equivalences.
+
+A pack spanning several bodies of law used to install its content correctly and
+land inert, because three things could not be expressed in a pack manifest and
+had to be created by hand afterwards: the corpus group (without which there is
+no cross-corpus retrieval at all), an orchestrator carrying
+`search_across_corpora`, and the group slug somewhere the agent would read it —
+the tool takes it as a required argument. The install reported success either
+way.
+
+```
+python manage.py install_domain_pack <name> --creator admin --public
+python manage.py install_domain_pack <name> --check      # plan, writes nothing
+python manage.py install_domain_pack --list
+```
+
+The install contract (C1–C7) is defined in the pack registry's
+`DOMAIN_PACKS.md`, so both sides build to one spec. Everything decidable from
+the files is decided before anything is written, on the `--check` path and the
+install path alike, and all wiring runs in one transaction.
+
+### Changed
+
+- **Exempted Claude Code's cloud-agent commit identity from the CLA gate.** `.github/workflows/cla.yml`'s `CLAAssistant` check blocked PRs whose commits are authored by GitHub user `claude` (the identity Claude Code's cloud/background agent uses when it pushes directly to `claude/*` branches, e.g. PR #2248) — that account had never signed the CLA and wasn't in the `allowlist` (previously `dependabot[bot]` only). Added `claude` to the allowlist alongside `dependabot[bot]`: copyright in those commits vests in whoever directed the tool (the maintainer, who has already signed), not in the automation account, so it isn't a third party asserting authorship. `CLA.md`'s "How to sign" section now documents both exemptions.
+- **Release image publishing: raise the Django image size budget and add a
+  manual re-publish path** (`.github/workflows/docker-build-release.yml`). The
+  v3.0.0 release build was the first since v3.0.0.b1 to get past the runner's
+  disk limits and actually finish the Django image — and it then failed the
+  `Enforce Django image size budget` gate at 2.4 GiB against the 1.5 GiB
+  acceptance criterion from issue #1494. The gate runs before the push step, so
+  `ghcr.io/.../opencontractserver_django:v3.0.0` was never published while
+  frontend, postgres, and traefik were. Two changes:
+  - `DJANGO_IMAGE_BUDGET_BYTES` raised 1.5 GiB → 3 GiB, leaving ~25% headroom
+    over the measured size so the gate still catches a real regression. This is
+    a stopgap so releases can publish; the regression itself is tracked in
+    issue #2236.
+  - New `workflow_dispatch` trigger taking an existing `tag` input. A `release`
+    event runs the workflow file *as it existed at the tag*, so re-running a
+    failed release build can never pick up a workflow fix; dispatching from the
+    default branch builds the tag's source with the current workflow. All
+    `docker/metadata-action` tag patterns now derive from a single `BUILD_TAG`
+    (dispatch input, else the released tag) so a dispatched re-publish emits
+    byte-identical image tags to the release event it stands in for.
+  - Image provenance on a dispatched re-publish: `docker/metadata-action`
+    derives its sha-suffixed tag and `org.opencontainers.image.revision` label
+    from `github.sha`, which on a dispatch is the default branch rather than the
+    tag being built. Both now come from the actually-checked-out commit. No
+    change on a release event, where the two are the same commit.
+- Synced the `mypy` pre-commit hook's stub pins with `requirements/local.txt`
+  (`.pre-commit-config.yaml`: `django-stubs` 6.0.6 → 6.1.0,
+  `djangorestframework-stubs` 3.17.0 → 3.18.0). The hook's own comment requires
+  these to match the requirements pins; they had drifted, so the type-checking
+  CI runs against different stubs than the dev/test image installs.
+- Fixed the 7 type errors `django-stubs` 6.1.0 surfaces, none of which change
+  runtime behavior:
+  - `opencontractserver/shared/QuerySets.py` (6 errors, lines 466/487/655/656/672/673):
+    six `permitted_ids`-style variables are assigned a lazy `values_list` queryset
+    in a `try` arm and a plain `[]` in the matching `except LookupError` arm. 6.1.0
+    types `values_list(..., flat=True)` precisely enough that the two arms no longer
+    unify, so each variable now carries an explicit `Iterable[Any]` declaration —
+    the honest common type, since every one of them is only ever fed to an `__in`
+    lookup.
+  - `opencontractserver/tests/test_corpus_canonical_caml_migration.py:157`:
+    `apps.get_model("corpuses", "CorpusDescriptionRevision")` is deliberately
+    unresolvable (the test asserts the model was dropped), but 6.1.0's plugin
+    resolves *literal* `get_model()` string pairs at type-check time and errors
+    on a miss. Whether it fires is interpreter-dependent (it does on 3.11, does
+    not on CI's 3.12), so a `# type: ignore` would itself be flagged unused on
+    one of them under `warn_unused_ignores`. The model name now lives in a
+    `str`-annotated local, denying the plugin a literal to match on either.
+    Runtime behavior and the assertion are unchanged.
+- Removed Graphene, graphene-django, django-graphql-jwt, and graphql-relay
+  dependencies. JWT authentication now uses the shared Django/PyJWT runtime in
+  `config/jwt_auth/`; global IDs and cursor pagination preserve the existing API
+  format. Deployments using the optional refresh-token app should replace
+  `graphql_jwt.refresh_token` with `config.jwt_auth.refresh_token` in
+  `INSTALLED_APPS`; existing tables and migration history are preserved.
+- Removed test-only resolver methods and the Graphene schema accessor, expanded
+  SDL parity checks, and made validation extensions independent per request.
+
+### Fixed
+
+- **Corpus/document agent instructions no longer silently discarded** (#2247). `UnifiedAgentFactory` appended its computed blocks — corpus memory (`llms/agents/agent_factory.py::_inject_corpus_memory`) and temporal grounding (`::_inject_temporal_grounding`) — directly onto `config.system_prompt`, which made the field non-`None` before `CoreDocumentAgentFactory.create_context` / `CoreCorpusAgentFactory.create_context` read `system_prompt is None` as "the caller supplied no prompt, resolve the configured persona". The signal was consumed before it was read, so `Corpus.corpus_agent_instructions` / `.document_agent_instructions` (and the `DEFAULT_*_AGENT_INSTRUCTIONS` fallbacks) never reached the model: every agent ran on the ~650-character temporal block alone. The value round-tripped correctly through the DB and GraphQL, so "the persona is set" verified fine while the agent never received it — making persona changes unmeasurable and leaving tools that depend on an instruction-supplied identifier unreachable.
+- Computed context is now queued on the new `AgentConfig.computed_context` list via `AgentConfig.add_computed_context()` and folded in by `AgentConfig.resolve_system_prompt()` (`llms/agents/core_agents.py`), which resolves the persona first and appends the queued blocks in order. Callers that pass an explicit `system_prompt` are unaffected — they still get the computed blocks appended. `resolve_system_prompt()` drains the queue, so repeated context creation cannot duplicate a block.
+- **Expect system-prompt token usage to rise**, by the size of the persona that was previously being dropped. `estimate_token_count(config.system_prompt)` feeds `system_prompt_tokens` into the compaction thresholds in `llms/context_guardrails.py`, so an install with a large `corpus_agent_instructions` (14k characters ≈ 3.5k tokens is realistic) will now see compaction trigger earlier in a conversation than it did before. The old figure was not an under-count — it accurately measured the truncated prompt the model was actually receiving. Anyone who tuned compaction thresholds against those numbers should re-check them.
+- Regression coverage: `opencontractserver/tests/test_agent_system_prompt_assembly.py` asserts the configured persona appears in the assembled prompt (document + corpus paths, ordering, explicit-prompt precedence, settings fallback, idempotency). `test_agent_memory.py` and `test_agent_temporal_grounding.py` now drive the real `AgentConfig` instead of local stand-ins exposing only `system_prompt` — the stand-ins are how the injectors and persona resolution drifted apart unnoticed.
+`install_domain_pack`'s C4 preflight (`opencontractserver/corpuses/management/commands/install_domain_pack.py::Command._preflight`)
+validated `equivalences[].from_key`/`to_key` without stripping whitespace, while
+the shared writer (`upsert_equivalence`) strips before validating — a manifest
+row with incidental leading/trailing whitespace could fail preflight and be
+refused even though the writer would have accepted it. Preflight now strips
+before validating, matching the writer exactly.
+
+A base pack that materialised into `AUTHORITY_PACK_INSTALL_DIR` but then failed
+its real (non-`--check`) `load_authority_pack` call left its directory behind
+unloaded. Since pipeline discovery unions every discoverable directory's
+`source_hosts` into the SSRF allowlist regardless of DB-load state, the failed
+pack's hosts stayed live in the trust boundary until the next re-run overwrote
+it. The install loop now removes the failed pack's own materialised directory
+before re-raising; packs that installed earlier in the same run are untouched.
+
+A plain install (no `--check`) missing `--creator` printed a `--check`-flavoured
+"C1 pack validity not checked" hint immediately before the actual
+"--creator is required to install" refusal. The hint is now gated to `--check`
+runs, where it is accurate.
+- Fixed the case-reporter citation grammar (`opencontractserver/enrichment/grammars.py`) so a bare `F.` (Federal Reporter, 1st series, 1880-1924) actually matches — the Circuits alternative's `(?:2d|3d|4th)` group was mandatory, so `"160 F. 903"` never matched even though the PR description listed `F.` as a covered reporter shape. Made the series suffix optional (matching the existing `F. Supp.` branch), which does not reintroduce ambiguity since the `F. Supp.` alternative is tried first.
+- Fixed vector search paying for discarded debug diagnostics in `opencontractserver/llms/vector_stores/core_vector_stores.py`: several `_logger.debug(...)`/`_logger.info(...)` calls passed a `_safe_queryset_info(...)`/`_safe_queryset_info_sync(...)` string (each running one or more `COUNT(*)` queries, one of them unfiltered over the whole annotation table) or a stringified `queryset.query` as an argument, and Python evaluates logging-call arguments before checking whether the level is enabled — so every search paid for the counts regardless of log level, and four sites logged them at `INFO` in production. All such call sites are now guarded by `_diagnostics_enabled()` (an `isEnabledFor(logging.DEBUG)` check) and the four `INFO` sites were demoted to `DEBUG`; on an 18-corpus fan-out search this cut wall-clock from 277.4s to 45.3s (6.1x). Diagnostics still emit when `DEBUG` logging is enabled — deferred, not deleted. Covered by `opencontractserver/tests/test_vector_store_diagnostics.py`.
+- **`get_authority_source_provider()` could resolve to the wrong component type.**
+  `opencontractserver/pipeline/registry.py` — its primary lookup went through
+  `PipelineComponentRegistry.get_by_name` / `get_by_class_name`, dicts shared by
+  every component family (parsers, embedders, LLM providers, ...). A class-name
+  collision with an unrelated component would silently return an instance of
+  the wrong type, which would only fail later and outside this function's
+  `try/except`, when the pack called `.can_handle(...)` on it. The lookup is
+  now scoped to `get_all_authority_source_providers_cached()` throughout,
+  matching the type-safety guarantee already stated in the docstring and
+  already applied on the ambiguous-leaf fallback path.
+- Fixed Tier-1 extraction of regulation-style citations (`opencontractserver/enrichment/extractor.py`). Section numbers could not contain dots and the `§` symbol was not accepted where the word "Section" was, so `"Section 120.10 of the ITAR"` matched nothing and `"ITAR Section 120.41"` matched the prefix and produced `itar:120` — a wrong document rather than a missing one. Roman-numeral divisions (`"Category XI of the United States Munitions List"`) had no pattern at all. Adds dotted section numbers, `§`/`§§`, part-level citation and a narrow `Category` division pattern, all gated on a registered authority alias so `"Part 3 of the Agreement"` still matches nothing. Affects every CFR-, state-admin-code- and municipal-code-style corpus, not just the one it was found on.
+- Added ECCN citation extraction as a Tier-2a shape grammar (`opencontractserver/enrichment/grammars.py`), emitting the shape-level key `eccn:3a611` rather than any pack's own prefix. `"ECCN 3A611"` carries no Section/Part/`§` token, so no existing pattern could match it. Anchored on the literal "ECCN" so bare alphanumerics in prose cannot become citations, and lowercased because authority-key matching is case-sensitive on the section part and ECCNs are conventionally written uppercase. A pack carrying the Commerce Control List folds these onto its own keys with generated per-key `equivalences` rows (`eccn:3a611 -> ccl:3a611`, one per ECCN), the same way it already folds the LLM-extracted `act:eccn-*` forms — per-key rows are the only pack-side mechanism, since prefix-level rewrite rules are deliberately never loaded from packs.
+- Fixed renamed authority sections stranding their previous document (`opencontractserver/enrichment/authorities.py`). The write derived the corpus path from the section TITLE, so a changed heading landed the new text at a new path while the old document stayed current — both carrying the same `canonical_key`. `find_authority_target` orders by `id` and takes the first, so the superseded document won every lookup and the key silently served stale text; on one rebuild all 21 USML categories served `[STUB]` bodies at IMPLEMENTING weight, with `21 created, 0 updated` as the only signal. A rename now versions up at the existing path instead of forking.
+- Fixed the local `warp-ingest` stack sending an empty API key: the Django setting defaulted to `""` while the service defaulted to `abc123`, so a stock `--profile warp-ingest` run 401'd every PDF parse. Both sides now resolve from the same variable with the same default.
+- **`anthropic` 1.0.0 removed the sampling parameters, breaking both direct
+  `messages.create()` calls.** `temperature` is gone from the SDK's runtime
+  signature and from all three `create()` overloads, and there is no `**kwargs`
+  passthrough — so `temperature=0` now raises
+  `TypeError: Messages.create() got an unexpected keyword argument
+  'temperature'` **before the request is built**. That is a hard crash, not an
+  API-level 400. It reached `main` with no commit touching the code:
+  `requirements/analyzers/claude_highlighter.txt` declares `anthropic>=0.45.2`
+  with **no upper bound**, both Dockerfiles glob every
+  `requirements/*/*.txt` into the image, and there is no lock file — so a
+  major release published upstream is picked up by the next resolve, in CI
+  and in the production image alike. Both call sites in
+  `doc_analysis_tasks.py` (chunked text extraction and the Claude PII scanner)
+  drop the parameter. The API removed `temperature` on Opus 4.7+ and rejects
+  it on Sonnet 5, so this is the forward-correct fix rather than a
+  client-only shim; determinism, where it matters, comes from the prompt, and
+  `temperature=0` never guaranteed identical outputs in any case. The
+  `temperature=0` guard in the pydantic-ai layer (issue #1381) is a different
+  code path and is unaffected.
+- **Pinned `anthropic` to `>=0.45.2,<1` as a stopgap, in both the analyzer
+  requirements and the mypy hook's `additional_dependencies`.** Note the
+  ceiling is `<1`, not `<2` — `1.0.0` satisfies `<2`, so that bound would be a
+  no-op (verified: `>=0.45.2` and `>=0.45.2,<2` both resolve to `1.0.0`;
+  `>=0.45.2,<1` resolves to `0.125.0`). Mirroring the pin into the pre-commit
+  hook matters because that hook resolves its own dependency set — without it
+  CI type-checks against a different major than the image ships, which is how
+  this broke `main` with no commit touching the code. Migration onto the 1.x
+  line is tracked in #2273.
+- **Auth0 stale refresh token loop on production** (`frontend/src/components/auth/AuthGate.tsx`): when Auth0 rejected the stored rotating refresh token (expired past its idle/absolute lifetime, revoked, or lost to rotation reuse-detection — tenant log event `fertft` "Token could not be decoded or is missing in DB", surfaced by auth0-spa-js as `invalid_grant` "Unknown or invalid refresh token." / `missing_refresh_token`), AuthGate treated it as an unexpected error: it showed a scary "Authentication failed" toast, and because the SDK cache (`cacheLocation="localstorage"`) was never cleared, `isAuthenticated` stayed `true` and the identical failed token exchange + toast replayed on **every page load** until the user manually logged in again. AuthGate now classifies these as expected session expiry: it clears the SDK cache locally (`logout({ openUrl: false })`), drops the `oc_has_authenticated` fast-path flag, shows a one-time "Your session has expired" info toast, and falls back to anonymous quietly. The `isAuthenticated:false` verification path gets the same handling (no more console noise or doomed re-verification on subsequent boots). Transient/unknown errors still keep the cache and surface an error toast. Docs updated in `frontend/src/docs/AUTHENTICATION_PATTERN.md`.
+- **Test suite: a developer's authority-pack fetch cache no longer leaks into tests.**
+  `config/settings/test.py` inherited the default
+  `AUTHORITY_PACK_INSTALL_DIR = ROOT_DIR/.authority_packs`, which is a real fetch
+  cache on any machine where `install_authority_pack` has been run — and which
+  `pipeline/registry.py::authority_pack_dirs` scans as an implicit discovery
+  root. Every test touching pack discovery was therefore environment-dependent:
+  `test_authority_pack_sideload.py::AuthorityPackDiscoveryTests` (3 tests) failed
+  locally while passing in CI, and the SSRF allowlist union, pack catalog, and
+  in-pack provider imports were silently exposed the same way. Test settings now
+  pin the install dir to a path that does not exist, so the third discovery
+  source contributes nothing unless a test opts in via `override_settings`; the
+  tests that assert an exact pack set also state that precondition themselves.
+- **`require_backend_ci_gate.sh` replaced the required-checks list instead of
+  adding to it.** Adding a second required context — which
+  `docs/development/test-suite.md` explicitly tells you to do once another
+  workflow grows its own gate — would have silently *unrequired*
+  `backend-ci-gate`, with no error and a verification print that looked
+  correct. It also hardcoded `strict: false` (reverting a maintainer who had
+  turned it on) and dropped the `app_id` GitHub pins each check to, widening
+  the requirement to any app. The merge now unions contexts, preserves
+  `strict` and `app_id`, migrates a legacy `contexts` list, and is idempotent.
+  It moved to `.github/scripts/branch_protection_body.py` with a 13-case
+  `--self-test`, reachable as `require_backend_ci_gate.sh --self-test`.
+  `.github/scripts/**` is now in Backend CI's path filter, so a change to the
+  code that decides whether a merge is allowed runs the full suite.
+- **`claude-review` reported a red X on every fork PR that no contributor
+  could clear.** `.github/workflows/claude-code-review.yml` triggers on
+  `pull_request`, but GitHub clamps runs whose head is a fork: the declared
+  `id-token: write` is silently dropped and the secret store is withheld
+  (`Secret source: None`, `claude_code_oauth_token: ""`). The action failed
+  with *"Could not fetch an OIDC token. Did you remember to add `id-token:
+  write` to your workflow permissions?"* — an error that accuses the workflow
+  file even though the permission is declared on line 43, sending anyone who
+  debugs from the message alone to edit code that is already correct
+  (run 33611167884, PR #2296). Re-running with "Approve and run" does not
+  restore secrets, and `GITHUB_TOKEN` is read-only on fork PRs, so the
+  `gh pr comment` the job is asked to make could not have posted either — three
+  independent blockers, any one of them fatal. The job now carries
+  `if: github.event.pull_request.head.repo.full_name == github.repository`
+  and reports **skipped** on forks, which is what actually happened. Dependabot
+  is unaffected: its branches live in this repository, so the guard passes and
+  the OIDC exchange works as before (run 33788653880). The comment above the
+  guard records why `pull_request_target` is not the fix — it would put the
+  OAuth secret and a write-capable token in a job checking out untrusted head
+  code — and points at the `@claude` mention path in
+  `.github/workflows/claude.yml` for reviewing a fork PR on demand.
+- Stopped large embedding backlogs from stalling indefinitely on the CPU-only
+  microservice embedder (`opencontractserver/constants/document_processing.py`).
+  `EMBEDDER_BATCH_REQUEST_TIMEOUT_SECONDS` was 60s while a batch of 100
+  long texts — whole ordinance sections or statute chapters, as produced by
+  authority-pack ingestion — routinely takes longer than that on CPU. The
+  client retried the *entire* batch three times, so each task burned ~3 minutes
+  and requeued without progress. Observed on a real ingest: a ~2,800-task queue
+  draining at ~1 task/min with a continuous retry storm, and semantic search
+  returning "no results from either arm" because no annotation ever got an
+  embedding.
+
+  The timeout is now 300s, and the microservice batch cap drops from 100 to 32
+  (`MICROSERVICE_EMBEDDER_MAX_BATCH_SIZE`, with `EMBEDDING_API_BATCH_SIZE`
+  lowered from 50 to 32 to keep the `documents.E001` system check satisfied), so
+  a slow batch finishes once instead of being redone three times. Measured on
+  the same queue after the change: retries dropped from continuous to **zero**
+  and throughput rose from ~4 to ~117 completed tasks per 4 minutes.
+- Fixed the Extract PDF end-to-end test stalling behind badge celebrations by
+  labeling the celebration as a dialog and dismissing it through its Close
+  button. The Extract CI job now retains HTML reports and failure artifacts,
+  runs one complete attempt, and reserves time for diagnostics before timeout.
+- Pinned the `flake8` pre-commit hook's `additional_dependencies`
+  (`.pre-commit-config.yaml`: `flake8-isort==7.0.0`, `isort==6.0.1`). They were
+  unpinned, and `additional_dependencies` are re-resolved every time a hook env
+  is rebuilt, so `flake8-isort` floated up to **isort 9.0.1** while the
+  standalone `isort` hook stayed `rev`-pinned to 6.0.1. The two versions
+  disagree about repeated `from X import (...)` statements — the shape isort 6
+  itself emits for aliased imports — so `isort` kept files in a layout `flake8`
+  then rejected. The result was the `linter` job failing on `main` and on every
+  open PR with 10 `I001`/`I005` findings in
+  `opencontractserver/llms/agents/pydantic_ai_agents.py` and
+  `opencontractserver/utils/compact_pawls.py`, neither of which any of those PRs
+  touched. `isort` here must track the `isort` hook's `rev`.
+- Replace popup authentication with same-tab Auth0 Universal Login through the
+  official React SDK and its memory cache. Validate restored sessions against the
+  backend, recover from failed identity checks, preserve sessions on permission
+  denials, and prevent stale requests from restoring logged-out users. Local
+  username/password sessions survive tab refreshes without persisting profiles.
+- Pinned the `mcp` `additional_dependencies` entry in the mypy pre-commit hook (`.pre-commit-config.yaml`) to `>=1.28.1,<2`, matching the runtime pin in `requirements/base.txt`. The previous unbounded `mcp>=1.0.0` let the hook resolve `mcp` 2.x, whose SDK renamed/removed fields and methods (`Server.list_resources`, `uriTemplate`→`uri_template`, `inputSchema`→`input_schema`) that `opencontractserver/mcp/server.py` (written against the 1.x API) still uses — producing 48 unrelated mypy errors on every PR's `linter`/`backend-ci-gate` checks regardless of what the PR actually changed.
+
+
 ## [3.0.0] - 2026-08-09
 
 ### Changed

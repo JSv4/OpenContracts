@@ -19,8 +19,8 @@ from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from graphql_jwt.shortcuts import get_token
 
+from config.jwt_auth.shortcuts import get_token
 from config.websocket.auth_handshake import AuthHandshakeMixin
 from config.websocket.middleware import (
     WS_AUTH_SUBPROTOCOL,

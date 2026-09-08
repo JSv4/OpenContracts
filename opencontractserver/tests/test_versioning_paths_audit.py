@@ -27,8 +27,13 @@ from django.db import connection
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
-from graphql_relay import to_global_id
 
+from config.graphql.document_types import (
+    _resolve_DocumentType_has_version_history,
+    _resolve_DocumentType_last_modified,
+    _resolve_DocumentType_version_history,
+    _resolve_DocumentType_version_number,
+)
 from opencontractserver.corpuses.models import Corpus, CorpusFolder
 from opencontractserver.corpuses.services import (
     DocumentLifecycleService,
@@ -45,6 +50,7 @@ from opencontractserver.documents.versioning import (
     restore_document,
 )
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()
@@ -424,48 +430,40 @@ class VersionResolverTests(TestCase):
         )
         self.corpus_gid = to_global_id("CorpusType", self.corpus.pk)
 
-    def _doc_type(self):
-        from config.graphql.document_types import DocumentType
-
-        return DocumentType
-
     def test_version_number_and_last_modified_share_one_query(self):
         # M4: both resolvers read the same current path; with the request cache
         # they cost a single query total (was 2N before).
-        DocumentType = self._doc_type()
         info = _fake_info(self.user)
         with CaptureQueriesContext(connection) as ctx:
-            vnum = DocumentType.resolve_version_number(
+            vnum = _resolve_DocumentType_version_number(
                 self.doc_v2, info, self.corpus_gid
             )
-            DocumentType.resolve_last_modified(self.doc_v2, info, self.corpus_gid)
+            _resolve_DocumentType_last_modified(self.doc_v2, info, self.corpus_gid)
         self.assertEqual(vnum, 2)
         self.assertEqual(len(ctx.captured_queries), 1)
 
     def test_has_version_history_zero_queries(self):
         # L1: parent_id check must not fetch the parent row.
-        DocumentType = self._doc_type()
         info = _fake_info(self.user)
         with CaptureQueriesContext(connection) as ctx:
-            has_history = DocumentType.resolve_has_version_history(self.doc_v2, info)
+            has_history = _resolve_DocumentType_has_version_history(self.doc_v2, info)
         self.assertTrue(has_history)
         self.assertEqual(len(ctx.captured_queries), 0)
 
         with CaptureQueriesContext(connection) as ctx:
-            no_history = DocumentType.resolve_has_version_history(self.doc_v1, info)
+            no_history = _resolve_DocumentType_has_version_history(self.doc_v1, info)
         self.assertFalse(no_history)
         self.assertEqual(len(ctx.captured_queries), 0)
 
     def test_version_history_scoped_to_visible_user(self):
         # M5: the owner sees both versions; an unauthorised user sees none.
-        DocumentType = self._doc_type()
 
-        owner_history = DocumentType.resolve_version_history(
+        owner_history = _resolve_DocumentType_version_history(
             self.doc_v2, _fake_info(self.user)
         )
         self.assertEqual(len(owner_history.versions), 2)
 
-        other_history = DocumentType.resolve_version_history(
+        other_history = _resolve_DocumentType_version_history(
             self.doc_v2, _fake_info(self.other)
         )
         self.assertEqual(

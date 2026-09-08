@@ -56,7 +56,7 @@ class PDFHashGraphQLTestCase(GraphQLTestCase):
         """
 
         # Convert Django ID to GraphQL ID
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         global_id = to_global_id("DocumentType", self.document.id)
 
@@ -125,7 +125,7 @@ class PDFHashGraphQLTestCase(GraphQLTestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         global_id = to_global_id("DocumentType", doc_no_pdf.id)
 

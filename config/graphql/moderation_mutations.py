@@ -31,7 +31,6 @@ import logging
 from typing import Annotated
 
 import strawberry
-from graphql_relay import from_global_id
 
 from config.graphql._util import strip_unset
 from config.graphql.core.auth import PermissionDenied
@@ -45,6 +44,7 @@ from opencontractserver.conversations.models import (
     CorpusModerator,
 )
 from opencontractserver.corpuses.models import Corpus
+from opencontractserver.utils.ids import from_global_id
 
 logger = logging.getLogger(__name__)
 

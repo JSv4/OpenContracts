@@ -34,7 +34,6 @@ from typing import Annotated
 import strawberry
 from django.contrib.auth import get_user_model
 from django.db.models import OuterRef, Q, Subquery
-from graphql_relay import from_global_id
 
 from config.graphql import enums
 from config.graphql._util import coerce_enum, coerce_str, strip_unset
@@ -64,6 +63,7 @@ from opencontractserver.corpuses.models import (
 )
 from opencontractserver.shared.services.base import BaseService
 from opencontractserver.utils.auth import is_authenticated_user
+from opencontractserver.utils.ids import from_global_id
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -1798,9 +1798,6 @@ def _get_node_CorpusType(info, pk):
 # ``_corpus_node_cache`` that collapses the ``corpuses_corpus`` recursive CTE
 # storm on ``annotation.corpus`` FK access
 # (``test_corpus_tree_cte_does_not_scale_with_document_count``).
-# ``_get_node_CorpusType`` is also still installed on the class as a
-# graphene-compat ``get_node`` (for the request-cache unit test) via
-# ``_install_graphene_resolver_aliases``.
 register_type(
     "CorpusType",
     CorpusType,

@@ -22,6 +22,7 @@ from django.test import TestCase
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
+from config.graphql.user_types import _resolve_UserType_display_name
 from opencontractserver.users.handle_generator import (
     PLAIN_ATTEMPTS,
     SUFFIXED_ATTEMPTS,
@@ -327,9 +328,8 @@ class DisplayNameResolverTests(TestCase):
     def _resolve_for(cls, user) -> str:
         # Calling the resolver directly avoids depending on a `me`-style query
         # we may not control, while still exercising the production code path.
-        from config.graphql.user_types import UserType
 
-        return UserType.resolve_display_name(user, info=cls._SelfInfo(user))
+        return _resolve_UserType_display_name(user, info=cls._SelfInfo(user))
 
     def test_name_takes_priority(self):
         user = User.objects.create_user(

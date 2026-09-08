@@ -12,7 +12,6 @@ the service layer.
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.test import TestCase
-from graphql_relay import to_global_id
 
 from opencontractserver.annotations.models import AuthorityRelationship
 from opencontractserver.corpuses.models import Corpus
@@ -23,6 +22,7 @@ from opencontractserver.enrichment.authorities import (
     AuthoritySection,
 )
 from opencontractserver.enrichment.services import EnrichmentService
+from opencontractserver.utils.ids import to_global_id
 
 User = get_user_model()
 

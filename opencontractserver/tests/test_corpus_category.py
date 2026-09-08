@@ -14,7 +14,6 @@ Tests cover:
 import pytest
 from django.contrib.auth.models import AnonymousUser
 from django.test import RequestFactory, TestCase
-from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
@@ -27,6 +26,7 @@ from opencontractserver.corpuses.models import Corpus, CorpusCategory
 from opencontractserver.corpuses.services import CorpusCategoryService
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.users.models import User
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 
@@ -535,7 +535,7 @@ class TestCorpusCategoryGraphQLMutations(TestCase):
         self.assertIsNotNone(mutation_result["objId"])
 
         # Get the created corpus and verify categories
-        from graphql_relay import from_global_id
+        from opencontractserver.utils.ids import from_global_id
 
         corpus_pk = from_global_id(mutation_result["objId"])[1]
         corpus = Corpus.objects.get(pk=corpus_pk)
@@ -571,7 +571,7 @@ class TestCorpusCategoryGraphQLMutations(TestCase):
         self.assertTrue(mutation_result["ok"])
 
         # Get the created corpus and verify no categories
-        from graphql_relay import from_global_id
+        from opencontractserver.utils.ids import from_global_id
 
         corpus_pk = from_global_id(mutation_result["objId"])[1]
         corpus = Corpus.objects.get(pk=corpus_pk)
@@ -760,7 +760,7 @@ class TestCorpusCategoryGraphQLMutations(TestCase):
         self.assertTrue(mutation_result["ok"])
 
         # Get the created corpus and verify only one category (deduplicated)
-        from graphql_relay import from_global_id
+        from opencontractserver.utils.ids import from_global_id
 
         corpus_pk = from_global_id(mutation_result["objId"])[1]
         corpus = Corpus.objects.get(pk=corpus_pk)

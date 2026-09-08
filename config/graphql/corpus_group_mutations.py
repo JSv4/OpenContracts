@@ -14,7 +14,6 @@ import logging
 from typing import Annotated
 
 import strawberry
-from graphql_relay import from_global_id
 
 from config.graphql._util import strip_unset
 from config.graphql.core.auth import PermissionDenied
@@ -23,6 +22,7 @@ from config.graphql.corpus_types import CorpusGroupType
 from config.graphql.ratelimits import RateLimits, graphql_ratelimit
 from opencontractserver.corpuses.services import CorpusGroupService
 from opencontractserver.corpuses.services.corpus_groups import GROUP_NOT_FOUND_MESSAGE
+from opencontractserver.utils.ids import from_global_id
 
 logger = logging.getLogger(__name__)
 

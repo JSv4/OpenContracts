@@ -16,7 +16,6 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.test import TestCase
-from graphql_relay import from_global_id, to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
@@ -27,6 +26,7 @@ from opencontractserver.annotations.models import (
 )
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document, DocumentRelationship
+from opencontractserver.utils.ids import from_global_id, to_global_id
 
 User = get_user_model()
 

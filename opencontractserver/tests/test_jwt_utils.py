@@ -15,9 +15,9 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
-from graphql_jwt.exceptions import JSONWebTokenError, JSONWebTokenExpired
 from rest_framework.test import APIRequestFactory
 
+from config.jwt_auth.exceptions import JSONWebTokenError, JSONWebTokenExpired
 from config.jwt_utils import (
     _validate_auth0_token,
     _validate_graphql_jwt_token,
@@ -79,8 +79,8 @@ class TestValidateGraphqlJwtToken(TestCase):
             is_active=False,
         )
 
-    @patch("graphql_jwt.utils.get_user_by_payload")
-    @patch("graphql_jwt.utils.get_payload")
+    @patch("config.jwt_auth.utils.get_user_by_payload")
+    @patch("config.jwt_auth.utils.get_payload")
     def test_valid_token_returns_user(self, mock_get_payload, mock_get_user):
         """Valid token should return the authenticated user."""
         mock_get_payload.return_value = {"username": "graphql_jwt_user"}
@@ -91,7 +91,7 @@ class TestValidateGraphqlJwtToken(TestCase):
         self.assertEqual(result, self.user)
         mock_get_payload.assert_called_once_with("valid_token")
 
-    @patch("graphql_jwt.utils.get_payload")
+    @patch("config.jwt_auth.utils.get_payload")
     def test_expired_token_raises_exception(self, mock_get_payload):
         """Expired token should raise JSONWebTokenExpired."""
         mock_get_payload.side_effect = JSONWebTokenExpired()
@@ -99,7 +99,7 @@ class TestValidateGraphqlJwtToken(TestCase):
         with self.assertRaises(JSONWebTokenExpired):
             _validate_graphql_jwt_token("expired_token")
 
-    @patch("graphql_jwt.utils.get_payload")
+    @patch("config.jwt_auth.utils.get_payload")
     def test_invalid_token_raises_exception(self, mock_get_payload):
         """Invalid token should raise JSONWebTokenError."""
         mock_get_payload.side_effect = JSONWebTokenError("Invalid token")
@@ -107,8 +107,8 @@ class TestValidateGraphqlJwtToken(TestCase):
         with self.assertRaises(JSONWebTokenError):
             _validate_graphql_jwt_token("invalid_token")
 
-    @patch("graphql_jwt.utils.get_user_by_payload")
-    @patch("graphql_jwt.utils.get_payload")
+    @patch("config.jwt_auth.utils.get_user_by_payload")
+    @patch("config.jwt_auth.utils.get_payload")
     def test_user_not_found_raises_exception(self, mock_get_payload, mock_get_user):
         """Token for non-existent user should raise JSONWebTokenError."""
         mock_get_payload.return_value = {"username": "nonexistent"}
@@ -119,8 +119,8 @@ class TestValidateGraphqlJwtToken(TestCase):
 
         self.assertIn("User not found", str(context.exception))
 
-    @patch("graphql_jwt.utils.get_user_by_payload")
-    @patch("graphql_jwt.utils.get_payload")
+    @patch("config.jwt_auth.utils.get_user_by_payload")
+    @patch("config.jwt_auth.utils.get_payload")
     def test_inactive_user_raises_exception(self, mock_get_payload, mock_get_user):
         """Token for inactive user should raise JSONWebTokenError."""
         mock_get_payload.return_value = {"username": "inactive_user"}

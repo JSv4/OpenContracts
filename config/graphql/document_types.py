@@ -36,7 +36,6 @@ import strawberry
 from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
 from graphql import GraphQLError
-from graphql_relay import from_global_id
 
 from config.graphql import enums
 from config.graphql._util import coerce_enum, coerce_str, strip_unset
@@ -72,6 +71,7 @@ from opencontractserver.documents.models import (
     IngestionSource,
 )
 from opencontractserver.shared.services.base import BaseService
+from opencontractserver.utils.ids import from_global_id
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -594,9 +594,8 @@ def _resolve_DocumentType_version_history(root, info):
     attribute-based, so the same data is packed into the plain
     ``DocumentVersionType`` / ``VersionHistoryType`` value types instead.
     """
-    from graphql_relay import to_global_id
-
     from config.graphql.base_types import DocumentVersionType, VersionHistoryType
+    from opencontractserver.utils.ids import to_global_id
 
     # Get all documents in the version tree the user may see, ordered by
     # creation. Scoped to ``visible_to_user`` so this resolver cannot leak
@@ -658,9 +657,8 @@ def _resolve_DocumentType_path_history(root, info, corpus_id):
     attribute-based, so the same data is packed into the plain
     ``PathEventType`` / ``PathHistoryType`` value types instead.
     """
-    from graphql_relay import to_global_id
-
     from config.graphql.base_types import PathEventType, PathHistoryType
+    from opencontractserver.utils.ids import to_global_id
 
     _, corpus_pk = from_global_id(corpus_id)
 
@@ -739,9 +737,8 @@ def _resolve_DocumentType_corpus_versions(root, info, corpus_id):
     in one query reuses the same result for documents sharing a
     version_tree_id + corpus_id pair (avoids N+1).
     """
-    from graphql_relay import to_global_id
-
     from config.graphql.base_types import CorpusVersionInfoType
+    from opencontractserver.utils.ids import to_global_id
 
     type_name, corpus_pk = from_global_id(corpus_id)
     if not type_name or type_name != "CorpusType":

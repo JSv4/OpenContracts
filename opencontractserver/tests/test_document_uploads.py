@@ -3,7 +3,6 @@ import io
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from docx import Document as DocxDocument
-from graphql_relay import from_global_id, to_global_id
 from openpyxl import Workbook
 from pptx import Presentation
 
@@ -14,6 +13,7 @@ from opencontractserver.documents.models import Document as DocumentModel
 from opencontractserver.pipeline.registry import get_allowed_mime_types
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.files import base_64_encode_bytes
+from opencontractserver.utils.ids import from_global_id, to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()

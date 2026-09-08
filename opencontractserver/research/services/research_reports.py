@@ -890,7 +890,7 @@ class ResearchReportService(BaseService):
         # a card does not serialise into one.
         full_content_parts: list[str] = []
         if any(f.get("card") for f in report.findings or []):
-            from graphql_relay import to_global_id
+            from opencontractserver.utils.ids import to_global_id
 
             full_content_parts.append(
                 "[component:research-findings reportId="

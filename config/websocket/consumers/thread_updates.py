@@ -24,7 +24,6 @@ import uuid
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-from graphql_relay import from_global_id
 
 from config.ratelimit.decorators import check_ws_rate_limit
 from config.websocket.auth_handshake import AuthHandshakeMixin
@@ -33,6 +32,7 @@ from config.websocket.utils.auth_helpers import check_auth_and_close_if_failed
 from opencontractserver.conversations.models import Conversation
 from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
+from opencontractserver.utils.ids import from_global_id
 
 logger = logging.getLogger(__name__)
 

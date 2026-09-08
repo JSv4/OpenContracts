@@ -10,7 +10,6 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q, QuerySet
 from django_filters import OrderingFilter
 from django_filters import rest_framework as filters
-from graphql_relay import from_global_id
 
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
@@ -37,6 +36,7 @@ from opencontractserver.enrichment.services.authority_namespace_service import (
 )
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.users.models import Assignment, UserExport
+from opencontractserver.utils.ids import from_global_id
 
 User = get_user_model()
 

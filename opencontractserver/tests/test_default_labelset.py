@@ -15,7 +15,6 @@ from django.apps import apps as live_apps
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
-from graphql_relay import to_global_id
 
 from config.graphql.testing import GraphQLTestCase
 from opencontractserver.annotations.label_set_seeds import (
@@ -26,6 +25,7 @@ from opencontractserver.annotations.label_set_seeds import (
 )
 from opencontractserver.annotations.models import AnnotationLabel, LabelSet
 from opencontractserver.corpuses.models import Corpus
+from opencontractserver.utils.ids import to_global_id
 
 User = get_user_model()
 

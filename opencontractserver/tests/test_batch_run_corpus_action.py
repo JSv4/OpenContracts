@@ -9,7 +9,6 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.test import TransactionTestCase
 from django.utils import timezone
-from graphql_relay import to_global_id
 
 from config.graphql.testing import GraphQLTestCase
 from opencontractserver.corpuses.models import (
@@ -21,6 +20,7 @@ from opencontractserver.corpuses.models import (
 from opencontractserver.corpuses.services import CorpusActionService
 from opencontractserver.documents.models import Document, DocumentPath
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()

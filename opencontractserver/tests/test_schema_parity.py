@@ -69,6 +69,28 @@ class SchemaParityTestCase(SimpleTestCase):
 
         problems: list[str] = []
 
+        for operation in ("query_type", "mutation_type", "subscription_type"):
+            expected = getattr(golden, operation)
+            actual = getattr(served, operation)
+            if getattr(expected, "name", None) != getattr(actual, "name", None):
+                problems.append(f"{operation}: {expected} vs {actual}")
+
+        def directives(schema):
+            return {
+                directive.name: (
+                    directive.is_repeatable,
+                    frozenset(location.value for location in directive.locations),
+                    {
+                        name: (str(arg.type), _printed_default(arg))
+                        for name, arg in directive.args.items()
+                    },
+                )
+                for directive in schema.directives
+            }
+
+        if directives(golden) != directives(served):
+            problems.append("directive definitions differ")
+
         gnames = {n for n in golden.type_map if not n.startswith("__")}
         snames = {n for n in served.type_map if not n.startswith("__")}
         for n in sorted(gnames - snames):
@@ -95,6 +117,17 @@ class SchemaParityTestCase(SimpleTestCase):
                     )
                 continue
 
+            if isinstance(gt, GraphQLUnionType):
+                expected_members = {member.name for member in gt.types}
+                actual_members = {
+                    member.name for member in cast(GraphQLUnionType, st).types
+                }
+                if expected_members != actual_members:
+                    problems.append(
+                        f"union {n}: {expected_members} vs {actual_members}"
+                    )
+                continue
+
             if isinstance(
                 gt, (GraphQLObjectType, GraphQLInterfaceType, GraphQLInputObjectType)
             ):
@@ -111,6 +144,9 @@ class SchemaParityTestCase(SimpleTestCase):
                     g, s = gf[fn], sf[fn]
                     if str(g.type) != str(s.type):
                         problems.append(f"{n}.{fn}: type {g.type} vs {s.type}")
+                    if isinstance(gt, GraphQLInputObjectType):
+                        if _printed_default(g) != _printed_default(s):
+                            problems.append(f"{n}.{fn}: input default differs")
                     ga = getattr(g, "args", {}) or {}
                     sa = getattr(s, "args", {}) or {}
                     for an in sorted(set(ga) - set(sa)):
@@ -128,9 +164,14 @@ class SchemaParityTestCase(SimpleTestCase):
                                 f"{_printed_default(ga[an])!r} vs {_printed_default(sa[an])!r}"
                             )
 
-                if isinstance(gt, GraphQLObjectType):
+                if isinstance(gt, (GraphQLObjectType, GraphQLInterfaceType)):
                     gi = {i.name for i in gt.interfaces}
-                    si = {i.name for i in cast(GraphQLObjectType, st).interfaces}
+                    si = {
+                        i.name
+                        for i in cast(
+                            "GraphQLObjectType | GraphQLInterfaceType", st
+                        ).interfaces
+                    }
                     if gi != si:
                         problems.append(f"{n}: interfaces {gi} vs {si}")
 

@@ -80,10 +80,9 @@ class EnrichmentGraphQLTests(TestCase):
         )
 
     def _run(self, user):
-        from graphql_relay import to_global_id
-
         from config.graphql.schema import schema
         from config.graphql.testing import Client
+        from opencontractserver.utils.ids import to_global_id
 
         gid = to_global_id("CorpusType", self.corpus.id)
         query = """
@@ -144,10 +143,9 @@ class CorpusReferenceDocumentFilterTests(TestCase):
         )
 
     def _run(self, document_pk):
-        from graphql_relay import to_global_id
-
         from config.graphql.schema import schema
         from config.graphql.testing import Client
+        from opencontractserver.utils.ids import to_global_id
 
         query = """
             query ($cid: ID!, $did: ID) {
@@ -223,10 +221,9 @@ class CorpusReferenceTraversalVisibilityTests(TestCase):
         self.ref = ref
 
     def _run(self, user):
-        from graphql_relay import to_global_id
-
         from config.graphql.schema import schema
         from config.graphql.testing import Client
+        from opencontractserver.utils.ids import to_global_id
 
         gid = to_global_id("CorpusType", self.corpus.id)
         query = """
@@ -261,10 +258,9 @@ class CorpusReferenceTraversalVisibilityTests(TestCase):
         # IDOR: a corpus reader filtering by an INVISIBLE document's id must
         # not learn whether it has references — that would probe the private
         # target. The owner, who can see the document, still gets the row.
-        from graphql_relay import to_global_id
-
         from config.graphql.schema import schema
         from config.graphql.testing import Client
+        from opencontractserver.utils.ids import to_global_id
 
         query = """
             query ($cid: ID!, $did: ID) {

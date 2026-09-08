@@ -39,7 +39,6 @@ from django.db import transaction
 from django.db.models import Max, Q
 from django.utils import timezone
 from graphql import GraphQLError
-from graphql_relay import from_global_id
 
 from config.graphql import enums
 from config.graphql._util import strip_unset
@@ -87,6 +86,7 @@ from opencontractserver.types.enums import (
 )
 from opencontractserver.users.models import UserExport
 from opencontractserver.utils.etl import is_dict_instance_of_typed_dict
+from opencontractserver.utils.ids import from_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)

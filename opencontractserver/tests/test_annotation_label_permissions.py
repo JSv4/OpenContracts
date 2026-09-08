@@ -16,7 +16,7 @@ guardian tables exist and crashed (caught + logged) for guardian-less models.
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from config.graphql.annotation_types import AnnotationLabelType
+from config.graphql.annotation_types import _resolve_AnnotationLabelType_my_permissions
 from opencontractserver.annotations.models import AnnotationLabel, LabelSet
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
@@ -62,12 +62,9 @@ class AnnotationLabelMyPermissionsTestCase(TestCase):
         )
 
     def _perms(self, user, label=None):
-        # graphene passes the model instance as ``self`` to the resolver; mypy
-        # types the unbound method's first arg as the GraphQL type, hence the
-        # ignore.
         return set(
-            AnnotationLabelType.resolve_my_permissions(
-                label or self.label, _Info(user)  # type: ignore[arg-type]
+            _resolve_AnnotationLabelType_my_permissions(
+                label or self.label, _Info(user)
             )
         )
 

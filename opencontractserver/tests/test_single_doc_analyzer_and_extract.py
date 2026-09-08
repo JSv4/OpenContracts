@@ -11,7 +11,6 @@ from django.db import transaction
 from django.db.models.signals import post_save
 from django.test import TestCase
 from django.test.client import Client as DjangoClient
-from graphql_relay import from_global_id, to_global_id
 from rest_framework.test import APIClient
 
 from config.graphql.schema import schema
@@ -33,6 +32,7 @@ from opencontractserver.tests.fixtures import (
     create_mock_submission_response,
     generate_random_analyzer_return_values,
 )
+from opencontractserver.utils.ids import from_global_id, to_global_id
 
 User = get_user_model()
 

@@ -36,7 +36,6 @@ from django.db import models, transaction
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from filetype import filetype
-from graphql_relay import from_global_id
 
 from opencontractserver.constants.zip_import import (
     BULK_UPLOAD_OWNER_CACHE_PREFIX,
@@ -60,6 +59,7 @@ from opencontractserver.tasks import (
 )
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.files import is_plaintext_content
+from opencontractserver.utils.ids import from_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 if TYPE_CHECKING:

@@ -93,7 +93,7 @@ class ConversationMutationsTestCase(TestCase):
         """
 
         # Get corpus global ID
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         corpus_id = to_global_id("CorpusType", self.corpus.id)
 
@@ -140,7 +140,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         corpus_id = to_global_id("CorpusType", self.corpus.id)
 
@@ -184,7 +184,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         conversation_id = to_global_id("ConversationType", conversation.id)
 
@@ -229,7 +229,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         conversation_id = to_global_id("ConversationType", conversation.id)
 
@@ -284,7 +284,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         parent_id = to_global_id("MessageType", parent_message.id)
 
@@ -328,7 +328,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         conversation_id = to_global_id("ConversationType", conversation.id)
 
@@ -376,7 +376,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", message.id)
 
@@ -466,7 +466,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         document_id = to_global_id("DocumentType", self.document.id)
 
@@ -527,7 +527,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         corpus_id = to_global_id("CorpusType", self.corpus.id)
         document_id = to_global_id("DocumentType", self.document.id)
@@ -704,7 +704,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", message.id)
 
@@ -755,7 +755,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", message.id)
 
@@ -813,7 +813,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", message.id)
 
@@ -860,7 +860,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", message.id)
 
@@ -908,7 +908,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", message.id)
 
@@ -953,7 +953,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", message.id)
 
@@ -1040,7 +1040,7 @@ class ConversationMutationsTestCase(TestCase):
             }
         """
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         message_id = to_global_id("MessageType", message.id)
 
@@ -1117,7 +1117,7 @@ class ConversationMutationsTestCase(TestCase):
         # Verify parent relationship is set
         self.assertEqual(reply_message.parent_message, parent_message)
 
-        from graphql_relay import to_global_id
+        from opencontractserver.utils.ids import to_global_id
 
         mutation = """
             mutation UpdateMessage($messageId: ID!, $content: String!) {

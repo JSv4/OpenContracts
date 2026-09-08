@@ -727,9 +727,8 @@ class CorpusScopedMentionSearchTestCase(TestCase):
 
     def setUp(self):
         """Create test users, corpuses, documents, and annotations."""
-        from graphql_relay import to_global_id
-
         from opencontractserver.annotations.models import Annotation, AnnotationLabel
+        from opencontractserver.utils.ids import to_global_id
 
         self.owner = User.objects.create_user(username="owner", password="test")
 
@@ -986,9 +985,8 @@ class CorpusScopedMentionSearchTestCase(TestCase):
 
     def test_document_search_with_invalid_corpus_returns_empty(self):
         """Document search with invalid corpus_id returns empty results safely."""
-        from graphql_relay import to_global_id
-
         from config.graphql import search_queries as _mention_search
+        from opencontractserver.utils.ids import to_global_id
 
         query = _mention_search
 
@@ -1013,9 +1011,8 @@ class CorpusScopedMentionSearchTestCase(TestCase):
 
     def test_annotation_search_with_invalid_corpus_returns_empty(self):
         """Annotation search with invalid corpus_id returns empty results safely."""
-        from graphql_relay import to_global_id
-
         from config.graphql import search_queries as _mention_search
+        from opencontractserver.utils.ids import to_global_id
 
         query = _mention_search
 
@@ -1051,9 +1048,8 @@ class AgentMentionCorpusScopingTestCase(TestCase):
 
     def setUp(self):
         """Create test agents and corpuses."""
-        from graphql_relay import to_global_id
-
         from opencontractserver.agents.models import AgentConfiguration
+        from opencontractserver.utils.ids import to_global_id
 
         self.owner = User.objects.create_user(username="owner", password="test")
 

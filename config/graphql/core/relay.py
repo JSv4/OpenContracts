@@ -26,8 +26,8 @@ from typing import Any, Callable, Optional
 import django.db.models
 import strawberry
 from django.db.models import Manager, QuerySet
-from graphql_relay import (
-    connection_from_array_slice,
+
+from opencontractserver.utils.ids import (
     cursor_to_offset,
     from_global_id,
     get_offset_with_default,
@@ -130,53 +130,6 @@ def register_type(
                 return isinstance(obj, _types)
 
             definition.is_type_of = _is_type_of
-
-    _install_graphene_resolver_aliases(type_name, strawberry_type)
-
-
-def _install_graphene_resolver_aliases(type_name: str, strawberry_type: type) -> None:
-    """Expose graphene-style ``XType.resolve_<field>(root, info, ...)`` methods.
-
-    graphene resolvers were bound methods callable as
-    ``XType.resolve_field(obj, info)`` — a form the unit tests use directly to
-    exercise resolver logic without going through the full schema. The
-    strawberry port keeps each custom resolver as a module-level
-    ``_resolve_<TypeName>_<field>(root, info, ...)`` function; this installs a
-    thin ``resolve_<field>`` staticmethod alias onto the type for each, plus
-    the three permission-annotation fields, so those tests keep working
-    unchanged. Strawberry ignores arbitrary ``resolve_*`` attributes (only
-    ``@strawberry.field`` methods and annotated fields matter), so the aliases
-    are inert for schema execution.
-    """
-    import sys
-
-    module = sys.modules.get(strawberry_type.__module__)
-    if module is not None:
-        prefix = f"_resolve_{type_name}_"
-        for attr_name in dir(module):
-            if attr_name.startswith(prefix):
-                field = attr_name[len(prefix) :]
-                fn = getattr(module, attr_name)
-                if callable(fn) and not hasattr(strawberry_type, f"resolve_{field}"):
-                    setattr(strawberry_type, f"resolve_{field}", staticmethod(fn))
-        # graphene ``get_node`` / ``get_queryset`` classmethods (some unit
-        # tests — e.g. test_doc_annotations_prefetch — call them directly).
-        for hook in ("get_node", "get_queryset"):
-            hook_fn = getattr(module, f"_{hook}_{type_name}", None)
-            if callable(hook_fn) and not hasattr(strawberry_type, hook):
-                setattr(strawberry_type, hook, staticmethod(hook_fn))
-
-    # Permission-annotation fields live in the shared core module, not the
-    # per-type module, so alias them explicitly.
-    from config.graphql.core import permissions as _perm
-
-    for field, fn in (
-        ("my_permissions", _perm.resolve_my_permissions),
-        ("is_published", _perm.resolve_is_published),
-        ("object_shared_with", _perm.resolve_object_shared_with),
-    ):
-        if not hasattr(strawberry_type, f"resolve_{field}"):
-            setattr(strawberry_type, f"resolve_{field}", staticmethod(fn))
 
 
 def get_registry_entry(type_name: str) -> TypeRegistryEntry | None:
@@ -345,8 +298,8 @@ class ConnectionValue:
     def __init__(self, edges: list[Any], page_info: PageInfo) -> None:
         self.edges = edges
         self.page_info = page_info
-        self.iterable = None
-        self.length = None
+        self.iterable: Any = None
+        self.length: int | None = None
 
 
 class EdgeValue:
@@ -374,9 +327,7 @@ def _resolve_current_page(root: ConnectionValue, info: strawberry.Info) -> int:
 
 def _resolve_page_count(root: ConnectionValue, info: strawberry.Info) -> int:
     """Port of ``PdfPageAwareConnection.resolve_page_count``."""
-    return max(
-        list(root.iterable.values_list("page", flat=True).distinct())  # type: ignore[attr-defined]
-    )
+    return max(list(root.iterable.values_list("page", flat=True).distinct()))
 
 
 def make_connection_types(
@@ -484,8 +435,6 @@ def resolve_connection_from_iterable(
         get_offset_with_default(args.get("after"), -1) + 1,
         array_length,
     )
-    array_slice_length = array_length - slice_start
-
     if (
         max_limit is not None
         and args.get("first", None) is None
@@ -493,33 +442,50 @@ def resolve_connection_from_iterable(
     ):
         args["first"] = max_limit
 
-    connection = connection_from_array_slice(
-        iterable[slice_start:],
-        args,
-        slice_start=slice_start,
-        array_length=array_length,
-        array_slice_length=array_slice_length,
-        # ``connection_from_array_slice`` invokes this as
-        # ``connection_type(edges=..., pageInfo=...)`` (graphql-relay's camelCase
-        # kwarg); the lambda adapts the ``pageInfo`` kwarg onto
-        # ``ConnectionValue``'s ``page_info`` positional — passing
-        # ``ConnectionValue`` directly would raise on the unexpected kwarg.
-        connection_type=lambda edges, pageInfo: ConnectionValue(  # type: ignore[arg-type]
-            edges, pageInfo
-        ),
-        edge_type=EdgeValue,
-        page_info_type=lambda startCursor, endCursor, hasPreviousPage, hasNextPage: (  # type: ignore[arg-type]
-            PageInfo(
-                has_next_page=hasNextPage,
-                has_previous_page=hasPreviousPage,
-                start_cursor=startCursor,
-                end_cursor=endCursor,
-            )
+    # Compute the requested window before evaluating a queryset. Preserve
+    # cursor bounds and directional page flags from the existing API.
+    start_offset = max(slice_start, 0)
+    end_offset = array_length
+    after = args.get("after")
+    before = args.get("before")
+    after_offset = get_offset_with_default(after, -1)
+    before_offset = get_offset_with_default(before, end_offset)
+    if 0 <= after_offset < array_length:
+        start_offset = max(start_offset, after_offset + 1)
+    if 0 <= before_offset < array_length:
+        end_offset = min(end_offset, before_offset)
+
+    first, last = args.get("first"), args.get("last")
+    if isinstance(first, int):
+        if first < 0:
+            raise ValueError("Argument 'first' must be a non-negative integer.")
+        end_offset = min(end_offset, start_offset + first)
+    if isinstance(last, int):
+        if last < 0:
+            raise ValueError("Argument 'last' must be a non-negative integer.")
+        start_offset = max(start_offset, end_offset - last)
+
+    window = iterable[slice_start:][
+        start_offset - slice_start : end_offset - slice_start
+    ]
+    edges = [
+        EdgeValue(node=value, cursor=offset_to_cursor(start_offset + index))
+        for index, value in enumerate(window)
+    ]
+    connection = ConnectionValue(
+        edges,
+        PageInfo(
+            start_cursor=edges[0].cursor if edges else None,
+            end_cursor=edges[-1].cursor if edges else None,
+            has_previous_page=isinstance(last, int)
+            and start_offset > (after_offset + 1 if after else 0),
+            has_next_page=isinstance(first, int)
+            and end_offset < (before_offset if before else array_length),
         ),
     )
-    connection.iterable = iterable  # type: ignore[attr-defined]
-    connection.length = array_length  # type: ignore[attr-defined]
-    return connection  # type: ignore[return-value]
+    connection.iterable = iterable
+    connection.length = array_length
+    return connection
 
 
 def resolve_django_connection(

@@ -331,9 +331,8 @@ def _resolve_UserType_reputation_for_corpus(root, info, corpus_id):
 
     Port of UserType.resolve_reputation_for_corpus
     """
-    from graphql_relay import from_global_id
-
     from opencontractserver.conversations.models import UserReputation
+    from opencontractserver.utils.ids import from_global_id
 
     try:
         _, corpus_pk = from_global_id(corpus_id)

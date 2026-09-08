@@ -25,7 +25,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.test import TestCase
 from django.utils import timezone
-from graphql_relay import to_global_id
 
 from config.graphql import conversation_types as ct
 from config.graphql.schema import schema
@@ -56,6 +55,7 @@ from opencontractserver.notifications.models import (
 )
 from opencontractserver.research.models import ResearchReport
 from opencontractserver.types.enums import JobStatus, PermissionTypes
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()

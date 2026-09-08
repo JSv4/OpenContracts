@@ -854,5 +854,5 @@ class BaselineOriginGraphQLExposureTests(TestCase):
     def test_baseline_origin_exposed_on_namespace_node(self):
         from config.graphql.schema import schema
 
-        fields = schema.graphql_schema.type_map["AuthorityNamespaceNode"].fields
+        fields = schema._schema.type_map["AuthorityNamespaceNode"].fields
         assert "baselineOrigin" in fields

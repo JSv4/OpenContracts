@@ -25,7 +25,6 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
-from graphql_relay import to_global_id
 from rest_framework.test import APIClient
 
 from opencontractserver.constants.zip_import import (
@@ -38,6 +37,7 @@ from opencontractserver.corpuses.models import (
 )
 from opencontractserver.documents.models import Document
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 User = get_user_model()
@@ -844,7 +844,7 @@ class DocumentImportRealJWTAuthTests(TestCase):
 
     def test_real_jwt_authenticates_single_doc_upload(self):
         """A valid JWT minted via graphql_jwt must authorise the upload."""
-        from graphql_jwt.shortcuts import get_token
+        from config.jwt_auth.shortcuts import get_token
 
         self._set_bearer(get_token(self.user))
         response = self.client.post(
@@ -869,7 +869,7 @@ class DocumentImportRealJWTAuthTests(TestCase):
 
     def test_tampered_jwt_is_rejected(self):
         """A token with a flipped signature byte must NOT authenticate."""
-        from graphql_jwt.shortcuts import get_token
+        from config.jwt_auth.shortcuts import get_token
 
         token = get_token(self.user)
         # Flip a char in the middle of the signature segment. The trailing
@@ -897,7 +897,7 @@ class DocumentImportRealJWTAuthTests(TestCase):
         """An expired bearer JWT must be rejected with 401/403."""
         from datetime import timedelta
 
-        from graphql_jwt.shortcuts import get_token
+        from config.jwt_auth.shortcuts import get_token
 
         # JWT_EXPIRATION_DELTA is read at import time; emit a token whose
         # exp is firmly in the past by overriding the setting for this test.

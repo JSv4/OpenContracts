@@ -83,7 +83,7 @@ def validate_documents(root: pathlib.Path):
             continue  # fragment-only — interpolated client-side
         checked += 1
         doc = strip_client_fields(doc)
-        errors = validate(schema.graphql_schema, doc, rules)
+        errors = validate(schema._schema, doc, rules)
         if errors:
             name = re.search(r"(query|mutation|subscription)\s+(\w+)", doc_text)
             failures.append(

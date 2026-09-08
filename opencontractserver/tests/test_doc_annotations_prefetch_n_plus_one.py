@@ -46,10 +46,9 @@ from typing import Any
 from django.db import connection
 from django.test import override_settings
 from django.test.utils import CaptureQueriesContext
-from graphql_relay import to_global_id
 
 from config.graphql.core.permissions import get_anonymous_user_id
-from config.graphql.corpus_types import CorpusType
+from config.graphql.corpus_types import _get_node_CorpusType
 from config.graphql.custom_resolvers import (
     SUPPORTED_FILTER_KEYS,
     UNSUPPORTED_FILTER_KEYS,
@@ -63,6 +62,7 @@ from opencontractserver.annotations.models import (
     AnnotationLabel,
 )
 from opencontractserver.tests.base import BaseFixtureTestCase
+from opencontractserver.utils.ids import to_global_id
 
 # The actual shape the frontend sends after the migration to ``docTypeLabels``.
 _BADGE_QUERY = """
@@ -308,13 +308,13 @@ class DocTypeLabelsBadgeNPlusOneTests(BaseFixtureTestCase):
 
         info = _FakeInfo(_Ctx(self.user))
         with CaptureQueriesContext(connection) as ctx:
-            first = CorpusType.get_node(info, self.corpus.pk)
+            first = _get_node_CorpusType(info, self.corpus.pk)
         first_call_queries = len(ctx.captured_queries)
         self.assertIsNotNone(first)
 
         with CaptureQueriesContext(connection) as ctx2:
             for _ in range(10):
-                cached = CorpusType.get_node(info, self.corpus.pk)
+                cached = _get_node_CorpusType(info, self.corpus.pk)
                 self.assertEqual(cached.pk, first.pk)
         self.assertEqual(
             len(ctx2.captured_queries),

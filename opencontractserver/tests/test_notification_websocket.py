@@ -318,7 +318,7 @@ class NotificationWebSocketTestCase(WebsocketFixtureBaseTestCase):
         user2 = await database_sync_to_async(
             lambda: User.objects.get(username="testuser2")
         )()
-        from graphql_jwt.shortcuts import get_token
+        from config.jwt_auth.shortcuts import get_token
 
         user2_token_str = await database_sync_to_async(get_token)(user2)
 

@@ -34,7 +34,6 @@ import strawberry
 from django.contrib.postgres.search import SearchQuery
 from django.db.models import Q
 from django.db.models.functions import Left
-from graphql_relay import from_global_id
 
 from config.graphql._util import strip_unset
 from config.graphql.core.auth import login_required
@@ -55,6 +54,7 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.documents.models import Document
 from opencontractserver.shared.services.base import BaseService
 from opencontractserver.users.models import User
+from opencontractserver.utils.ids import from_global_id
 
 logger = _logging.getLogger(__name__)
 

@@ -23,12 +23,10 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from asgiref.sync import async_to_sync
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.test import TestCase, TransactionTestCase
-from graphene_django.utils.testing import GraphQLTestCase
-from graphql_relay import to_global_id
 
+from config.graphql.testing import GraphQLTestCase
 from opencontractserver.agents.models import AgentConfiguration
 from opencontractserver.annotations.models import Annotation
 from opencontractserver.constants.tools import (
@@ -40,9 +38,9 @@ from opencontractserver.corpuses.services import CorpusGroupService
 from opencontractserver.corpuses.services.corpus_groups import GROUP_NOT_FOUND_MESSAGE
 from opencontractserver.documents.models import Document
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.users.models import User
+from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
-
-User = get_user_model()
 
 
 class CorpusGroupModelTests(TestCase):
@@ -731,6 +729,10 @@ class CorpusGroupMineFilterTests(GraphQLTestCase):
     """
 
     GRAPHQL_URL = "/graphql/"
+    me: User
+    other: User
+    my_group: CorpusGroup
+    other_public_group: CorpusGroup
 
     @classmethod
     def setUpTestData(cls):
@@ -796,6 +798,11 @@ class CorpusGroupGraphQLTests(GraphQLTestCase):
     """Permission boundaries on the GraphQL surface."""
 
     GRAPHQL_URL = "/graphql/"
+    owner: User
+    stranger: User
+    owner_corpus: Corpus
+    public_corpus: Corpus
+    group: CorpusGroup
 
     @classmethod
     def setUpTestData(cls):

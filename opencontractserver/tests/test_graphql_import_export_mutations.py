@@ -5,7 +5,6 @@ import pathlib
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.test import TestCase
-from graphql_relay import to_global_id
 
 from config.graphql.schema import schema
 from config.graphql.testing import Client
@@ -14,6 +13,7 @@ from opencontractserver.corpuses.models import Corpus
 from opencontractserver.tests.fixtures import SAMPLE_PDF_FILE_TWO_PATH
 from opencontractserver.types.dicts import OpenContractsAnnotatedDocumentImportType
 from opencontractserver.types.enums import LabelType
+from opencontractserver.utils.ids import to_global_id
 
 User = get_user_model()
 

@@ -13,7 +13,6 @@ import traceback
 from collections.abc import Sequence
 from typing import Any
 
-from graphql_relay import from_global_id, to_global_id
 from rest_framework import serializers
 
 from config.graphql.core.auth import PermissionDenied
@@ -21,6 +20,7 @@ from config.ratelimit.decorators import graphql_ratelimit
 from config.ratelimit.rates import RateLimits
 from opencontractserver.shared.services.base import BaseService
 from opencontractserver.types.enums import PermissionTypes
+from opencontractserver.utils.ids import from_global_id, to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
 
 logger = logging.getLogger(__name__)

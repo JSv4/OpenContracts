@@ -72,8 +72,9 @@ class GraphQLView(_StrawberryGraphQLView):
             # malformed/unknown/inactive API keys (DRF ``AuthenticationFailed``
             # raised by ``ApiKeyBackend`` when ``USE_API_KEY_AUTH=True``) both
             # become a 200 error payload rather than an unhandled 500.
-            from graphql_jwt.exceptions import JSONWebTokenError
             from rest_framework.exceptions import AuthenticationFailed
+
+            from config.jwt_auth.exceptions import JSONWebTokenError
 
             if isinstance(exc, (JSONWebTokenError, AuthenticationFailed)):
                 return JsonResponse(

@@ -32,7 +32,6 @@ from typing import Annotated
 
 import strawberry
 from django.conf import settings
-from graphql_relay import from_global_id
 
 from config.graphql._util import strip_unset
 from config.graphql.core.auth import PermissionDenied, user_passes_test
@@ -43,6 +42,7 @@ from config.graphql.core.scalars import GenericScalar
 from config.graphql.ratelimits import RateLimits, graphql_ratelimit
 from config.telemetry import record_event
 from opencontractserver.analyzer.services import AnalysisLifecycleService
+from opencontractserver.utils.ids import from_global_id
 
 logger = logging.getLogger(__name__)
 

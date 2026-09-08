@@ -6,7 +6,13 @@ venv/
 .venv/
 env/
 .env
-.envs/.local/
+# The WHOLE .envs/ tree, not just .local/. `.envs/.production/.django` is real
+# credential material on a developer's disk (untracked, ~60 assignments) plus a
+# CREDENTIALS.md — excluding only .local/ baked those into the production image.
+# Nothing inside the image reads .envs/: compose consumes it host-side via
+# `env_file:`, and the k8s pods get config from the Secret Manager CSI mount at
+# /var/secrets/django/.env.
+.envs/
 .vscode/
 .idea/
 
@@ -15,16 +21,21 @@ env/
 .gitignore
 .github/
 
-# Python build artefacts and caches
-__pycache__/
-*.py[cod]
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+# Python build artefacts and caches.
+# NOTE: .dockerignore patterns are matched against the full path relative to
+# the context root and do NOT recurse implicitly the way .gitignore does — a
+# bare `__pycache__/` excludes only the one at the root. The `**/` prefix is
+# what catches the ~70 nested cache dirs under opencontractserver/ and config/.
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
 .tox/
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
 
 # Frontend has its own image
@@ -56,6 +67,18 @@ static/
 site/
 .ipython/
 
+# Local scratch corpora, fetch caches, and pilot data. These are all gitignored
+# developer state, but .dockerignore is independent of .gitignore — without
+# these entries `COPY .` uploads them to the daemon and bakes them into the
+# production image (~13GB as of 2026-09, dominated by .pilot_data/).
+# `.authority_packs*` deliberately covers the live cache, the _test/ variant,
+# and any ad-hoc `.pre-native-backup`-style copies left on disk.
+.pilot_data/
+.authority_packs*
+.eval_extract/
+demo/
+imports/
+
 # Top-level docs (CHANGELOG.md is intentionally retained)
 README.md
 CLAUDE.md
@@ -64,3 +87,7 @@ CLAUDE.md
 .pre-commit-config.yaml
 .cursor/
 .claude/
+.claire/
+.playwright-mcp/
+node_modules/
+screenshots/

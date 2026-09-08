@@ -76,7 +76,7 @@ strawberry-graphql==0.323.2  # code-first GraphQL; replaced graphene-django (sch
 
 # Telemetry
 # ------------------------------------------------------------------------------
-posthog==7.45.3  # https://github.com/posthog/posthog-python
+posthog==7.47.0  # https://github.com/posthog/posthog-python
 
 # Model Context Protocol
 # ------------------------------------------------------------------------------

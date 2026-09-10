@@ -81,6 +81,8 @@ To enable PDF, DOCX and TXT, use the bundled
 
 ```bash
 export OC_PARSER_CONFIG=/app/scripts/remote_ingest/parser-config.example.json
+export OC_PARSER_IDENTITY=parser-deployment-v1
+export OC_EMBEDDING_IDENTITY=embedding-model-v1
 # Start the services selected in that file, plus the optional embedder:
 docker compose -f remote_worker.yml up -d docling-parser docxodus-parser vector-embedder
 docker compose -f remote_worker.yml run --rm worker plan --extensions .pdf,.docx,.txt
@@ -143,11 +145,47 @@ TXT emits stable `txt-N` IDs; other parser IDs are preserved.
 `parser_name` is the selected component's title. `parser_version="1.0"` preserves
 the normal structural-set provenance convention: it is **not a discovered
 service/model version**. `LocalParsers.identity(mime)` exposes a defensive copy
-of the class path and effective settings for future preparation fingerprints.
+of the class path, effective settings and implementation fingerprints.
 That in-memory snapshot includes secrets: do not log or persist it. Callers may
 supply different title/description envelopes; PDF `content` is reconstructed
-exactly as normal persistence does. Preparation caching, settings synchronization,
-file conversion, and embedding/completion validation are separate work.
+exactly as normal persistence does. Settings synchronization, file conversion and
+broader completion/readiness reporting remain separate work.
+
+## Preparation checkpoints and source conflicts
+
+The existing `/ledger` volume stores three atomic, digest-verified checkpoints:
+complete parsed export/text, enriched export plus the existing metadata overlay,
+and validated document/annotation embeddings. Restarts and rejected uploads reuse
+every valid stage. Changing a stage's configuration invalidates it and its
+dependents while retaining earlier work. Required annotation IDs, parents,
+relationships and JSON embedding keys are validated consistently on fresh and
+resumed preparation. The uploaded source is the same byte snapshot that was
+hashed and prepared, even if its filesystem path changes in the meantime.
+
+Set `OC_PARSER_IDENTITY` for the parser service deployment (or per-parser
+`identities` in the JSON config), `OC_EMBEDDING_IDENTITY` for the embedding model,
+and `OC_ENRICHER_IDENTITY` when using enrichers. Use stable non-secret revisions;
+bump them when external models, helpers or effective enricher configuration/data
+change. Parser service identities and embedding identities are required for
+`run`; pure TXT parsing and `--no-embeddings` need neither service identity.
+The expected vector dimension is `OC_EMBEDDING_DIMENSION` / `--embedding-dimension`
+(default 384). Partial or invalid embedding responses fail before checkpointing
+or upload. Only `--no-embeddings` requests server annotation fallback.
+
+Replanning changed, unaccepted bytes resets retry exhaustion and stale receipts.
+Changes after `UPLOADED`/`COMPLETED`, or an uncertain POST, produce `CONFLICT` and
+retain the old receipt. Lost responses, 5xx and unusable receipts produce
+`AMBIGUOUS`; these rows are never automatically replayed. An operator must
+reconcile acceptance/replacement with the server. Checkpoints provide local
+recovery, not upload idempotency. Receipt access still requires the exact token
+that created the receipt, even after rotating tokens for the same corpus.
+
+Existing ledgers migrate in place; legacy rows start uncached. `worker cleanup`
+removes unreferenced artifacts older than 24 hours using bounded traversal and
+retains every artifact referenced by an active ledger row, including completed
+or blocked rows. Run one command per ledger at a time. See the
+[checkpoint and recovery reference](../../scripts/remote_ingest/README.md#durable-preparation-identities-and-source-versions)
+for identity examples, retention rules and conflict diagnostics.
 
 ## Setup
 
@@ -197,6 +235,8 @@ export OC_DATA_DIR=/data/pdfs                 # your directory tree of PDFs
 # The embedder authorizes by comparing it to the request's X-API-Key header
 # (its built-in default is "abc123"); a mismatch yields HTTP 401 on embedding.
 export VECTOR_EMBEDDER_API_KEY=<any-value>
+export OC_PARSER_IDENTITY=docling-deployment-v1
+export OC_EMBEDDING_IDENTITY=embedding-model-v1
 
 docker compose -f remote_worker.yml up -d --build docling-parser vector-embedder
 docker compose -f remote_worker.yml run --rm worker plan
@@ -283,7 +323,7 @@ def enrich(ctx: EnricherContext) -> Enrichment:
 ```
 
 ```bash
-docker compose -f remote_worker.yml run --rm worker run --enricher my_enrichers:enrich
+docker compose -f remote_worker.yml run --rm worker run --enricher my_enrichers:enrich --enricher-identity my-config-v1
 ```
 
 What an `Enrichment` can carry (all optional, additive):

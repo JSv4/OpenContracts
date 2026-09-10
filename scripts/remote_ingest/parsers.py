@@ -25,6 +25,7 @@ from opencontractserver.pipeline.base.settings_schema import (
 )
 from opencontractserver.pipeline.utils import get_component_by_name
 from opencontractserver.utils.compact_pawls import expand_pawls_pages
+from scripts.remote_ingest.checkpoints import implementation_digest
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +134,7 @@ class LocalParsers:
 
     default_embedder_path = DEFAULT_EMBEDDER
 
-    def __init__(self, config_path: str | None = None):
+    def __init__(self, config_path: str | None = None, *, identity: str | None = None):
         config: dict[str, Any] = {"parsers": {FileTypeEnum.PDF.mimetype: DOCLING}}
         if config_path:
             try:
@@ -142,16 +143,23 @@ class LocalParsers:
                 raise ValueError(
                     "Cannot read parser config: expected a readable JSON file"
                 ) from None
-        if not isinstance(config, dict) or config.keys() - {"parsers", "settings"}:
+        if not isinstance(config, dict) or config.keys() - {
+            "parsers",
+            "settings",
+            "identities",
+        }:
             raise ValueError(
-                "Parser config supports only 'parsers' and 'settings' objects"
+                "Parser config supports only 'parsers', 'settings' and 'identities' objects"
             )
         mapping = config.get("parsers")
         overrides = config.get("settings", {})
+        identities = config.get("identities", {})
         if (
             not isinstance(mapping, dict)
             or not mapping
             or not isinstance(overrides, dict)
+            or not isinstance(identities, dict)
+            or any(not isinstance(v, str) or not v.strip() for v in identities.values())
         ):
             raise ValueError(
                 "Parser config requires a non-empty MIME-to-parser 'parsers' object"
@@ -225,22 +233,41 @@ class LocalParsers:
                 "settings": deepcopy(effective),
                 "parser_name": parser.title,
                 "parser_version": "1.0",
+                "operator_identity": identities.get(path) or identity,
+                "implementation": [
+                    implementation_digest(component),
+                    implementation_digest(normalize_and_validate_export),
+                    implementation_digest(build_translation_layer),
+                    implementation_digest(expand_pawls_pages),
+                ],
             }
             logger.info("%s ready for %s", parser.title, mime)
-        if overrides.keys() - selected_paths:
+        if (overrides.keys() | identities.keys()) - selected_paths:
             raise ValueError(
-                "Settings keys must be full class paths of selected parsers"
+                "Settings/identities keys must be full class paths of selected parsers"
             )
 
     def identity(self, mime: str) -> dict:
         return deepcopy(self.identities[canonical_mime(mime)])
 
-    def parse(self, source_bytes: bytes, *, filename: str) -> dict:
+    def require_checkpoint_identities(self) -> None:
+        for identity in self.identities.values():
+            if identity["class_path"] != TXT and not identity["operator_identity"]:
+                raise ValueError(
+                    "Parser service revision is unknown: set --parser-identity "
+                    "or per-parser 'identities' in the parser config"
+                )
+
+    def source_mime(self, source_bytes: bytes, *, filename: str) -> str:
         mime = canonical_mime(detect_mime_type(source_bytes, filename))
         if mime not in self.parsers:
             raise ValueError(
                 f"No local parser selected for {mime}; add it to the parser config"
             )
+        return mime
+
+    def parse(self, source_bytes: bytes, *, filename: str) -> dict:
+        mime = self.source_mime(source_bytes, filename=filename)
         parser, method = self.parsers[mime]
         kwargs = {}
         source: bytes | str = source_bytes

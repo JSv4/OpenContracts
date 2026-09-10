@@ -178,7 +178,7 @@ class SchedulingTests(unittest.TestCase):
                 test.assertLessEqual(peaks["unfinished"], window)
                 return future
 
-        def process(cfg, parser, embedder, client, row, enrichers):
+        def process(cfg, parser, embedder, client, row, enrichers, ledger):
             self.assertTrue(
                 release.wait(3), "coordinator did not reach its bounded window"
             )
@@ -435,13 +435,42 @@ class SchedulingTests(unittest.TestCase):
             self.assertEqual(cli.cmd_plan(replace(self.cfg, limit=1)), 0)
         rows = {row["rel_path"]: row for row in self.ledger.claimable(7)}
         self.assertEqual(set(rows), {"sub/old.PDF", "sub/new.PDF"})
-        self.assertEqual(rows["sub/old.PDF"]["sha256"], "old-hash")
+        self.assertEqual(
+            rows["sub/old.PDF"]["sha256"], hashlib.sha256(b"old.PDF").hexdigest()
+        )
         self.assertEqual(
             rows["sub/new.PDF"]["sha256"], hashlib.sha256(b"new.PDF").hexdigest()
         )
         self.assertEqual(rows["sub/new.PDF"]["size"], 7)
         self.assertEqual([handle.consumed for handle in handles], [1, 2])
         self.assertTrue(all(handle.closed for handle in handles))
+
+    def test_cleanup_traversal_uses_bounded_pages_and_preserves_every_status(self):
+        from scripts.remote_ingest.checkpoints import Checkpoints
+
+        self.populate(
+            75,
+            statuses=(
+                cli.PENDING,
+                cli.FAILED,
+                cli.PARKED,
+                cli.UPLOADED,
+                cli.COMPLETED,
+                cli.AMBIGUOUS,
+                cli.CONFLICT,
+            ),
+        )
+        visited = []
+
+        def prune(cache):
+            visited.append(cache.path.name)
+            self.assertFalse(cache.path.exists())  # no caches created by cleanup
+            return 0
+
+        with patch.object(Checkpoints, "prune", prune):
+            self.assertEqual(cli.cmd_cleanup(self.cfg), 0)
+        self.assertEqual(len(set(visited)), 75)
+        self.assert_pages_bounded(self.cfg.ledger_page_size)
 
     def test_scanner_extensions_links_and_posix_paths(self):
         (self.root / "nested").mkdir()

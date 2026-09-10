@@ -21,14 +21,17 @@
 #                                            # embedder service + the worker below
 #                                            # (mismatch -> HTTP 401 on embedding)
 #
+#   export OC_PARSER_IDENTITY=docling-deployment-v1
+#   export OC_EMBEDDING_IDENTITY=embedding-model-v1
+#
 #   cd scripts/remote_ingest
 #   docker compose -f remote_worker.yml up -d --build docling-parser vector-embedder
 #   docker compose -f remote_worker.yml run --rm worker plan
 #   docker compose -f remote_worker.yml run --rm worker run --max-workers 8
 #   docker compose -f remote_worker.yml run --rm worker verify
 #
-# The ledger is persisted in a named volume, so `run` is fully resumable —
-# re-run it after an interruption and it skips finished documents.
+# Ledger and preparation checkpoints persist in one named volume. Ambiguous
+# uploads stop for operator reconciliation; local recovery is not POST idempotency.
 # ===========================================================================
 name: oc-remote-worker
 
@@ -81,6 +84,11 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.remote_worker
       OC_PARSER_CONFIG: ${OC_PARSER_CONFIG:-}
+      # Stable, non-secret deployment/model/config revisions; bump on changes.
+      OC_PARSER_IDENTITY: ${OC_PARSER_IDENTITY:-}
+      OC_EMBEDDING_IDENTITY: ${OC_EMBEDDING_IDENTITY:-}
+      OC_EMBEDDING_DIMENSION: ${OC_EMBEDDING_DIMENSION:-384}
+      OC_ENRICHER_IDENTITY: ${OC_ENRICHER_IDENTITY:-}
       DOCLING_PARSER_SERVICE_URL: ${DOCLING_PARSER_SERVICE_URL:-http://docling-parser:8000/parse/}
       DOCXODUS_PARSER_SERVICE_URL: ${DOCXODUS_PARSER_SERVICE_URL:-http://docxodus-parser:8080/parse}
       WARP_INGEST_PARSER_SERVICE_URL: ${WARP_INGEST_PARSER_SERVICE_URL:-http://warp-ingest:5001/api/parse}

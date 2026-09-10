@@ -16,6 +16,7 @@ import argparse
 import hashlib
 import json
 import logging
+import math
 import os
 import random
 import sqlite3
@@ -25,11 +26,15 @@ import time
 from collections.abc import Generator, Mapping
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from contextlib import closing
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from io import BytesIO
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 
 import requests
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 if TYPE_CHECKING:  # avoid importing enrichers (needs Django path) at module load
     from enrichers import MetadataOverlay
@@ -62,6 +67,8 @@ UPLOADED = "UPLOADED"  # staged on the server (202 accepted), not yet confirmed
 COMPLETED = "COMPLETED"  # server confirmed terminal success
 FAILED = "FAILED"  # retry-eligible
 PARKED = "PARKED"  # retries exhausted (terminal)
+AMBIGUOUS = "AMBIGUOUS"  # POST started; acceptance/receipt cannot be established
+CONFLICT = "CONFLICT"  # changed source with an accepted or ambiguous prior version
 
 
 # ======================================================================
@@ -98,8 +105,12 @@ class Ledger:
                     ON docs(rel_path) WHERE status='UPLOADED' AND upload_id IS NOT NULL;
                 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
                 PRAGMA journal_mode=WAL;
-                PRAGMA synchronous=NORMAL;
+                PRAGMA synchronous=FULL;
                 """)
+            columns = {r["name"] for r in conn.execute("PRAGMA table_info(docs)")}
+            for name in ("prior_status", "conflict_sha256"):
+                if name not in columns:
+                    conn.execute(f"ALTER TABLE docs ADD COLUMN {name} TEXT")
 
     def _conn(self) -> sqlite3.Connection:
         # One connection per thread (sqlite connections are not thread-safe).
@@ -108,6 +119,8 @@ class Ledger:
             conn = sqlite3.connect(self.path, timeout=60, isolation_level=None)
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA busy_timeout=60000;")
+            # In particular, the pre-POST AMBIGUOUS marker must survive power loss.
+            conn.execute("PRAGMA synchronous=FULL;")
             self._local.conn = conn
         return conn
 
@@ -129,14 +142,72 @@ class Ledger:
     def upsert_doc(
         self, rel_path: str, abs_path: str, size: int, sha256: str, now: float
     ) -> bool:
-        """Insert a doc if new. Returns True if inserted, False if it already existed."""
+        """Reconcile source versions. Return True only for a newly planned path.
+
+        Accepted/unknown uploads retain their source hash and receipt on conflict.
+        A server-rejected version (FAILED/PARKED) may be replaced safely.
+        """
         cur = self._conn().execute(
             "INSERT INTO docs(rel_path, abs_path, size, sha256, status, created_at) "
             "VALUES(?, ?, ?, ?, 'PENDING', ?) "
             "ON CONFLICT(rel_path) DO NOTHING",
             (rel_path, abs_path, size, sha256, now),
         )
-        return cur.rowcount > 0
+        if cur.rowcount > 0:
+            return True
+        row = self.get_doc(rel_path)
+        if row["sha256"] == sha256:
+            self._conn().execute(
+                "UPDATE docs SET abs_path=?, size=?, "
+                "status=COALESCE(prior_status, status), prior_status=NULL, "
+                "conflict_sha256=NULL WHERE rel_path=?",
+                (abs_path, size, rel_path),
+            )
+        elif row["status"] in (UPLOADED, COMPLETED, AMBIGUOUS, CONFLICT):
+            self._conn().execute(
+                "UPDATE docs SET prior_status=COALESCE(prior_status, status), "
+                "status='CONFLICT', conflict_sha256=?, abs_path=? WHERE rel_path=?",
+                (sha256, abs_path, rel_path),
+            )
+            logger.error(
+                "%s: source changed after upload; prior receipt retained. "
+                "Resolve an explicit replace/new-document policy before continuing.",
+                rel_path,
+            )
+        else:
+            self._conn().execute(
+                "UPDATE docs SET abs_path=?, size=?, sha256=?, status='PENDING', "
+                "upload_id=NULL, attempts=0, page_count=NULL, last_error=NULL, "
+                "uploaded_at=NULL, completed_at=NULL, prior_status=NULL, "
+                "conflict_sha256=NULL WHERE rel_path=?",
+                (abs_path, size, sha256, rel_path),
+            )
+        return False
+
+    def get_doc(self, rel_path: str) -> sqlite3.Row:
+        return (
+            self._conn()
+            .execute("SELECT * FROM docs WHERE rel_path=?", (rel_path,))
+            .fetchone()
+        )
+
+    def mark_upload_started(self, rel_path: str) -> None:
+        self._conn().execute(
+            "UPDATE docs SET status='AMBIGUOUS', upload_id=NULL, "
+            "uploaded_at=NULL, completed_at=NULL, "
+            "last_error='Upload started; outcome unknown. Reconcile with the server before replay.' "
+            "WHERE rel_path=?",
+            (rel_path,),
+        )
+
+    def mark_rejected(self, rel_path: str) -> None:
+        self._conn().execute(
+            "UPDATE docs SET status='FAILED' WHERE rel_path=? AND status='AMBIGUOUS'",
+            (rel_path,),
+        )
+
+    def blocked_count(self) -> int:
+        return self._count("status IN ('CONFLICT', 'AMBIGUOUS')")
 
     def _iter_rows(
         self, where: str, index: str, page_size: int
@@ -215,8 +286,19 @@ class Ledger:
     def mark_failed(self, rel_path: str, error: str, max_attempts: int) -> None:
         conn = self._conn()
         row = conn.execute(
-            "SELECT attempts FROM docs WHERE rel_path=?", (rel_path,)
+            "SELECT attempts, status FROM docs WHERE rel_path=?", (rel_path,)
         ).fetchone()
+        if row and row["status"] == AMBIGUOUS:
+            conn.execute(
+                "UPDATE docs SET last_error=? WHERE rel_path=?",
+                (
+                    f"Ambiguous upload; reconcile before replay: {error}"[:1000],
+                    rel_path,
+                ),
+            )
+            return  # Preparation retries must never authorize an uncertain POST replay.
+        if row and row["status"] == CONFLICT:
+            return
         attempts = (row["attempts"] if row else 0) + 1
         status = PARKED if attempts >= max_attempts else FAILED
         conn.execute(
@@ -257,6 +339,10 @@ class Config:
     enrichers: list[str]
     parser_config: str | None = None
     ledger_page_size: int = DEFAULT_LEDGER_PAGE_SIZE
+    enricher_identity: str | None = None
+    embedding_identity: str | None = None
+    embedding_dimension: int = 384
+    parser_identity: str | None = None
 
 
 class TargetClient:
@@ -273,49 +359,55 @@ class TargetClient:
     def _backoff(attempt: int) -> float:
         return min(2.0 * (2 ** (attempt - 1)), 60.0) * random.uniform(_JITTER_MIN, 1.0)
 
-    def upload(self, source_path: str, metadata: dict) -> str:
-        """POST a document. Returns the server upload_id. Raises on permanent failure."""
+    def upload(self, source_bytes: bytes, metadata: dict, *, filename: str) -> str:
+        """Send the immutable preparation snapshot; never replay an uncertain POST.
+
+        Only explicit 429 rejections are retried. A transport error, 5xx, redirect
+        or unusable success receipt can follow acceptance and is ambiguous.
+        """
         url = f"{self.base}/api/worker-uploads/documents/"
-        meta_json = json.dumps(metadata)
-        last_error = "unknown"
+        meta_json = json.dumps(metadata, allow_nan=False)
         for attempt in range(1, _HTTP_MAX_RETRIES + 1):
             try:
-                with open(source_path, "rb") as fh:
+                with BytesIO(source_bytes) as fh:
                     resp = self.session.post(
                         url,
-                        files={
-                            "file": (
-                                PurePosixPath(source_path).name,
-                                fh,
-                                metadata["file_type"],
-                            )
-                        },
+                        files={"file": (filename, fh, metadata["file_type"])},
                         data={"metadata": meta_json},
                         timeout=300,
                         verify=self._verify,
+                        allow_redirects=False,
                     )
-                if resp.status_code == 202:
-                    return resp.json()["upload_id"]
-                if resp.status_code == 429:
-                    wait = float(resp.headers.get("Retry-After", "60"))
-                    logger.warning(f"429 rate-limited; sleeping {wait}s")
-                    time.sleep(wait)
-                    continue
-                if 400 <= resp.status_code < 500:
-                    # Permanent (bad payload / auth / too large) — do not retry.
-                    raise PermanentUploadError(
-                        f"HTTP {resp.status_code}: {resp.text[:500]}"
-                    )
-                last_error = f"HTTP {resp.status_code}: {resp.text[:300]}"
-            except PermanentUploadError:
-                raise
-            except requests.RequestException as e:
-                last_error = f"network: {e}"
-            if attempt < _HTTP_MAX_RETRIES:
-                time.sleep(self._backoff(attempt))
-        raise TransientUploadError(
-            f"upload failed after {_HTTP_MAX_RETRIES} attempts: {last_error}"
-        )
+            except requests.RequestException:
+                raise AmbiguousUploadError(
+                    "Upload response lost; reconcile server acceptance before replay"
+                ) from None
+            if resp.status_code == 202:
+                try:
+                    receipt = resp.json()["upload_id"]
+                    if not isinstance(receipt, str) or not receipt.strip():
+                        raise ValueError
+                    return receipt
+                except (ValueError, KeyError, TypeError):
+                    raise AmbiguousUploadError(
+                        "Upload accepted without a usable receipt; reconcile with server"
+                    ) from None
+            if resp.status_code == 429:
+                if attempt < _HTTP_MAX_RETRIES:
+                    try:
+                        delay = float(resp.headers.get("Retry-After", "60"))
+                        if not math.isfinite(delay) or delay < 0:
+                            raise ValueError
+                    except (ValueError, TypeError):
+                        delay = self._backoff(attempt)
+                    time.sleep(min(delay, 300))
+                continue
+            if 400 <= resp.status_code < 500:
+                raise PermanentUploadError(f"Upload rejected: HTTP {resp.status_code}")
+            raise AmbiguousUploadError(
+                f"Upload outcome unknown: HTTP {resp.status_code}; reconcile before replay"
+            )
+        raise TransientUploadError("Upload rejected: rate limit retries exhausted")
 
     def upload_status(self, upload_id: str) -> dict | None:
         url = f"{self.base}/api/worker-uploads/documents/{upload_id}/"
@@ -348,6 +440,10 @@ class TransientUploadError(Exception):
     pass
 
 
+class AmbiguousUploadError(Exception):
+    pass
+
+
 # ======================================================================
 # Embedder client (vector-embedder microservice)
 # ======================================================================
@@ -356,12 +452,22 @@ class TransientUploadError(Exception):
 class EmbedderClient:
     """Thin HTTP client for the vector-embedder microservice."""
 
-    def __init__(self, service_url: str, api_key: str | None, batch_size: int):
+    def __init__(
+        self,
+        service_url: str,
+        api_key: str | None,
+        batch_size: int,
+        *,
+        dimension: int = 384,
+        identity: str | None = None,
+    ):
         self.base = service_url.rstrip("/")
         self.session = requests.Session()
         if api_key:
             self.session.headers["X-API-Key"] = api_key
         self.batch_size = batch_size
+        self.dimension = dimension
+        self.identity = identity
 
     def embed_text(self, text: str) -> list[float] | None:
         if not text or not text.strip():
@@ -372,14 +478,11 @@ class EmbedderClient:
         resp.raise_for_status()
         return self._coerce_vector(resp.json().get("embeddings"))
 
-    @staticmethod
-    def _coerce_vector(vec) -> list[float] | None:
-        """Accept either a 1-D vector or a 2-D ``[[...]]`` single-row response."""
-        if not isinstance(vec, list) or not vec:
-            return None
-        if isinstance(vec[0], list):  # 2-D (batch-shaped) single response
-            inner = vec[0]
-            return inner if inner else None
+    def _coerce_vector(self, vec) -> list[float]:
+        """The same flat/singleton-row wire shapes used by MicroserviceEmbedder."""
+        if isinstance(vec, list) and len(vec) == 1 and isinstance(vec[0], list):
+            vec = vec[0]
+        _validate_vector(vec, self.dimension)
         return vec
 
     def embed_batch(self, texts: list[str]) -> list[list[float] | None]:
@@ -397,15 +500,14 @@ class EmbedderClient:
             )
             resp.raise_for_status()
             vecs = resp.json().get("embeddings")
-            if not isinstance(vecs, list):
-                continue
+            if not isinstance(vecs, list) or len(vecs) != len(chunk_idxs):
+                raise ValueError("Embedding batch cardinality does not match inputs")
             for local_i, vec in enumerate(vecs):
                 # The batch endpoint wraps each row one level deeper than the
                 # single endpoint (per-item shape is ``[[...floats...]]``), so
                 # coerce each row down to a flat numeric vector.
                 coerced = self._coerce_vector(vec)
-                if coerced is not None:
-                    out[chunk_idxs[local_i]] = coerced
+                out[chunk_idxs[local_i]] = coerced
         return out
 
 
@@ -417,8 +519,11 @@ class EmbedderClient:
 class _Parser:
     """Bootstrap Django imports, then use explicitly configured local parsers."""
 
-    def __init__(self, config_path: str | None = None) -> None:
+    def __init__(
+        self, config_path: str | None = None, identity: str | None = None
+    ) -> None:
         self.config_path = config_path
+        self.operator_identity = identity
         self._parsers: LocalParsers | None = None
 
     def ensure_ready(self) -> LocalParsers:
@@ -433,7 +538,9 @@ class _Parser:
         django.setup()
         from scripts.remote_ingest.parsers import LocalParsers
 
-        self._parsers = LocalParsers(self.config_path)
+        parsers = LocalParsers(self.config_path, identity=self.operator_identity)
+        parsers.require_checkpoint_identities()
+        self._parsers = parsers
         return self._parsers
 
     @property
@@ -445,6 +552,9 @@ class _Parser:
 
     def identity(self, mime: str) -> dict:
         return self.ensure_ready().identity(mime)
+
+    def source_mime(self, source_bytes: bytes, *, filename: str) -> str:
+        return self.ensure_ready().source_mime(source_bytes, filename=filename)
 
 
 # ======================================================================
@@ -565,37 +675,61 @@ def _compute_embeddings(
     embedder_path: str,
     content: str,
     labelled_text: list,
-) -> dict | None:
+) -> dict:
     """Compute the doc-level + per-annotation embeddings the server would store."""
+    ann_ids = _embedding_ids(labelled_text)
     doc_vec = embedder.embed_text(content)
-
-    # Annotation embeddings keyed by the annotation's stable export ``id``
-    # (the same id the worker-upload path maps to the new DB pk).
-    ann_ids: list = []
-    ann_texts: list[str] = []
-    for ann in labelled_text:
-        ann_id = ann.get("id")
-        raw = ann.get("rawText") or ""
-        if ann_id is not None and raw.strip():
-            ann_ids.append(ann_id)
-            ann_texts.append(raw)
-
-    annotation_embeddings: dict[str, list[float]] = {}
-    if ann_texts:
-        vecs = embedder.embed_batch(ann_texts)
-        for ann_id, vec in zip(ann_ids, vecs):
-            if vec is not None:
-                annotation_embeddings[str(ann_id)] = vec
-
-    if doc_vec is None and not annotation_embeddings:
-        return None
-
-    payload: dict = {"embedder_path": embedder_path}
-    if doc_vec is not None:
-        payload["document_embedding"] = doc_vec
-    if annotation_embeddings:
-        payload["annotation_embeddings"] = annotation_embeddings
+    vecs = embedder.embed_batch(
+        [ann["rawText"] for ann in labelled_text if ann["rawText"].strip()]
+    )
+    if not isinstance(vecs, list) or len(vecs) != len(ann_ids):
+        raise ValueError(
+            "Embedding batch cardinality does not match eligible annotations"
+        )
+    payload = {
+        "embedder_path": embedder_path,
+        "document_embedding": doc_vec,
+        "annotation_embeddings": dict(zip(ann_ids, vecs)),
+    }
+    _validate_embeddings(payload, labelled_text, embedder.dimension, embedder_path)
     return payload
+
+
+def _embedding_ids(annotations: list) -> list[str]:
+    ids = set()
+    eligible = []
+    for ann in annotations:
+        aid = ann.get("id")
+        if type(aid) not in (str, int) or aid == "" or str(aid) in ids:
+            raise ValueError(
+                "Embeddings require unique string/integer annotation IDs (including JSON keys)"
+            )
+        ids.add(str(aid))
+        if ann["rawText"].strip():
+            eligible.append(str(aid))
+    return eligible
+
+
+def _validate_vector(vector, dimension: int) -> None:
+    if (
+        not isinstance(vector, list)
+        or len(vector) != dimension
+        or any(type(v) not in (int, float) or not math.isfinite(v) for v in vector)
+    ):
+        raise ValueError(f"Embedding requires {dimension} finite numeric values")
+
+
+def _validate_embeddings(payload, annotations, dimension, embedder_path) -> None:
+    if not isinstance(payload, dict) or payload.get("embedder_path") != embedder_path:
+        raise ValueError("Embedding payload is missing or has an incompatible embedder")
+    _validate_vector(payload.get("document_embedding"), dimension)
+    vectors = payload.get("annotation_embeddings", {})
+    if not isinstance(vectors, dict) or set(vectors) != set(
+        _embedding_ids(annotations)
+    ):
+        raise ValueError("Embedding coverage does not match eligible annotation IDs")
+    for vector in vectors.values():
+        _validate_vector(vector, dimension)
 
 
 # ======================================================================
@@ -661,7 +795,7 @@ def cmd_plan(cfg: Config) -> int:
                 logger.info(f"planned {scanned} files ({added} new)…")
     logger.info(f"plan complete: scanned={scanned}, new={added}")
     _print_status(ledger, None)
-    return 0
+    return 1 if ledger.blocked_count() else 0
 
 
 def _process_one(
@@ -671,98 +805,177 @@ def _process_one(
     client: TargetClient,
     row: sqlite3.Row | Mapping[str, Any],
     enrichers: list | None = None,
+    ledger: Ledger | None = None,
 ) -> tuple[str, bool, str]:
     """Parse + (enrich) + embed + upload one document. Returns (rel_path, ok, message)."""
+    from scripts.remote_ingest.checkpoints import (
+        Checkpoints,
+        digest,
+        implementation_digest,
+    )
+    from scripts.remote_ingest.parsers import normalize_and_validate_export
+
     rel_path = row["rel_path"]
-    abs_path = row["abs_path"]
+    owns_ledger = ledger is None
+    ledger = ledger or Ledger(cfg.ledger_path)
     try:
-        with open(abs_path, "rb") as fh:
-            source_bytes = fh.read()
-
-        export = parser.parse(source_bytes, filename=PurePosixPath(rel_path).name)
-        content = export["content"]
-        if not content.strip():
-            return (rel_path, False, "empty content/text layer (would be unsearchable)")
-
-        # Pre-processing / enrichment stage: calculate + inject extra metadata
-        # and annotations BEFORE embedding (so injected annotations get embedded)
-        # and BEFORE building the payload. A validation failure fails the doc.
-        overlay = None
-        if enrichers:
-            from enrichers import (  # local import: needs Django path set up
-                EnricherContext,
-                apply_enrichment,
-                run_enrichers,
-                validate_enrichment,
+        current = ledger.get_doc(rel_path)
+        abs_path = current["abs_path"]
+        # Immutable snapshot: neither parser nor uploader reopens the mutable path.
+        source_bytes = Path(abs_path).read_bytes()
+        source_digest = digest(source_bytes)
+        ledger.upsert_doc(
+            rel_path, abs_path, len(source_bytes), source_digest, time.time()
+        )
+        current = ledger.get_doc(rel_path)
+        if current["status"] not in (PENDING, FAILED):
+            return (
+                rel_path,
+                False,
+                f"{current['status']}: source/receipt requires reconciliation",
             )
 
-            ctx = EnricherContext(
-                rel_path=rel_path, abs_path=abs_path, export=export, content=content
-            )
-            enrichment = run_enrichers(enrichers, ctx)
-            if not enrichment.is_empty():
+        filename = PurePosixPath(rel_path).name
+        mime = parser.source_mime(source_bytes, filename=filename)
+        identity = parser.identity(mime)
+        cache = Checkpoints(cfg.ledger_path, rel_path)
+        export, parsed_digest = cache.stage(
+            "parse",
+            [source_digest, filename, identity],
+            lambda: parser.parse(source_bytes, filename=filename),
+            normalize_and_validate_export,
+        )
+
+        from enrichers import (
+            EnricherContext,
+            MetadataOverlay,
+            apply_enrichment,
+            run_enrichers,
+            validate_enrichment,
+        )
+
+        def enrich():
+            overlay = MetadataOverlay()
+            if enrichers:
+                ctx = EnricherContext(
+                    rel_path=rel_path,
+                    abs_path=abs_path,
+                    export=export,
+                    content=export["content"],
+                )
+                enrichment = run_enrichers(enrichers, ctx)
                 errors = validate_enrichment(export, enrichment)
                 if errors:
-                    return (
-                        rel_path,
-                        False,
-                        "enrichment invalid: " + "; ".join(errors[:5]),
-                    )
+                    raise ValueError("enrichment invalid: " + "; ".join(errors[:5]))
                 overlay = apply_enrichment(export, enrichment)
+            return {"export": export, "overlay": asdict(overlay)}
 
-        # Check the complete export again after enrichment to catch cross-stage
-        # ID collisions, dangling links and invalid spans before embedding/upload.
-        from scripts.remote_ingest.parsers import normalize_and_validate_export
+        def validate_enriched(value):
+            normalize_and_validate_export(value["export"])
+            overlay = MetadataOverlay(**value["overlay"])
+            if not all(
+                isinstance(v, dict)
+                for v in (
+                    overlay.custom_meta,
+                    overlay.text_label_defs,
+                    overlay.doc_label_defs,
+                )
+            ) or not isinstance(overlay.metadata, list):
+                raise ValueError("Invalid cached enrichment overlay")
 
-        normalize_and_validate_export(export)
+        if enrichers and not cfg.enricher_identity:
+            raise ValueError(
+                "--enricher-identity must describe the effective enricher configuration"
+            )
+        enriched, enriched_digest = cache.stage(
+            "enrich",
+            [
+                parsed_digest,
+                rel_path,
+                abs_path,
+                cfg.enricher_identity,
+                [(name, implementation_digest(fn)) for name, fn in (enrichers or [])],
+                implementation_digest(apply_enrichment),
+            ],
+            enrich,
+            validate_enriched,
+        )
+        export = enriched["export"]
+        overlay = MetadataOverlay(**enriched["overlay"])
         embeddings = None
-        if cfg.embeddings and embedder is not None:
-            # Compute over the (possibly enriched) labelled_text so injected
-            # annotations are embedded too.
-            embeddings = _compute_embeddings(
-                embedder=embedder,
-                embedder_path=parser.default_embedder_path,
-                content=content,
-                labelled_text=export.get("labelled_text", []) or [],
+        if cfg.embeddings:
+            if embedder is None:
+                raise ValueError("Remote embeddings enabled without an embedder")
+            embeddings, _ = cache.stage(
+                "embed",
+                [
+                    enriched_digest,
+                    parser.default_embedder_path,
+                    embedder.base,
+                    embedder.identity,
+                    embedder.dimension,
+                    implementation_digest(type(embedder).__init__),
+                ],
+                lambda: _compute_embeddings(
+                    embedder=embedder,
+                    embedder_path=parser.default_embedder_path,
+                    content=export["content"],
+                    labelled_text=export.get("labelled_text", []),
+                ),
+                lambda value: _validate_embeddings(
+                    value,
+                    export.get("labelled_text", []),
+                    embedder.dimension,
+                    parser.default_embedder_path,
+                ),
             )
 
-        target_folder_path = None
-        if cfg.target_folder_from_tree:
-            parent = PurePosixPath(rel_path).parent.as_posix()
-            target_folder_path = None if parent in (".", "") else parent
-
-        title = PurePosixPath(rel_path).name
-        identity = parser.identity(export["file_type"])
+        parent = PurePosixPath(rel_path).parent.as_posix()
         metadata = _build_metadata(
-            title=title,
+            title=filename,
             export=export,
-            content=content,
+            content=export["content"],
             embedder_path=parser.default_embedder_path,
             embeddings=embeddings,
-            target_folder_path=target_folder_path,
+            target_folder_path=(
+                parent
+                if cfg.target_folder_from_tree and parent not in (".", "")
+                else None
+            ),
             overlay=overlay,
             parser_name=identity["parser_name"],
             parser_version=identity["parser_version"],
         )
-
-        upload_id = client.upload(abs_path, metadata)
+        # Validate JSON before entering the uncertain network boundary.
+        json.dumps(metadata, allow_nan=False)
+        ledger.mark_upload_started(rel_path)
+        upload_id = client.upload(source_bytes, metadata, filename=filename)
         page_count = metadata["page_count"]
+        ledger.mark_uploaded(rel_path, upload_id, page_count, time.time())
         return (rel_path, True, f"{upload_id}|{page_count}")
-    except PermanentUploadError as e:
-        return (rel_path, False, f"permanent: {e}")
-    except Exception as e:  # noqa: BLE001 — surface any parse/embed/upload failure
+    except (PermanentUploadError, TransientUploadError) as e:
+        ledger.mark_rejected(rel_path)
         return (rel_path, False, str(e))
+    except Exception as e:  # noqa: BLE001 — ambiguous rows stay unclaimable
+        return (rel_path, False, str(e))
+    finally:
+        if owns_ledger:
+            ledger._conn().close()
 
 
 def cmd_run(cfg: Config) -> int:
     ledger = Ledger(cfg.ledger_path)
-    parser = _Parser(cfg.parser_config)
+    parser = _Parser(cfg.parser_config, cfg.parser_identity)
     # Set up Django + the parser eagerly so config errors (missing service URL,
     # broken enricher import) surface before we start churning documents.
     parser.ensure_ready()
 
     enrichers: list = []
     if cfg.enrichers:
+        if not cfg.enricher_identity:
+            raise ValueError(
+                "--enricher-identity is required with --enricher; include configuration/data versions"
+            )
         from enrichers import load_enrichers
 
         enrichers = load_enrichers(cfg.enrichers)
@@ -773,12 +986,22 @@ def cmd_run(cfg: Config) -> int:
 
     embedder = None
     if cfg.embeddings:
+        if not cfg.embedding_identity:
+            raise ValueError(
+                "--embedding-identity is required: identify the deployed model/service revision"
+            )
+        from opencontractserver.annotations.models import EMBEDDING_DIMENSIONS
+
+        if cfg.embedding_dimension not in {dim for dim, _ in EMBEDDING_DIMENSIONS}:
+            raise ValueError("--embedding-dimension is not supported by server storage")
         embedder = EmbedderClient(
             os.environ.get(
                 "EMBEDDINGS_MICROSERVICE_URL", "http://vector-embedder:8000"
             ),
             os.environ.get("VECTOR_EMBEDDER_API_KEY") or None,
             DEFAULT_EMBED_BATCH,
+            dimension=cfg.embedding_dimension,
+            identity=cfg.embedding_identity,
         )
     client = TargetClient(cfg)
 
@@ -786,7 +1009,7 @@ def cmd_run(cfg: Config) -> int:
     if not total:
         logger.info("nothing to do — run `plan` first or everything is done.")
         _print_status(ledger, client)
-        return 0
+        return 1 if ledger.blocked_count() else 0
 
     window = FUTURES_PER_WORKER * cfg.max_workers
     logger.info(
@@ -831,7 +1054,9 @@ def cmd_run(cfg: Config) -> int:
             stop_event.wait(_GOVERNOR_WAIT_SECONDS)
         if stop_event.is_set():
             return
-        rel, ok, msg = _process_one(cfg, parser, embedder, client, row, enrichers)
+        rel, ok, msg = _process_one(
+            cfg, parser, embedder, client, row, enrichers, ledger
+        )
         now = time.time()
         if ok:
             upload_id, _, page_count = msg.partition("|")
@@ -892,7 +1117,7 @@ def cmd_run(cfg: Config) -> int:
 
     logger.info(f"run complete: uploaded={done['ok']}, failed={done['fail']}")
     _print_status(ledger, client)
-    return 0 if done["fail"] == 0 else 1
+    return 0 if done["fail"] == 0 and not ledger.blocked_count() else 1
 
 
 def cmd_verify(cfg: Config) -> int:
@@ -925,6 +1150,21 @@ def cmd_verify(cfg: Config) -> int:
         f"verify complete: confirmed={confirmed}, failed={failed}, still-processing={still}"
     )
     _print_status(ledger, client)
+    return 1 if ledger.blocked_count() else 0
+
+
+def cmd_cleanup(cfg: Config) -> int:
+    from scripts.remote_ingest.checkpoints import Checkpoints
+
+    ledger = Ledger(cfg.ledger_path)
+    removed = 0
+    for row in ledger._iter_rows(
+        "1=1", "sqlite_autoindex_docs_1", cfg.ledger_page_size
+    ):
+        removed += Checkpoints(cfg.ledger_path, row["rel_path"], create=False).prune()
+    logger.info(
+        "cleanup: removed %s unreferenced artifacts older than 24 hours", removed
+    )
     return 0
 
 
@@ -944,7 +1184,7 @@ def _print_status(ledger: Ledger, client: TargetClient | None) -> None:
     print(f"  root_dir : {ledger.get_meta('root_dir')}")
     print(f"  corpus   : {ledger.get_meta('corpus_id')}")
     print(f"  total    : {total}")
-    for st in (PENDING, UPLOADED, COMPLETED, FAILED, PARKED):
+    for st in (PENDING, UPLOADED, COMPLETED, FAILED, PARKED, AMBIGUOUS, CONFLICT):
         if counts.get(st):
             print(f"  {st:<9}: {counts[st]}")
     if client is not None:
@@ -990,6 +1230,12 @@ def _build_config(args: argparse.Namespace) -> Config:
         enrichers=enrichers,
         parser_config=args.parser_config or os.environ.get("OC_PARSER_CONFIG"),
         ledger_page_size=args.ledger_page_size,
+        enricher_identity=args.enricher_identity
+        or os.environ.get("OC_ENRICHER_IDENTITY"),
+        embedding_identity=args.embedding_identity
+        or os.environ.get("OC_EMBEDDING_IDENTITY"),
+        embedding_dimension=args.embedding_dimension,
+        parser_identity=args.parser_identity or os.environ.get("OC_PARSER_IDENTITY"),
     )
 
 
@@ -1018,6 +1264,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--parser-config",
         help="Local parser mapping/settings JSON file (env OC_PARSER_CONFIG)",
+    )
+    p.add_argument(
+        "--parser-identity",
+        help="Parser deployment revision (env OC_PARSER_IDENTITY); per-parser JSON identities override this",
     )
     p.add_argument(
         "--max-workers",
@@ -1065,8 +1315,25 @@ def main(argv: list[str] | None = None) -> int:
             "E.g. example_enrichers:effective_date_annotations"
         ),
     )
+    p.add_argument(
+        "--enricher-identity",
+        help=(
+            "Stable identity of effective enricher configuration/data "
+            "(required with enrichers; env OC_ENRICHER_IDENTITY)"
+        ),
+    )
+    p.add_argument(
+        "--embedding-identity",
+        help="Operator model/service revision (env OC_EMBEDDING_IDENTITY); bump when the model changes",
+    )
+    p.add_argument(
+        "--embedding-dimension",
+        type=_positive_int,
+        default=os.environ.get("OC_EMBEDDING_DIMENSION", "384"),
+        help="Expected document/annotation vector dimension (default 384)",
+    )
     p.add_argument("-v", "--verbose", action="store_true")
-    p.add_argument("command", choices=["plan", "run", "verify", "status"])
+    p.add_argument("command", choices=["plan", "run", "verify", "status", "cleanup"])
     args = p.parse_args(argv)
 
     logging.basicConfig(
@@ -1090,6 +1357,7 @@ def main(argv: list[str] | None = None) -> int:
         "run": cmd_run,
         "verify": cmd_verify,
         "status": cmd_status,
+        "cleanup": cmd_cleanup,
     }[args.command](cfg)
 
 

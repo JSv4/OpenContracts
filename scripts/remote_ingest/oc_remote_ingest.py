@@ -22,8 +22,9 @@ import sqlite3
 import sys
 import threading
 import time
-from collections.abc import Mapping
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections.abc import Generator, Mapping
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
@@ -40,6 +41,8 @@ logger = logging.getLogger("oc_remote_ingest")
 # --- Defaults --------------------------------------------------------------
 DEFAULT_EXTENSIONS = ".pdf"
 DEFAULT_MAX_WORKERS = 4
+DEFAULT_LEDGER_PAGE_SIZE = 256
+FUTURES_PER_WORKER = 2
 DEFAULT_EMBED_BATCH = 100
 DEFAULT_MAX_ATTEMPTS = 5
 # Backpressure: pause submitting when the target has more than HIGH worker
@@ -48,6 +51,10 @@ DEFAULT_QUEUE_HIGH = 2000
 DEFAULT_QUEUE_LOW = 500
 _HTTP_MAX_RETRIES = 6
 _JITTER_MIN = 0.5
+_GOVERNOR_WAIT_SECONDS = 10
+
+_CLAIMABLE_WHERE = "status IN ('PENDING', 'FAILED')"
+_UNCONFIRMED_WHERE = "status='UPLOADED' AND upload_id IS NOT NULL"
 
 # Ledger statuses
 PENDING = "PENDING"
@@ -85,6 +92,10 @@ class Ledger:
                     completed_at REAL
                 );
                 CREATE INDEX IF NOT EXISTS idx_docs_status ON docs(status);
+                CREATE INDEX IF NOT EXISTS idx_docs_claimable_path
+                    ON docs(rel_path) WHERE status IN ('PENDING', 'FAILED');
+                CREATE INDEX IF NOT EXISTS idx_docs_unconfirmed_path
+                    ON docs(rel_path) WHERE status='UPLOADED' AND upload_id IS NOT NULL;
                 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
                 PRAGMA journal_mode=WAL;
                 PRAGMA synchronous=NORMAL;
@@ -127,23 +138,63 @@ class Ledger:
         )
         return cur.rowcount > 0
 
-    def claimable(self) -> list[sqlite3.Row]:
-        return list(
+    def _iter_rows(
+        self, where: str, index: str, page_size: int
+    ) -> Generator[sqlite3.Row]:
+        """One pass in immutable path order; visited failures wait for the next run.
+
+        Pages release their read cursor before yielding so worker writes neither
+        shift an OFFSET nor keep a long-lived SQLite read snapshot/WAL open.
+        One CLI invocation owns the ledger; concurrent plan/run/verify is unsupported.
+        ``where``/``index`` are internal SQL constants, never operator input.
+        """
+        if page_size <= 0:
+            raise ValueError("ledger page size must be positive")
+        after = None
+        while True:
+            keyset = "" if after is None else " AND rel_path > ?"
+            params = (page_size,) if after is None else (after, page_size)
+            with closing(
+                self._conn().execute(
+                    # Force the matching path index: SQLite can otherwise choose the
+                    # status index and re-sort the remaining ledger on every page.
+                    f"SELECT * FROM docs INDEXED BY {index} "
+                    f"WHERE {where}{keyset} ORDER BY rel_path LIMIT ?",
+                    params,
+                )
+            ) as cursor:
+                rows = cursor.fetchmany(page_size)
+            if not rows:
+                return
+            after = rows[-1]["rel_path"]
+            yield from rows
+            if len(rows) < page_size:
+                return
+            del rows
+
+    def _count(self, where: str) -> int:
+        return (
             self._conn()
-            .execute(
-                "SELECT * FROM docs WHERE status IN ('PENDING', 'FAILED') "
-                "ORDER BY rel_path"
-            )
-            .fetchall()
+            .execute(f"SELECT COUNT(*) FROM docs WHERE {where}")
+            .fetchone()[0]
         )
 
-    def uploaded_unconfirmed(self) -> list[sqlite3.Row]:
-        return list(
-            self._conn()
-            .execute(
-                "SELECT * FROM docs WHERE status='UPLOADED' AND upload_id IS NOT NULL"
-            )
-            .fetchall()
+    def claimable_count(self) -> int:
+        return self._count(_CLAIMABLE_WHERE)
+
+    def claimable(
+        self, page_size: int = DEFAULT_LEDGER_PAGE_SIZE
+    ) -> Generator[sqlite3.Row]:
+        return self._iter_rows(_CLAIMABLE_WHERE, "idx_docs_claimable_path", page_size)
+
+    def uploaded_unconfirmed_count(self) -> int:
+        return self._count(_UNCONFIRMED_WHERE)
+
+    def uploaded_unconfirmed(
+        self, page_size: int = DEFAULT_LEDGER_PAGE_SIZE
+    ) -> Generator[sqlite3.Row]:
+        return self._iter_rows(
+            _UNCONFIRMED_WHERE, "idx_docs_unconfirmed_path", page_size
         )
 
     def mark_uploaded(
@@ -205,6 +256,7 @@ class Config:
     limit: int
     enrichers: list[str]
     parser_config: str | None = None
+    ledger_page_size: int = DEFAULT_LEDGER_PAGE_SIZE
 
 
 class TargetClient:
@@ -560,14 +612,27 @@ def _sha256(path: str) -> str:
 
 
 def _scan(root: str, extensions: tuple[str, ...]):
+    """Stream depth-first in filesystem order, without following directory links.
+
+    Retain only one scandir iterator per depth, even for a very wide directory.
+    Closing the generator (e.g. at --limit) closes every open directory handle.
+    """
     root_path = Path(root).resolve()
-    for path in sorted(root_path.rglob("*")):
-        if not path.is_file():
-            continue
-        if path.suffix.lower() not in extensions:
-            continue
-        rel = path.relative_to(root_path).as_posix()
-        yield rel, str(path)
+    stack = [os.scandir(root_path)]
+    try:
+        while stack:
+            entry = next(stack[-1], None)
+            if entry is None:
+                stack.pop().close()
+            elif entry.is_dir(follow_symlinks=False):
+                stack.append(os.scandir(entry.path))
+            elif entry.is_file():
+                path = Path(entry.path)
+                if path.suffix.lower() in extensions:
+                    yield path.relative_to(root_path).as_posix(), str(path)
+    finally:
+        for entries in stack:
+            entries.close()
 
 
 # ======================================================================
@@ -582,17 +647,18 @@ def cmd_plan(cfg: Config) -> int:
         ledger.set_meta("corpus_id", cfg.corpus_id)
     now = time.time()
     added = scanned = 0
-    for rel, abs_path in _scan(cfg.root_dir, cfg.extensions):
-        scanned += 1
-        size = os.path.getsize(abs_path)
-        # sha256 is recorded for provenance/dedup; cheap enough at plan time.
-        if ledger.upsert_doc(rel, abs_path, size, _sha256(abs_path), now):
-            added += 1
-        if cfg.limit and added >= cfg.limit:
-            logger.info(f"reached --limit {cfg.limit}; stopping scan")
-            break
-        if scanned % 500 == 0:
-            logger.info(f"planned {scanned} files ({added} new)…")
+    with closing(_scan(cfg.root_dir, cfg.extensions)) as paths:
+        for rel, abs_path in paths:
+            scanned += 1
+            size = os.path.getsize(abs_path)
+            # sha256 is recorded for provenance/dedup; cheap enough at plan time.
+            if ledger.upsert_doc(rel, abs_path, size, _sha256(abs_path), now):
+                added += 1
+            if cfg.limit and added >= cfg.limit:
+                logger.info(f"reached --limit {cfg.limit}; stopping scan")
+                break
+            if scanned % 500 == 0:
+                logger.info(f"planned {scanned} files ({added} new)…")
     logger.info(f"plan complete: scanned={scanned}, new={added}")
     _print_status(ledger, None)
     return 0
@@ -716,14 +782,16 @@ def cmd_run(cfg: Config) -> int:
         )
     client = TargetClient(cfg)
 
-    todo = ledger.claimable()
-    if not todo:
+    total = ledger.claimable_count()
+    if not total:
         logger.info("nothing to do — run `plan` first or everything is done.")
         _print_status(ledger, client)
         return 0
 
+    window = FUTURES_PER_WORKER * cfg.max_workers
     logger.info(
-        f"run: {len(todo)} docs to process with {cfg.max_workers} workers "
+        f"run: {total} docs to process with {cfg.max_workers} workers "
+        f"(future window={window}, ledger page size={cfg.ledger_page_size}) "
         f"(embeddings={'on' if cfg.embeddings else 'off'}, "
         f"enrichers={len(enrichers)})"
     )
@@ -731,11 +799,12 @@ def cmd_run(cfg: Config) -> int:
     # Backpressure gate shared by all workers.
     pause_event = threading.Event()
     pause_event.set()  # set == "go"
-    governor_state = {"last_poll": 0.0, "stop": False}
+    stop_event = threading.Event()
+    governor_state = {"last_poll": 0.0}
     gov_lock = threading.Lock()
 
     def maybe_poll_backpressure() -> None:
-        if cfg.queue_high <= 0:
+        if stop_event.is_set() or cfg.queue_high <= 0:
             return
         with gov_lock:
             now = time.time()
@@ -754,10 +823,14 @@ def cmd_run(cfg: Config) -> int:
     done_lock = threading.Lock()
 
     def worker(row: sqlite3.Row) -> None:
-        # Wait while paused (re-poll periodically to unblock).
-        while not pause_event.wait(timeout=10):
+        # Cancellation wakes paused workers without consuming a document attempt.
+        while not stop_event.is_set():
             maybe_poll_backpressure()
-        maybe_poll_backpressure()
+            if pause_event.is_set():
+                break
+            stop_event.wait(_GOVERNOR_WAIT_SECONDS)
+        if stop_event.is_set():
+            return
         rel, ok, msg = _process_one(cfg, parser, embedder, client, row, enrichers)
         now = time.time()
         if ok:
@@ -766,20 +839,56 @@ def cmd_run(cfg: Config) -> int:
             with done_lock:
                 done["ok"] += 1
                 n = done["ok"] + done["fail"]
-            logger.info(f"[{n}/{len(todo)}] uploaded {rel} -> {upload_id}")
+            logger.info(f"[{n}/{total}] uploaded {rel} -> {upload_id}")
         else:
             ledger.mark_failed(rel, msg, cfg.max_attempts)
             with done_lock:
                 done["fail"] += 1
                 n = done["ok"] + done["fail"]
-            logger.warning(f"[{n}/{len(todo)}] FAILED {rel}: {msg}")
+            logger.warning(f"[{n}/{total}] FAILED {rel}: {msg}")
 
-    with ThreadPoolExecutor(max_workers=cfg.max_workers) as pool:
-        futures = [pool.submit(worker, row) for row in todo]
-        for fut in as_completed(futures):
-            exc = fut.exception()
-            if exc is not None:
-                logger.error(f"worker crashed: {exc}")
+    todo = ledger.claimable(cfg.ledger_page_size)
+    pool = ThreadPoolExecutor(max_workers=cfg.max_workers)
+    pending: set[Future[None]] = set()
+    exhausted = interrupted = False
+    try:
+        while pending or not exhausted:
+            while not exhausted and len(pending) < window:
+                row = next(todo, None)
+                if row is None:
+                    exhausted = True
+                    break
+                pending.add(pool.submit(worker, row))
+            if not pending:
+                break
+            finished, pending = wait(pending, return_when=FIRST_COMPLETED)
+            for future in finished:
+                exc = future.exception()
+                if exc is not None:
+                    logger.error(f"worker crashed: {exc}")
+                    with done_lock:
+                        done["fail"] += 1
+            finished.clear()
+            del future
+    except KeyboardInterrupt:
+        interrupted = True
+    finally:
+        stop_event.set()
+        for future in pending:
+            future.cancel()
+        todo.close()
+        if interrupted:
+            logger.info(
+                "interrupted: cancelling queued work; waiting for at most "
+                f"{cfg.max_workers} already-running document/status calls"
+            )
+        # Avoid the context manager's unconditional wait on governor-paused work.
+        # In-flight preparation/uploads finish and persist their ledger transitions.
+        pool.shutdown(wait=True, cancel_futures=True)
+
+    if interrupted:
+        _print_status(ledger, None)
+        return 130
 
     logger.info(f"run complete: uploaded={done['ok']}, failed={done['fail']}")
     _print_status(ledger, client)
@@ -789,8 +898,9 @@ def cmd_run(cfg: Config) -> int:
 def cmd_verify(cfg: Config) -> int:
     ledger = Ledger(cfg.ledger_path)
     client = TargetClient(cfg)
-    pending = ledger.uploaded_unconfirmed()
-    logger.info(f"verify: polling {len(pending)} uploaded docs for terminal status")
+    pending = ledger.uploaded_unconfirmed(cfg.ledger_page_size)
+    total = ledger.uploaded_unconfirmed_count()
+    logger.info(f"verify: polling {total} uploaded docs for terminal status")
     confirmed = failed = still = 0
     now = time.time()
     for row in pending:
@@ -879,7 +989,15 @@ def _build_config(args: argparse.Namespace) -> Config:
         limit=args.limit,
         enrichers=enrichers,
         parser_config=args.parser_config or os.environ.get("OC_PARSER_CONFIG"),
+        ledger_page_size=args.ledger_page_size,
     )
+
+
+def _positive_int(value: str) -> int:
+    number = int(value)
+    if number <= 0:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return number
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -901,7 +1019,18 @@ def main(argv: list[str] | None = None) -> int:
         "--parser-config",
         help="Local parser mapping/settings JSON file (env OC_PARSER_CONFIG)",
     )
-    p.add_argument("--max-workers", type=int, default=DEFAULT_MAX_WORKERS)
+    p.add_argument(
+        "--max-workers",
+        type=_positive_int,
+        default=DEFAULT_MAX_WORKERS,
+        help="Active workers; submitted unfinished work is capped at twice this value",
+    )
+    p.add_argument(
+        "--ledger-page-size",
+        type=_positive_int,
+        default=DEFAULT_LEDGER_PAGE_SIZE,
+        help="Maximum ledger rows fetched per page for run/verify (default 256)",
+    )
     p.add_argument("--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
     p.add_argument("--queue-high", type=int, default=DEFAULT_QUEUE_HIGH)
     p.add_argument("--queue-low", type=int, default=DEFAULT_QUEUE_LOW)

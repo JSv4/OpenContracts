@@ -186,11 +186,14 @@ Useful flags (append after the subcommand):
   the bottleneck. On CPU each OCR parse is serial and uses **3-6 GB RAM**, so size
   this to **available RAM** (and parser replicas), not raw CPU count —
   over-parallelizing OCR on CPU can exhaust memory/swap. On a capable GPU, scale up.
+- `--ledger-page-size N` — maximum rows read per ledger page by `run`/`verify`
+  (default 256, must be positive). The submitted-but-unfinished future window is
+  bounded separately at **2 × `--max-workers`**, including active workers.
 - `--no-embeddings` — skip remote embedding and let the **server** embed instead
   (the worker still offloads parsing). By default the worker embeds and the
   server is told not to re-embed.
-- `--limit N` — (on `plan`) cap how many documents are recorded; handy for a
-  trial run.
+- `--limit N` — (on `plan`) stop after recording N **new** documents; existing
+  ledger paths do not consume the limit. Zero means no cap.
 - `--flat` — do not mirror the directory tree into corpus folders.
 - `--queue-high / --queue-low` — back-pressure thresholds against the target's
   worker-upload backlog (pause when `PENDING+PROCESSING` exceeds high, resume
@@ -200,6 +203,38 @@ Useful flags (append after the subcommand):
 - `--max-attempts N` — retries per document before it is PARKED (default 5).
 - `--insecure` — disable TLS verification (testing only; e.g. a self-signed or
   local HTTPS target).
+
+### Bounded traversal and resume
+
+`plan` walks depth-first in filesystem order, yielding files without collecting
+or sorting the tree (including within a large directory). Directory symlinks are
+not traversed; matching file symlinks remain eligible. `--limit` stops discovery
+immediately, but its selected subset is no longer globally sorted or guaranteed
+to repeat after filesystem changes. Relative POSIX paths, case-insensitive
+extension matching and SHA-256 recording are unchanged; replanning skips known
+paths and can add the next limited set.
+
+`run` and `verify` visit ledger rows in ascending relative-path order, in bounded
+pages using a keyset cursor. Updating earlier rows cannot skip later rows, and a
+document that fails stays behind the cursor until the next `run`. Totals use
+separate SQL counts. Partial path indexes are added automatically to existing
+ledgers; no manual migration is needed. Coordinator storage is proportional to
+the page size plus the future window, independent of the document count. Active
+documents still require memory for their source and preparation artifacts.
+
+On **Ctrl-C**, `run` stops fetching/submitting rows, cancels queued futures, and
+wakes workers paused by backpressure without consuming a retry attempt. At most
+`--max-workers` already-started document/status calls finish before exit **130**;
+their upload/failure transitions are saved. This is a graceful drain, so it can
+take as long as those operations and their configured timeouts/retries. Run the
+command again to resume unfinished rows.
+
+Use one CLI invocation per ledger at a time, including `plan` and `verify`.
+These cursors do not coordinate ownership across processes. Local resume also
+does not guarantee exactly-once delivery: an upload accepted by the server whose
+response is lost may be repeated. Preparation checkpoints, source-change
+reconciliation, admission error classification, and verification exit outcomes
+are tracked separately in #2318, #2319, and #2320.
 
 ---
 

@@ -67,7 +67,7 @@ def _validate_graphql_jwt_token(token: str) -> "User":
     from config.jwt_auth.exceptions import JSONWebTokenError
     from config.jwt_auth.utils import get_payload, get_user_by_payload
 
-    logger.debug(f"Validating graphql_jwt token: {token[:10]}...")
+    logger.debug("Validating local JWT")
 
     # get_payload raises JSONWebTokenExpired or JSONWebTokenError
     payload = get_payload(token)
@@ -102,7 +102,7 @@ def _validate_auth0_token(token: str) -> "User":
     from config.graphql_auth0_auth.utils import get_user_by_token
     from config.jwt_auth.exceptions import JSONWebTokenError
 
-    logger.debug(f"Validating Auth0 token: {token[:10]}...")
+    logger.debug("Validating Auth0 JWT")
 
     # get_user_by_token handles payload extraction, user lookup/creation,
     # and raises JSONWebTokenExpired or JSONWebTokenError as appropriate

@@ -1000,7 +1000,7 @@ def start_chunked_upload(
     Raises :class:`ChunkedUploadError` (client error, carries HTTP status)
     or :class:`DocumentImportPermissionError` (permission, 403).
     """
-    metadata = metadata or {}
+    metadata = dict(metadata or {})
 
     if kind not in ChunkedUploadKind.values:
         raise ChunkedUploadError(f"Unknown upload kind: {kind}")
@@ -1031,6 +1031,12 @@ def start_chunked_upload(
             "Worker tokens support only document and zip_to_corpus uploads",
             http_status=403,
         )
+
+    # Persist the token's implicit target now. Completion with another token
+    # must not retarget a DOCUMENT upload that omitted add_to_corpus_id.
+    if access_token is not None and kind == ChunkedUploadKind.DOCUMENT:
+        if normalise_optional(metadata.get("add_to_corpus_id")) is None:
+            metadata["add_to_corpus_id"] = str(access_token.corpus_id)
 
     # --- per-kind fast-fail permission gates (see _gate_chunked_corpus) ----------
     if kind == ChunkedUploadKind.DOCUMENT:
@@ -1095,7 +1101,7 @@ def start_chunked_upload(
     return session
 
 
-def _get_owned_session(user, upload_id) -> ChunkedUploadSession:
+def _get_owned_session(user, upload_id, access_token=None) -> ChunkedUploadSession:
     """
     Fetch a session the requester owns, or raise a generic 404.
 
@@ -1103,7 +1109,23 @@ def _get_owned_session(user, upload_id) -> ChunkedUploadSession:
     the IDOR: a cross-user id is indistinguishable from a missing one.
     """
     try:
-        return ChunkedUploadSession.objects.get(id=upload_id, creator=user)
+        session = ChunkedUploadSession.objects.get(id=upload_id, creator=user)
+        if access_token is not None:
+            target_fields: dict[str, str] = {
+                ChunkedUploadKind.DOCUMENT: "add_to_corpus_id",
+                ChunkedUploadKind.ZIP_TO_CORPUS: "corpus_id",
+            }
+            target_field = target_fields.get(session.kind)
+            target = (
+                (session.metadata or {}).get(target_field) if target_field else None
+            )
+            # Legacy unbound worker sessions cannot be safely attributed to
+            # a corpus and must be restarted. Do not mutate them on denial.
+            if target is None or str(_resolve_pk(target)) != str(
+                access_token.corpus_id
+            ):
+                raise ChunkedUploadSession.DoesNotExist
+        return session
     except (ChunkedUploadSession.DoesNotExist, ValueError, TypeError):
         raise ChunkedUploadError("Upload session not found", http_status=404)
 
@@ -1114,6 +1136,7 @@ def store_chunk(
     upload_id,
     index: int,
     chunk_file: UploadedFile,
+    access_token: CorpusAccessToken | None = None,
 ) -> ChunkedSessionInfo:
     """
     Persist one part of a chunked upload (idempotent on ``index``).
@@ -1121,7 +1144,7 @@ def store_chunk(
     Re-uploading an index overwrites the previous part (deleting its
     storage object first) so a client can safely retry a failed part.
     """
-    session = _get_owned_session(user, upload_id)
+    session = _get_owned_session(user, upload_id, access_token)
     if session.status != ChunkedUploadStatus.PENDING:
         raise ChunkedUploadError(
             "Upload session is not accepting parts", http_status=409
@@ -1167,9 +1190,11 @@ def store_chunk(
     return _session_info(locked)
 
 
-def get_chunked_session_status(*, user, upload_id) -> ChunkedSessionInfo:
+def get_chunked_session_status(
+    *, user, upload_id, access_token: CorpusAccessToken | None = None
+) -> ChunkedSessionInfo:
     """Return progress for a session the requester owns (resumability)."""
-    return _session_info(_get_owned_session(user, upload_id))
+    return _session_info(_get_owned_session(user, upload_id, access_token))
 
 
 def _safe_unlink(path: str) -> None:
@@ -1251,7 +1276,7 @@ def complete_chunked_upload(
     :class:`DocumentImportPermissionError` (propagated from the import
     service).
     """
-    session = _get_owned_session(user, upload_id)
+    session = _get_owned_session(user, upload_id, access_token)
     if session.status != ChunkedUploadStatus.PENDING:
         raise ChunkedUploadError(
             f"Upload session is not completable (status={session.status})",

@@ -12,7 +12,6 @@ from django.utils.translation import gettext as _
 
 from config.graphql_auth0_auth.settings import auth0_settings
 from config.jwt_auth import exceptions
-from opencontractserver.constants import TOKEN_LOG_PREFIX_LENGTH
 
 logger = logging.getLogger(__name__)
 
@@ -102,11 +101,7 @@ def _can_serve_stale(current_time: float) -> bool:
 
 
 def jwt_auth0_decode(token):
-    logger.debug(
-        "jwt_auth0_decode() - Attempting to decode token, first %d chars: %s...",
-        TOKEN_LOG_PREFIX_LENGTH,
-        token[:TOKEN_LOG_PREFIX_LENGTH],
-    )
+    logger.debug("Processing Auth0 token")
     try:
         header = jwt.get_unverified_header(token)
         logger.debug("jwt_auth0_decode() - Header: %s", header)
@@ -166,11 +161,7 @@ def jwt_auth0_decode(token):
 
 
 def get_payload(token):
-    logger.debug(
-        "get_payload() - Processing token, first %d chars: %s...",
-        TOKEN_LOG_PREFIX_LENGTH,
-        token[:TOKEN_LOG_PREFIX_LENGTH] if token else "None",
-    )
+    logger.debug("Processing Auth0 token")
     try:
         payload = auth0_settings.AUTH0_DECODE_HANDLER(token)
         logger.debug(
@@ -602,11 +593,7 @@ def get_user_by_token(token, **kwargs):
     user exists and settings is set to create user obj for unknown user,
     create a user, configure it, and return user obj
     """
-    logger.debug(
-        "get_user_by_token() - Starting with token first %d chars: %s...",
-        TOKEN_LOG_PREFIX_LENGTH,
-        token[:TOKEN_LOG_PREFIX_LENGTH] if token else "None",
-    )
+    logger.debug("Processing Auth0 token")
     try:
         payload = get_payload(token)
         logger.debug(

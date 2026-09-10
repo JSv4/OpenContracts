@@ -281,6 +281,14 @@ class TestWorkerTokenAuthentication(TestCase):
         response = client.get("/api/worker-uploads/documents/list/")
         self.assertEqual(response.status_code, 200)
 
+    def test_disabled_linked_user_rejects_worker_token(self):
+        self.account.user.is_active = False
+        self.account.user.save(update_fields=["is_active"])
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f"WorkerKey {self.plaintext_key}")
+        response = client.get("/api/worker-uploads/documents/list/")
+        self.assertEqual(response.status_code, 401)
+
     def test_missing_token(self):
         client = APIClient()
         response = client.get("/api/worker-uploads/documents/list/")

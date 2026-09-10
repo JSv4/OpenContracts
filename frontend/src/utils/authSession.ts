@@ -10,6 +10,7 @@ import {
 } from "../graphql/cache";
 import { clearLocalAuthSession } from "./localAuthSession";
 import { makeVar } from "@apollo/client";
+import { documentCacheManager } from "../services/documentCacheManager";
 
 export const authSessionEpochVar = makeVar(0);
 export const authSessionCleanupPendingVar = makeVar(false);
@@ -20,6 +21,9 @@ export const getAuthSessionEpoch = () => authSessionEpochVar();
 
 /** A new login is distinct from the SDK renewing the same user's token. */
 export function beginAuthSession(token: string): void {
+  void documentCacheManager.clearCache().catch(() => {
+    console.warn("Unable to remove stored document content");
+  });
   authSessionEpochVar(authSessionEpochVar() + 1);
   authToken(token);
 }
@@ -52,6 +56,7 @@ export function replaceAuthSession(expectedToken: string): void {
 }
 
 function resetAuthSession(token: string, reason: ClearReason): void {
+  const documentCleanup = documentCacheManager.clearCache();
   // Close the routing gate before advancing the epoch or clearing the store.
   // Overlapping invalidations must all settle before requests can restart.
   authInitCompleteVar(false);
@@ -67,9 +72,10 @@ function resetAuthSession(token: string, reason: ClearReason): void {
   editingDocument(null);
   showUserSettingsModal(false);
   cache.restore({});
-  void Promise.allSettled(
-    Array.from(cleanupHandlers, async (cleanup) => cleanup(reason))
-  ).then((results) => {
+  void Promise.allSettled([
+    documentCleanup,
+    ...Array.from(cleanupHandlers, async (cleanup) => cleanup(reason)),
+  ]).then((results) => {
     if (results.some((result) => result.status === "rejected")) {
       console.warn("Unable to finish clearing the authentication cache");
     }

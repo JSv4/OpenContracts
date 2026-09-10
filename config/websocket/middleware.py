@@ -35,8 +35,10 @@ documents a DevTools-driven sanity check.
 """
 
 import logging
+import math
 from typing import Any
 
+import jwt
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 from django.contrib.auth.models import AnonymousUser
@@ -45,6 +47,26 @@ from config.jwt_auth.exceptions import JSONWebTokenError, JSONWebTokenExpired
 from config.jwt_utils import get_user_from_jwt_token
 
 logger = logging.getLogger(__name__)
+
+
+def verified_token_expiry(token: str) -> float:
+    """Read the deadline only AFTER this exact token passed JWT verification.
+
+    Identity and signature checks belong to get_user_from_jwt_token. This
+    second decode only schedules connection expiry; it never authenticates.
+    WebSocket credentials must have a finite expiration.
+    """
+    try:
+        value = jwt.decode(token, options={"verify_signature": False})["exp"]
+        if isinstance(value, bool):
+            raise ValueError("Invalid expiry")
+        expiry = float(value)
+        if not math.isfinite(expiry):
+            raise ValueError("Invalid expiry")
+        return expiry
+    except (KeyError, TypeError, ValueError, jwt.InvalidTokenError) as exc:
+        raise JSONWebTokenError("Invalid token expiry") from exc
+
 
 # Subprotocol marker the client sends and the server echoes.
 # Versioned so we can roll a v2 protocol without breaking existing clients.
@@ -131,6 +153,8 @@ class JWTAuthMiddleware(BaseMiddleware):
         scope["user"] = AnonymousUser()
         scope["auth_error"] = None
         scope["accepted_subprotocol"] = None
+        scope["auth_token"] = None
+        scope["auth_expires_at"] = None
 
         marker_present, token = _parse_subprotocol_token(
             scope.get("headers", []),
@@ -145,7 +169,10 @@ class JWTAuthMiddleware(BaseMiddleware):
 
         try:
             user = await _get_user_from_token(token)
+            expiry = verified_token_expiry(token)
             scope["user"] = user
+            scope["auth_token"] = token
+            scope["auth_expires_at"] = expiry
             logger.debug(f"WS handshake authenticated user={user.username}")
         except JSONWebTokenExpired as e:
             logger.warning(f"WS handshake auth failed - token expired: {e}")

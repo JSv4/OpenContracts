@@ -14,10 +14,11 @@ Wire protocol (frames in addition to whatever the consumer already speaks):
         "EXPIRED" | "INVALID" | "USER_MISMATCH" | "PERMISSION_REVOKED"}
     {"type": "AUTH_REFRESH_REQUIRED", "grace_seconds": float}
 
-Security guarantees enforced by handle_auth_message():
+Security guarantees enforced at dispatch, during refresh, and by a watchdog:
   1. A live socket bound to user A cannot be re-bound to user B (USER_MISMATCH).
-  2. If the user has lost access to a bound resource since connect, the next
-     AUTH frame closes 4003 (PERMISSION_REVOKED).
+  2. Resource revocation closes 4003 (PERMISSION_REVOKED) on the next event
+     or periodic recheck. Streaming tokens share a recheck for at most 1 second;
+     token expiry is checked on every event regardless of that window.
   3. An expired/invalid AUTH frame closes the socket (4001/4002) and never
      leaves the consumer in an inconsistent state.
 """
@@ -39,6 +40,7 @@ from config.websocket.middleware import (
     WS_CLOSE_PERMISSION_DENIED,
     WS_CLOSE_TOKEN_EXPIRED,
     WS_CLOSE_TOKEN_INVALID,
+    verified_token_expiry,
 )
 from opencontractserver.constants.auth import WS_AUTH_REFRESH_GRACE_SECONDS
 
@@ -49,6 +51,9 @@ logger = logging.getLogger(__name__)
 # floor cannot interfere with legitimate refreshes but stops a malicious client
 # from spamming AUTH frames to burn DB queries (issue raised in PR #1502 review).
 _MIN_AUTH_FRAME_INTERVAL_SEC = 1.0
+_AUTH_RECHECK_INTERVAL_SEC = 30.0
+# Bound DB work during token fan-out without extending the window per token.
+_STREAM_AUTH_RECHECK_INTERVAL_SEC = 1.0
 
 
 @database_sync_to_async
@@ -70,8 +75,12 @@ class AuthHandshakeMixin:
          code that catches a JSONWebTokenExpired mid-flight.
     """
 
+    # Supplied by AsyncWebsocketConsumer when this cooperative mixin is used.
+    scope: dict[str, Any]
+
     # Populated by accept_with_auth() and updated by handle_auth_message().
     _refresh_grace_task: asyncio.Task | None = None
+    _authorization_task: asyncio.Task | None = None
     _initial_auth_sent: bool = False
     # Tracks whether the handshake has accepted but not yet been cleaned up.
     # The grace-timer guard uses this to avoid calling close() on a socket
@@ -80,10 +89,11 @@ class AuthHandshakeMixin:
     # Monotonic timestamp of the last AUTH frame we accepted; used to throttle
     # spam at the per-connection level before any DB work runs.
     _last_auth_frame_at: float = 0.0
+    _last_authorized_at: float | None = None
 
     @property
-    def current_user(self):
-        return self.scope.get("user")  # type: ignore[attr-defined]
+    def current_user(self) -> Any:
+        return self.scope.get("user") or AnonymousUser()
 
     # ------------------------------------------------------------------ #
     #  Connection accept
@@ -91,10 +101,90 @@ class AuthHandshakeMixin:
 
     async def accept_with_auth(self) -> None:
         """Accept the connection echoing the negotiated subprotocol."""
-        subprotocol = self.scope.get("accepted_subprotocol")  # type: ignore[attr-defined]
+        subprotocol = self.scope.get("accepted_subprotocol")
         await self.accept(subprotocol=subprotocol)  # type: ignore[attr-defined]
         self._handshake_connected = True
+        self._last_authorized_at = None
         await self._send_initial_auth_ok()
+        self._start_authorization_watchdog()
+
+    async def dispatch(self, message: dict[str, Any]) -> None:
+        """Authorize actions and channel broadcasts, even without client AUTH.
+
+        A valid handshake is not a lifetime grant. Revalidation uses fresh
+        users/resources, never the consumer's retained permission caches.
+        """
+        if message["type"] not in ("websocket.connect", "websocket.disconnect"):
+            is_auth = False
+            if message["type"] == "websocket.receive":
+                try:
+                    payload = json.loads(message.get("text") or "null")
+                    is_auth = (
+                        isinstance(payload, dict) and payload.get("type") == "AUTH"
+                    )
+                except (ValueError, TypeError):
+                    # Malformed frames still require authorization before receive().
+                    pass
+            if not self._handshake_connected:
+                return
+            # Only this server-originated channel event may reuse a check.
+            # Client frames and other broadcasts always revalidate fully.
+            if not is_auth and not await self.ensure_authorized(
+                allow_recent=message["type"] == "agent_stream_token"
+            ):
+                return
+        await super().dispatch(message)  # type: ignore[misc]
+
+    async def ensure_authorized(self, *, allow_recent: bool = False) -> bool:
+        """Fail closed on expiry, deactivation, or resource revocation."""
+        user = self.current_user
+        token = self.scope.get("auth_token")
+        checked_at = time.monotonic()
+        try:
+            expires_at = self.scope.get("auth_expires_at")
+            if expires_at is not None and time.time() >= expires_at:
+                raise JSONWebTokenExpired("Token has expired")
+            if allow_recent and self._last_authorized_at is not None:
+                elapsed = checked_at - self._last_authorized_at
+                if 0 <= elapsed < _STREAM_AUTH_RECHECK_INTERVAL_SEC:
+                    return True
+            if token:
+                user = await _get_user_from_token(token)
+            if not await self._validate_resource_permissions(user):
+                await self._fail_auth("PERMISSION_REVOKED", WS_CLOSE_PERMISSION_DENIED)
+                return False
+        except JSONWebTokenExpired:
+            await self._fail_auth("EXPIRED", WS_CLOSE_TOKEN_EXPIRED)
+            return False
+        except JSONWebTokenError:
+            await self._fail_auth("INVALID", WS_CLOSE_TOKEN_INVALID)
+            return False
+        except Exception:
+            logger.exception("WebSocket authorization recheck failed")
+            await self._fail_auth("PERMISSION_REVOKED", WS_CLOSE_PERMISSION_DENIED)
+            return False
+        self.scope["user"] = user
+        self._last_authorized_at = checked_at
+        return True
+
+    def _start_authorization_watchdog(self) -> None:
+        if self._authorization_task is not None:
+            self._authorization_task.cancel()
+        self._authorization_task = asyncio.create_task(self._watch_authorization())
+
+    async def _watch_authorization(self) -> None:
+        """Expire idle/streaming sockets without relying on client cooperation."""
+        try:
+            while self._handshake_connected:
+                delay = _AUTH_RECHECK_INTERVAL_SEC
+                expires_at = self.scope.get("auth_expires_at")
+                if expires_at is not None:
+                    delay = min(delay, max(0.01, expires_at - time.time()))
+                await asyncio.sleep(delay)
+                if not self._handshake_connected or not await self.ensure_authorized():
+                    return
+        except asyncio.CancelledError:
+            return
 
     async def _send_initial_auth_ok(self) -> None:
         if self._initial_auth_sent:
@@ -148,6 +238,7 @@ class AuthHandshakeMixin:
 
         try:
             new_user = await _get_user_from_token(token)
+            expiry = verified_token_expiry(token)
         except JSONWebTokenExpired:
             await self._fail_auth("EXPIRED", WS_CLOSE_TOKEN_EXPIRED)
             return
@@ -188,8 +279,12 @@ class AuthHandshakeMixin:
             return
 
         # Success — swap, ack, cancel any pending grace timer.
-        self.scope["user"] = new_user  # type: ignore[attr-defined]
+        self.scope["user"] = new_user
+        self.scope["auth_token"] = token
+        self.scope["auth_expires_at"] = expiry
+        self._last_authorized_at = None
         self._cancel_refresh_grace_timer()
+        self._start_authorization_watchdog()
         await self.send(  # type: ignore[attr-defined]
             text_data=json.dumps(
                 {
@@ -210,6 +305,11 @@ class AuthHandshakeMixin:
         return True
 
     async def _fail_auth(self, reason: str, close_code: int) -> None:
+        self._handshake_connected = False
+        self._last_authorized_at = None
+        # UnifiedAgentConsumer checks this flag between streaming events.
+        if hasattr(self, "_is_connected"):
+            self._is_connected = False
         try:
             await self.send(  # type: ignore[attr-defined]
                 text_data=json.dumps(
@@ -269,4 +369,10 @@ class AuthHandshakeMixin:
     async def cleanup_auth_handshake(self) -> None:
         """Consumers should call this from their ``disconnect()``."""
         self._handshake_connected = False
+        self._last_authorized_at = None
         self._cancel_refresh_grace_timer()
+        task = self._authorization_task
+        self._authorization_task = None
+        if task is not None and task is not asyncio.current_task():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)

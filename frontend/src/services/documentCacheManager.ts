@@ -5,6 +5,12 @@
  * with hash-based validation. Implements LRU eviction strategy and respects storage limits.
  */
 
+import {
+  getDocumentCacheGeneration,
+  getDocumentCacheScope,
+  invalidateDocumentCacheSession,
+} from "./documentCacheState";
+
 interface CachedDocument {
   documentId: string;
   documentType: "pdf" | "text" | "pawls";
@@ -85,7 +91,7 @@ export class DocumentCacheManager {
     documentId: string,
     documentType: "pdf" | "text" | "pawls"
   ): string {
-    return `${documentId}_${documentType}`;
+    return `${getDocumentCacheScope()}:${documentId}_${documentType}`;
   }
 
   /**
@@ -95,8 +101,10 @@ export class DocumentCacheManager {
     documentId: string,
     expectedHash: string
   ): Promise<Blob | null> {
+    const generation = getDocumentCacheGeneration();
     try {
       const db = await this.initDB();
+      if (generation !== getDocumentCacheGeneration()) return null;
       const transaction = db.transaction([this.STORE_NAME], "readonly");
       const store = transaction.objectStore(this.STORE_NAME);
       const cacheKey = this.getCacheKey(documentId, "pdf");
@@ -106,6 +114,10 @@ export class DocumentCacheManager {
 
         request.onsuccess = () => {
           const cached = request.result as CachedDocument | undefined;
+          if (generation !== getDocumentCacheGeneration()) {
+            resolve(null);
+            return;
+          }
 
           if (!cached) {
             console.log(`No cached PDF found for document ${documentId}`);
@@ -174,8 +186,10 @@ export class DocumentCacheManager {
     documentId: string,
     expectedHash?: string
   ): Promise<string | null> {
+    const generation = getDocumentCacheGeneration();
     try {
       const db = await this.initDB();
+      if (generation !== getDocumentCacheGeneration()) return null;
       const transaction = db.transaction([this.STORE_NAME], "readonly");
       const store = transaction.objectStore(this.STORE_NAME);
       const cacheKey = this.getCacheKey(documentId, "text");
@@ -185,6 +199,10 @@ export class DocumentCacheManager {
 
         request.onsuccess = async () => {
           const cached = request.result as CachedDocument | undefined;
+          if (generation !== getDocumentCacheGeneration()) {
+            resolve(null);
+            return;
+          }
 
           if (!cached) {
             console.log(`No cached text found for document ${documentId}`);
@@ -222,7 +240,9 @@ export class DocumentCacheManager {
             } else if (cached.data instanceof Blob) {
               // Legacy format - stored as Blob (for backward compatibility)
               const text = await cached.data.text();
-              resolve(text);
+              resolve(
+                generation === getDocumentCacheGeneration() ? text : null
+              );
             } else if (
               cached.data &&
               typeof cached.data === "object" &&
@@ -259,8 +279,10 @@ export class DocumentCacheManager {
    * Get cached PAWLS data if it exists
    */
   async getCachedPawlsData(documentId: string): Promise<any | null> {
+    const generation = getDocumentCacheGeneration();
     try {
       const db = await this.initDB();
+      if (generation !== getDocumentCacheGeneration()) return null;
       const transaction = db.transaction([this.STORE_NAME], "readonly");
       const store = transaction.objectStore(this.STORE_NAME);
       const cacheKey = this.getCacheKey(documentId, "pawls");
@@ -270,6 +292,10 @@ export class DocumentCacheManager {
 
         request.onsuccess = () => {
           const cached = request.result as CachedDocument | undefined;
+          if (generation !== getDocumentCacheGeneration()) {
+            resolve(null);
+            return;
+          }
 
           if (!cached) {
             console.log(
@@ -309,8 +335,10 @@ export class DocumentCacheManager {
    * Cache a PDF with its hash
    */
   async cachePDF(documentId: string, hash: string, blob: Blob): Promise<void> {
+    const generation = getDocumentCacheGeneration();
     try {
       const db = await this.initDB();
+      if (generation !== getDocumentCacheGeneration()) return;
 
       // Check current cache size and evict if necessary
       const currentSize = await this.getCacheSize();
@@ -338,6 +366,7 @@ export class DocumentCacheManager {
         });
 
         // Now start the transaction with the data ready
+        if (generation !== getDocumentCacheGeneration()) return;
         const transaction = db.transaction(
           [this.STORE_NAME, this.METADATA_STORE_NAME],
           "readwrite"
@@ -382,6 +411,7 @@ export class DocumentCacheManager {
         });
       } else {
         // Real browser environment - store Blob normally
+        if (generation !== getDocumentCacheGeneration()) return;
         const transaction = db.transaction(
           [this.STORE_NAME, this.METADATA_STORE_NAME],
           "readwrite"
@@ -437,9 +467,11 @@ export class DocumentCacheManager {
     text: string,
     hash?: string
   ): Promise<void> {
+    const generation = getDocumentCacheGeneration();
     try {
       // Store text directly as string instead of Blob for better compatibility
       const db = await this.initDB();
+      if (generation !== getDocumentCacheGeneration()) return;
 
       // Check current cache size and evict if necessary
       const currentSize = await this.getCacheSize();
@@ -449,6 +481,7 @@ export class DocumentCacheManager {
         await this.evictOldest(newSize);
       }
 
+      if (generation !== getDocumentCacheGeneration()) return;
       const transaction = db.transaction(
         [this.STORE_NAME, this.METADATA_STORE_NAME],
         "readwrite"
@@ -501,10 +534,12 @@ export class DocumentCacheManager {
    * Cache PAWLS data
    */
   async cachePawlsData(documentId: string, pawlsData: any): Promise<void> {
+    const generation = getDocumentCacheGeneration();
     try {
       const dataStr = JSON.stringify(pawlsData);
       const size = new Blob([dataStr]).size;
       const db = await this.initDB();
+      if (generation !== getDocumentCacheGeneration()) return;
 
       // Check current cache size and evict if necessary
       const currentSize = await this.getCacheSize();
@@ -513,6 +548,7 @@ export class DocumentCacheManager {
         await this.evictOldest(size);
       }
 
+      if (generation !== getDocumentCacheGeneration()) return;
       const transaction = db.transaction(
         [this.STORE_NAME, this.METADATA_STORE_NAME],
         "readwrite"
@@ -567,8 +603,10 @@ export class DocumentCacheManager {
     documentType: "pdf" | "text" | "pawls",
     serverHash?: string
   ): Promise<boolean> {
+    const generation = getDocumentCacheGeneration();
     try {
       const db = await this.initDB();
+      if (generation !== getDocumentCacheGeneration()) return false;
       const transaction = db.transaction(
         [this.METADATA_STORE_NAME],
         "readonly"
@@ -581,6 +619,10 @@ export class DocumentCacheManager {
 
         request.onsuccess = () => {
           const metadata = request.result as CacheMetadata | undefined;
+          if (generation !== getDocumentCacheGeneration()) {
+            resolve(false);
+            return;
+          }
 
           if (!metadata) {
             resolve(false);
@@ -773,6 +815,10 @@ export class DocumentCacheManager {
    * Clear all cached documents
    */
   async clearCache(): Promise<void> {
+    // Invalidate synchronously, including in-flight reads/writes and DOCX bytes.
+    // A new scope stays isolated even if IndexedDB cleanup fails.
+    invalidateDocumentCacheSession();
+    if (typeof indexedDB === "undefined") return;
     try {
       const db = await this.initDB();
       const transaction = db.transaction(

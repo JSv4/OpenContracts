@@ -268,12 +268,18 @@ def _measure_depth(
     current_depth: int = 0,
     context: Any = None,
     visited_fragments: set[str] | None = None,
+    fragment_depths: dict[str, int] | None = None,
 ) -> int:
     """Recursively measure the maximum depth of selection sets.
 
     Follows fragment spreads through the fragment registry to prevent
     attackers from hiding depth behind named fragments.
     """
+    # Cache relative fragment depth, not whether it appeared anywhere in
+    # the query. Reuse at a deeper location must count its full depth, while
+    # a fragment DAG must not expand exponentially during validation.
+    if fragment_depths is None:
+        fragment_depths = {}
     if visited_fragments is None:
         visited_fragments = set()
     if not hasattr(node, "selection_set") or node.selection_set is None:
@@ -283,25 +289,35 @@ def _measure_depth(
     for selection in node.selection_set.selections:
         if isinstance(selection, ast.FieldNode):
             child_depth = _measure_depth(
-                selection, current_depth + 1, context, visited_fragments
+                selection,
+                current_depth + 1,
+                context,
+                visited_fragments,
+                fragment_depths,
             )
         elif isinstance(selection, ast.InlineFragmentNode):
             child_depth = _measure_depth(
-                selection, current_depth, context, visited_fragments
+                selection, current_depth, context, visited_fragments, fragment_depths
             )
         elif isinstance(selection, ast.FragmentSpreadNode) and context is not None:
             frag_name = selection.name.value
-            if frag_name not in visited_fragments:
-                visited_fragments.add(frag_name)
-                fragment = context.get_fragment(frag_name)
-                if fragment:
-                    child_depth = _measure_depth(
-                        fragment, current_depth, context, visited_fragments
-                    )
-                else:
-                    child_depth = current_depth
+            if frag_name in visited_fragments:
+                child_depth = current_depth  # Cycles are rejected by spec validation.
             else:
-                child_depth = current_depth  # cycle guard
+                if frag_name not in fragment_depths:
+                    fragment = context.get_fragment(frag_name)
+                    fragment_depths[frag_name] = (
+                        _measure_depth(
+                            fragment,
+                            0,
+                            context,
+                            visited_fragments | {frag_name},
+                            fragment_depths,
+                        )
+                        if fragment
+                        else 0
+                    )
+                child_depth = current_depth + fragment_depths[frag_name]
         else:
             child_depth = current_depth
         if child_depth > max_child:

@@ -30,8 +30,7 @@ from config.websocket.auth_handshake import AuthHandshakeMixin
 from config.websocket.middleware import WS_CLOSE_RATE_LIMITED
 from config.websocket.utils.auth_helpers import check_auth_and_close_if_failed
 from opencontractserver.conversations.models import Conversation
-from opencontractserver.corpuses.models import Corpus
-from opencontractserver.documents.models import Document
+from opencontractserver.conversations.services import ConversationService
 from opencontractserver.utils.ids import from_global_id
 
 logger = logging.getLogger(__name__)
@@ -87,7 +86,7 @@ class ThreadUpdatesConsumer(AuthHandshakeMixin, AsyncWebsocketConsumer):
         if await check_auth_and_close_if_failed(self, self.session_id):
             return
 
-        user = self.scope.get("user")
+        user = self.current_user
         self.user_id = user.pk
 
         # Parse query parameters
@@ -276,10 +275,9 @@ class ThreadUpdatesConsumer(AuthHandshakeMixin, AsyncWebsocketConsumer):
         """
         Check if ``user`` may participate in ``self.conversation_id``.
 
-        For conversations with BOTH chat_with_corpus AND chat_with_document set
-        (doc-in-corpus threads), the user must have access to BOTH the corpus
-        AND the document (AND logic). For single-context conversations the user
-        only needs access to that one resource.
+        Use the canonical policy: private CHATs require their own authority;
+        THREADs can inherit parent visibility, with both contexts required for
+        document-in-corpus threads. Administrators have no blanket read bypass.
 
         ``cache_conversation`` controls whether the resolved Conversation is
         attached to ``self.conversation`` for downstream use; the connect path
@@ -288,39 +286,16 @@ class ThreadUpdatesConsumer(AuthHandshakeMixin, AsyncWebsocketConsumer):
         if self.conversation_id is None:
             return False
 
-        try:
-            conversation = Conversation.objects.get(pk=self.conversation_id)
-        except Conversation.DoesNotExist:
+        conversation = ConversationService.get_or_none(
+            Conversation, self.conversation_id, user
+        )
+        if conversation is None:
             return False
 
         if cache_conversation:
             self.conversation = conversation
 
-        if conversation.creator_id == user.pk or user.is_superuser:
-            return True
-
-        has_corpus = (
-            Corpus.objects.visible_to_user(user)
-            .filter(pk=conversation.chat_with_corpus_id)
-            .exists()
-            if conversation.chat_with_corpus_id
-            else None
-        )
-        has_document = (
-            Document.objects.visible_to_user(user)
-            .filter(pk=conversation.chat_with_document_id)
-            .exists()
-            if conversation.chat_with_document_id
-            else None
-        )
-
-        if has_corpus is not None and has_document is not None:
-            return has_corpus and has_document
-        if has_corpus is not None:
-            return has_corpus
-        if has_document is not None:
-            return has_document
-        return False
+        return True
 
     # -------------------------------------------------------------------------
     #  AuthHandshakeMixin override

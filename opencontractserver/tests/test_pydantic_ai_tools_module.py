@@ -266,6 +266,14 @@ class TestCheckUserPermissions(TestCase):
         )
         cls.doc, _, _ = cls.corpus.add_document(document=original_doc, user=cls.user)
 
+    async def test_disabled_user_loses_tool_access_mid_session(self):
+        deps = PydanticAIDependencies(user_id=self.user.pk, corpus_id=self.corpus.pk)
+        ctx = MagicMock(deps=deps)
+        await _check_user_permissions(ctx)
+        await User.objects.filter(pk=self.user.pk).aupdate(is_active=False)
+        with self.assertRaisesRegex(PermissionError, "inactive"):
+            await _check_user_permissions(ctx)
+
     async def test_anonymous_user_nonexistent_document_raises_error(self):
         """Test that anonymous user accessing non-existent document raises PermissionError.
 

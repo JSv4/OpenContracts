@@ -289,19 +289,19 @@ class WorkerTokenChunkedServiceTests(TestCase):
 
     def test_complete_rejects_swapped_token(self):
         """A token bound to a *different* corpus cannot complete a session that
-        another token started (token-swap guard); the session is marked FAILED."""
+        another token started (token-swap guard); the session is left untouched."""
         session = self._start_and_fill_zip_session(self.token)
         swapped, _ = CorpusAccessToken.create_token(
             worker_account=self.account, corpus=self.other
         )
-        with self.assertRaises(DocumentImportPermissionError):
+        with self.assertRaises(ChunkedUploadError):
             complete_chunked_upload(
                 user=self.account.user,
                 upload_id=session.id,
                 access_token=swapped,
             )
         session.refresh_from_db()
-        self.assertEqual(session.status, ChunkedUploadStatus.FAILED)
+        self.assertEqual(session.status, ChunkedUploadStatus.PENDING)
 
     def test_complete_rejects_swapped_token_document_kind(self):
         """The completion token-rebind guard also protects DOCUMENT-kind
@@ -325,14 +325,14 @@ class WorkerTokenChunkedServiceTests(TestCase):
         swapped, _ = CorpusAccessToken.create_token(
             worker_account=self.account, corpus=self.other
         )
-        with self.assertRaises(DocumentImportPermissionError):
+        with self.assertRaises(ChunkedUploadError):
             complete_chunked_upload(
                 user=self.account.user,
                 upload_id=session.id,
                 access_token=swapped,
             )
         session.refresh_from_db()
-        self.assertEqual(session.status, ChunkedUploadStatus.FAILED)
+        self.assertEqual(session.status, ChunkedUploadStatus.PENDING)
 
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=False)
@@ -367,6 +367,55 @@ class WorkerTokenRestEndpointTests(TestCase):
 
     def _zip_upload(self):
         return io.BytesIO(_zip_bytes())
+
+    def test_chunked_operations_enforce_corpus_scope_for_same_worker(self):
+        from tempfile import TemporaryDirectory
+
+        other_token, other_plaintext = CorpusAccessToken.create_token(
+            worker_account=self.account, corpus=self.other
+        )
+        with TemporaryDirectory() as media_root, override_settings(
+            MEDIA_ROOT=media_root
+        ):
+            session = start_chunked_upload(
+                user=self.account.user,
+                kind="document",
+                filename="x.pdf",
+                total_size=len(_PDF),
+                chunk_size=len(_PDF),
+                total_chunks=1,
+                metadata={"title": "x.pdf"},
+                access_token=other_token,
+            )
+            self.assertEqual(session.metadata["add_to_corpus_id"], str(self.other.pk))
+            store_chunk(
+                user=self.account.user,
+                upload_id=session.pk,
+                index=0,
+                chunk_file=SimpleUploadedFile("x.pdf", _PDF),
+                access_token=other_token,
+            )
+            root = f"/api/imports/chunked/{session.pk}/"
+            wrong = self._client()
+            self.assertEqual(wrong.get(root).status_code, 404)
+            self.assertEqual(
+                wrong.post(
+                    root + "parts/0/",
+                    {"file": SimpleUploadedFile("x.pdf", b"x" * len(_PDF))},
+                    format="multipart",
+                ).status_code,
+                404,
+            )
+            self.assertEqual(
+                wrong.post(root + "complete/", {}, format="json").status_code, 404
+            )
+            session.refresh_from_db()
+            self.assertEqual(session.status, ChunkedUploadStatus.PENDING)
+            with session.parts.get(index=0).file.open("rb") as part:
+                self.assertEqual(part.read(), _PDF)
+            allowed = APIClient()
+            allowed.credentials(HTTP_AUTHORIZATION=f"WorkerKey {other_plaintext}")
+            self.assertEqual(allowed.get(root).status_code, 200)
 
     def test_workerkey_zip_to_corpus_accepted(self):
         r = self._client().post(

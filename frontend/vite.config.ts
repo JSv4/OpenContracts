@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react-swc";
-import fs from "fs";
+import { docxodusWasmPlugin } from "./tooling/docxodusWasm";
 import path from "path";
 
 // Custom plugin to handle asset imports in Playwright tests
@@ -12,59 +12,6 @@ const assetPlugin = () => {
       if (id.match(/\.(png|jpe?g|gif|svg|webp)$/)) {
         return `export default "${path.basename(id)}";`;
       }
-    },
-  };
-};
-
-// Serve docxodus WASM files from node_modules with correct MIME types.
-// Vite's dep optimizer rewrites import.meta.url, breaking auto-detection
-// of sibling WASM files. We exclude docxodus from optimization (below)
-// so import.meta.url resolves to the real node_modules path, then this
-// middleware serves the _framework files that the .NET WASM loader fetches.
-const docxodusWasmPlugin = () => {
-  const MIME_TYPES: Record<string, string> = {
-    ".js": "application/javascript",
-    ".wasm": "application/wasm",
-    ".json": "application/json",
-    ".dat": "application/octet-stream",
-  };
-
-  return {
-    name: "docxodus-wasm-server",
-    configureServer(server: { middlewares: { use: Function } }) {
-      server.middlewares.use(
-        (
-          req: { url?: string },
-          res: {
-            setHeader: Function;
-            writeHead: Function;
-            end: Function;
-          },
-          next: Function
-        ) => {
-          const url = req.url || "";
-          // Match requests for docxodus WASM framework files
-          const match = url.match(/\/node_modules\/docxodus\/dist\/wasm\/(.*)/);
-          if (!match) return next();
-
-          const filePath = path.join(
-            __dirname,
-            "node_modules/docxodus/dist/wasm",
-            match[1]
-          );
-          const ext = path.extname(filePath);
-          const mimeType = MIME_TYPES[ext] || "application/octet-stream";
-
-          try {
-            const data = fs.readFileSync(filePath);
-            res.setHeader("Content-Type", mimeType);
-            res.setHeader("Access-Control-Allow-Origin", "*");
-            res.end(data);
-          } catch {
-            next();
-          }
-        }
-      );
     },
   };
 };
@@ -110,7 +57,9 @@ export default defineConfig(async () => {
     plugins: [
       react(),
       assetPlugin(),
-      docxodusWasmPlugin(),
+      docxodusWasmPlugin(
+        path.join(__dirname, "node_modules/docxodus/dist/wasm")
+      ),
       // Instrument source code with Istanbul when collecting Playwright CT coverage
       ...istanbulPlugins,
     ],

@@ -1867,10 +1867,10 @@
     json5 "^2.2.3"
     lodash.sortby "^4.7.0"
 
-"@tiptap/core@^3.10.4", "@tiptap/core@^3.30.4":
-  version "3.30.4"
-  resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-3.30.4.tgz#9e0847c5f4dd53750ae3accc6b83223e37f693b3"
-  integrity sha512-V9yKuUfV8qC9WBrnVxkFWmYLBomc3d1CwXoFSjED5DRu5q2oyxv07F+jOJSRogJAY+feHjuxvjhixwxeHm2DXQ==
+"@tiptap/core@^3.10.4", "@tiptap/core@^3.30.5":
+  version "3.30.5"
+  resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-3.30.5.tgz#9929ae10a5e0892fb1a38a197ae8208cdd3801ea"
+  integrity sha512-3O7N0FyKIfuLV+xrdWyDM3V5eUY/q2CgLjhhMwOAbM1Pu7VPp9VP+TpEYOdH8aRyB+h1vj5hX5A747D8ZrPfHA==
 
 "@tiptap/extension-blockquote@^3.10.4":
   version "3.10.4"

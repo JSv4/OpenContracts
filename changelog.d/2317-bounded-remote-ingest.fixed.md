@@ -1,1 +1,0 @@
-- Bound remote-ingest discovery, ledger reads, and unfinished futures in `scripts/remote_ingest/oc_remote_ingest.py` (#2317). Stream directory traversal, page by relative path without skipping status transitions or retrying failures within a pass, and gracefully cancel queued/paused work on Ctrl-C while saving active upload results for resume.

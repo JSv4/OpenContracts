@@ -1,7 +1,7 @@
 import { OS_LEGAL_COLORS } from "./osLegalStyles";
 
 // Rendered in the NavBar version pill. Keep in sync with the release tag.
-export const VERSION_TAG = "v3.1.0";
+export const VERSION_TAG = "v3.1.1";
 // Small-mobile breakpoint - used by chat widget styles for the tightest
 // viewports (very small phones), where chat-bubble arrows are removed and
 // font sizes shrink. Distinct from MOBILE_VIEW_BREAKPOINT (600).

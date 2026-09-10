@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.1] - 2026-09-10
+
+### Added
+
+- Remote ingest supports Docling or Warp PDF parsing, Docxodus DOCX parsing,
+  and TXT chunking through shared database-independent adapters. Local settings,
+  MIME routing, parser provenance, span annotations, and structural links are
+  validated and preserved (#2316).
+
+### Changed
+
+- Updated Strawberry GraphQL, PostHog, Gunicorn, Tiptap, Vitest, and coverage
+  dependencies. Synchronized the frontend and backend telemetry version with
+  this release.
+
+### Fixed
+
+- Fixed label-set workflows: label colors use the API's accepted hex format,
+  failed creation preserves the form, and success waits for refreshed labels.
+  **Add Label** stays beside search on populated lists. Corpus creation displays
+  and submits the selected label set, including a cleared selection (#2295).
+- Bounded remote-ingest discovery, ledger reads, and unfinished futures. Directory
+  traversal streams, ledger reads use stable pages, and Ctrl-C cancels queued or
+  paused work while retaining active upload results for resume (#2317).
+- Remote ingest checkpoints parsing, enrichment, and validated embeddings in the
+  existing ledger volume. It reconciles source changes and uploads a stable byte
+  snapshot. Accepted-source conflicts retain receipts, and ambiguous POST outcomes
+  stop automatic replay. Existing ledgers migrate in place; artifact cleanup is
+  bounded (#2318).
+- Remote ingest pauses admission when token-scoped upload status is unavailable.
+  Status polls are serialized, preserve watermark hysteresis, and retry transient
+  errors with cancellation-aware backoff. Permanent status errors stop `run`
+  without consuming document attempts; unknown status is distinct from zero (#2319).
+- Remote ingest verifies the whole ledger with explicit completion, outstanding,
+  failure, and unavailable outcomes, plus optional streaming JSON Lines results.
+  Receipt HTTP errors preserve durable state. Remote preparation and the server
+  microservice client share embedding-response validation; remote uploads require
+  complete, finite vectors before caching or upload (#2320).
+
+### Upgrade notes
+
+- No new Django database migrations are introduced relative to v3.1.0.
+- Remote parser services require `OC_PARSER_IDENTITY` (or per-parser JSON
+  identities). Embedding mode requires `OC_EMBEDDING_IDENTITY`; enrichers require
+  `OC_ENRICHER_IDENTITY`. Use stable deployment/model/configuration revisions and
+  update them when those inputs change. Pure TXT parsing and `--no-embeddings`
+  do not require the corresponding service identities.
+- Remote `verify` now exits with **0** for complete/empty, **1** for outstanding
+  work, **2** for failure/reconciliation, and **3** when verification is unavailable.
+  Completion means the worker-upload transaction, not asynchronous thumbnail,
+  embedding, or search readiness. Update automation that consumes these statuses.
+- See [Remote Ingest Worker](docs/upload_methods/remote_ingest_worker.md) and its
+  [CLI reference](scripts/remote_ingest/README.md) for configuration and recovery.
+
 ## [3.1.0] - 2026-09-08
 
 ### Added

@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import axios from "axios";
+import axios, { AxiosHeaders } from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { documentCacheManager } from "../documentCacheManager";
 import {
@@ -65,20 +65,32 @@ describe("document cache isolation at authentication changes", () => {
   it.each(["text", "pawls", "pdf", "docx"])(
     "rejects late %s responses after logout",
     async (format) => {
-      const network = deferred<any>();
+      const network = deferred<void>();
       let pending: Promise<unknown>;
       if (format === "text") {
-        vi.mocked(rest.getDocumentRawText).mockReturnValueOnce(network.promise);
+        vi.mocked(rest.getDocumentRawText).mockReturnValueOnce(
+          network.promise.then(() => "PRIVATE")
+        );
         pending = getDocumentRawText("private.txt", "private-doc");
         await vi.waitFor(() =>
           expect(rest.getDocumentRawText).toHaveBeenCalled()
         );
       } else if (format === "pawls") {
-        vi.mocked(rest.getPawlsLayer).mockReturnValueOnce(network.promise);
+        vi.mocked(rest.getPawlsLayer).mockReturnValueOnce(
+          network.promise.then(() => [])
+        );
         pending = getPawlsLayer("private.json", "private-doc");
         await vi.waitFor(() => expect(rest.getPawlsLayer).toHaveBeenCalled());
       } else {
-        vi.spyOn(axios, "get").mockReturnValueOnce(network.promise);
+        vi.spyOn(axios, "get").mockReturnValueOnce(
+          network.promise.then(() => ({
+            data: new Uint8Array([1, 2]).buffer,
+            status: 200,
+            statusText: "OK",
+            headers: {},
+            config: { headers: new AxiosHeaders() },
+          }))
+        );
         pending =
           format === "pdf"
             ? getCachedPDFUrl("private.pdf", "private-doc", "hash")
@@ -89,13 +101,7 @@ describe("document cache isolation at authentication changes", () => {
         "Document session changed"
       );
       clearAuthSession(undefined, "logout");
-      network.resolve(
-        format === "text"
-          ? "PRIVATE"
-          : format === "pawls"
-          ? []
-          : { data: new Uint8Array([1, 2]).buffer }
-      );
+      network.resolve();
       await rejected;
       expect(
         await documentCacheManager.getCachedText("private-doc")

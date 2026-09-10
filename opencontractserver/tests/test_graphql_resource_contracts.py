@@ -8,15 +8,19 @@ from django.contrib.auth.models import AnonymousUser
 from django.test import TestCase
 
 from config.jwt_auth.shortcuts import get_token
+from opencontractserver.agents.models import AgentConfiguration
 from opencontractserver.analyzer.models import Analysis, Analyzer, GremlinEngine
 from opencontractserver.annotations.models import (
     Annotation,
     AnnotationLabel,
     LabelSet,
+    Note,
     Relationship,
 )
-from opencontractserver.corpuses.models import Corpus
+from opencontractserver.corpuses.models import Corpus, CorpusAction, CorpusActionTrigger
 from opencontractserver.documents.models import Document, DocumentPath
+from opencontractserver.extracts.models import Fieldset
+from opencontractserver.shared.services.tree_traversal import TreeTraversalService
 from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.ids import to_global_id
 from opencontractserver.utils.permissioning import set_permissions_for_obj_to_user
@@ -186,6 +190,153 @@ class GraphQLResourceContractTests(TestCase):
         )
         self.assertIn(private.raw_text, json.dumps(result))
 
+    def test_note_trees_and_links_respect_independent_visibility(self):
+        _, private_annotation, _ = self.privacy_fixture()
+        private_document = Document.objects.create(
+            title="Private note document", creator=self.owner
+        )
+        ancestor = Note.objects.create(
+            title="Private ancestor",
+            content="PRIVATE_ANCESTOR",
+            document=private_document,
+            corpus=self.corpus,
+            creator=self.owner,
+        )
+        root = Note.objects.create(
+            title="Visible root",
+            content="VISIBLE_ROOT",
+            parent=ancestor,
+            document=self.document,
+            corpus=self.corpus,
+            creator=self.owner,
+            annotation=private_annotation,
+        )
+        Note.objects.create(
+            title="Private child",
+            content="PRIVATE_CHILD",
+            parent=root,
+            document=private_document,
+            corpus=self.corpus,
+            creator=self.owner,
+        )
+        Note.objects.create(
+            title="Visible child",
+            content="VISIBLE_CHILD",
+            parent=root,
+            document=self.document,
+            corpus=self.corpus,
+            creator=self.owner,
+        )
+        query = """query($id: ID!) { note(id: $id) {
+            parent { id } corpus { id } annotation { id }
+            descendantsTree fullTree subtree
+        } }"""
+        variables = {"id": to_global_id("NoteType", root.pk)}
+        result = self.query(query, variables, self.viewer)["note"]
+        self.assertIsNone(result["parent"])
+        self.assertIsNone(result["annotation"])
+        self.assertEqual(
+            result["corpus"]["id"], to_global_id("CorpusType", self.corpus.pk)
+        )
+        for field in ("descendantsTree", "fullTree", "subtree"):
+            with self.subTest(field=field):
+                tree = json.dumps(result[field])
+                self.assertIn("VISIBLE_CHILD", tree)
+                self.assertNotIn("PRIVATE_CHILD", tree)
+                self.assertNotIn("PRIVATE_ANCESTOR", tree)
+
+        result = self.query(query, variables, self.owner)["note"]
+        self.assertEqual(result["parent"]["id"], to_global_id("NoteType", ancestor.pk))
+        self.assertEqual(
+            result["annotation"]["id"],
+            to_global_id("AnnotationType", private_annotation.pk),
+        )
+        self.assertIn("PRIVATE_ANCESTOR", json.dumps(result["fullTree"]))
+        self.assertIn("PRIVATE_CHILD", json.dumps(result["descendantsTree"]))
+
+    def test_tree_traversal_rejects_hidden_roots_and_terminates_cycles(self):
+        plain, private, _ = self.privacy_fixture()
+        self.assertEqual(
+            TreeTraversalService.get_nodes(
+                private, self.viewer, mode="full", text_field="raw_text"
+            ),
+            [],
+        )
+        Annotation.objects.filter(pk=plain.pk).update(parent=private)
+        plain.refresh_from_db()
+        for mode in ("full", "subtree", "descendants"):
+            with self.subTest(mode=mode):
+                nodes = TreeTraversalService.get_nodes(
+                    plain, self.owner, mode=mode, text_field="raw_text"
+                )
+                expected = (
+                    {private.pk} if mode == "descendants" else {plain.pk, private.pk}
+                )
+                self.assertEqual({node["id"] for node in nodes}, expected)
+                self.assertEqual(len(nodes), len(expected))
+
+    def test_action_configuration_links_require_target_visibility(self):
+        private_corpus = Corpus.objects.create(
+            title="Private config corpus", creator=self.owner
+        )
+        resources = {
+            "fieldset": Fieldset.objects.create(
+                name="Private fieldset", creator=self.owner
+            ),
+            "analyzer": Analyzer.objects.create(
+                id="private_action_analyzer",
+                creator=self.owner,
+                task_name="opencontractserver.tasks.noop",
+            ),
+            "agent_config": AgentConfiguration.objects.create(
+                name="Private config",
+                scope="CORPUS",
+                corpus=private_corpus,
+                creator=self.owner,
+                system_instructions="Synthetic instructions",
+            ),
+        }
+        actions = {}
+        for field, resource in resources.items():
+            action = CorpusAction.objects.create(
+                name=field,
+                corpus=self.corpus,
+                creator=self.owner,
+                trigger=CorpusActionTrigger.ADD_DOCUMENT,
+                task_instructions="Synthetic task" if field == "agent_config" else "",
+                **{field: resource},
+            )
+            set_permissions_for_obj_to_user(self.viewer, action, [PermissionTypes.READ])
+            actions[to_global_id("CorpusActionType", action.pk)] = field
+
+        query = """query($corpusId: ID) { corpusActions(corpusId: $corpusId) {
+            edges { node { id fieldset { id } analyzer { id } agentConfig { id } } }
+        } }"""
+        variables = {"corpusId": to_global_id("CorpusType", self.corpus.pk)}
+        viewer_nodes = self.query(query, variables, self.viewer)["corpusActions"][
+            "edges"
+        ]
+        self.assertEqual(len(viewer_nodes), 3)
+        for edge in viewer_nodes:
+            self.assertIsNone(edge["node"]["fieldset"])
+            self.assertIsNone(edge["node"]["analyzer"])
+            self.assertIsNone(edge["node"]["agentConfig"])
+
+        owner_nodes = self.query(query, variables, self.owner)["corpusActions"]["edges"]
+        self.assertEqual(len(owner_nodes), 3)
+        types = {
+            "fieldset": "FieldsetType",
+            "analyzer": "AnalyzerType",
+            "agent_config": "AgentConfigurationType",
+        }
+        for edge in owner_nodes:
+            node = edge["node"]
+            field = actions[node["id"]]
+            api_field = "agentConfig" if field == "agent_config" else field
+            self.assertEqual(
+                node[api_field]["id"], to_global_id(types[field], resources[field].pk)
+            )
+
     def test_legacy_analysis_link_obeys_independent_visibility(self):
         plain, _, analysis = self.privacy_fixture()
         plain.analysis = analysis
@@ -210,23 +361,46 @@ class GraphQLResourceContractTests(TestCase):
             document=self.document,
             corpus=self.corpus,
             created_by_analysis=analysis,
+            analysis=analysis,
+            analyzer=analysis.analyzer,
             relationship_label=label,
         )
         relation.source_annotations.add(plain)
+        relation.target_annotations.add(plain)
         self.assertFalse(
             Relationship.objects.visible_to_user(AnonymousUser())
             .filter(pk=relation.pk)
             .exists()
         )
-        result = self.query(
-            "query($id: ID!) { annotation(id: $id) { allSourceNodeInRelationship { id relationshipLabel { text } } } }",
-            {"id": to_global_id("AnnotationType", plain.pk)},
-        )
+        query = """query($id: ID!) { annotation(id: $id) {
+            allSourceNodeInRelationship {
+                id relationshipLabel { text } analyzer { id }
+                analysis { id } createdByAnalysis { id } createdByExtract { id }
+            }
+            allTargetNodeInRelationship { id }
+        } }"""
+        variables = {"id": to_global_id("AnnotationType", plain.pk)}
+        result = self.query(query, variables)
         self.assertNotIn(
             label.text,
             json.dumps(result),
             "Anonymous relationship traversal bypassed source privacy",
         )
+        self.assertEqual(result["annotation"]["allTargetNodeInRelationship"], [])
+        result = self.query(query, variables, self.owner)["annotation"]
+        expected_id = to_global_id("RelationshipType", relation.pk)
+        self.assertEqual(result["allTargetNodeInRelationship"], [{"id": expected_id}])
+        visible = result["allSourceNodeInRelationship"][0]
+        self.assertEqual(visible["id"], expected_id)
+        self.assertEqual(
+            visible["analysis"]["id"], to_global_id("AnalysisType", analysis.pk)
+        )
+        self.assertEqual(visible["createdByAnalysis"], visible["analysis"])
+        self.assertEqual(
+            visible["analyzer"]["id"],
+            to_global_id("AnalyzerType", analysis.analyzer_id),
+        )
+        self.assertIsNone(visible["createdByExtract"])
 
     def test_parent_annotation_respects_visibility(self):
         plain, private, _ = self.privacy_fixture()

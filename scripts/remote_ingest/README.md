@@ -179,7 +179,7 @@ with `compose/accelerated/bench_parse.py`; its speedup is hardware-specific.
 |---|---|
 | `plan` | Scan `OC_DATA_DIR` and record every PDF in the SQLite ledger. No network, no parsing. |
 | `run` | Parse + embed + upload all `PENDING`/`FAILED` docs. Resumable, concurrent, back-pressure-aware. |
-| `verify` | Poll the target for each uploaded doc's terminal status; mark `COMPLETED`/`FAILED`. |
+| `verify` | Verify the whole ledger; poll uploaded receipts and return a completion, outstanding, failure or unavailable result. |
 | `status` | Print ledger counts + token-scoped outstanding uploads (or `unknown`). |
 
 Useful flags (append after the subcommand):
@@ -204,6 +204,47 @@ Useful flags (append after the subcommand):
 - `--max-attempts N` — retries per document before it is PARKED (default 5).
 - `--insecure` — disable TLS verification (testing only; e.g. a self-signed or
   local HTTPS target).
+
+### Verification contract
+
+`verify` covers **every row in the ledger**, including work never uploaded and
+failures from earlier passes. It polls each `UPLOADED` receipt once, persists valid
+`COMPLETED`/`FAILED` responses, then decides its exit from final ledger state and
+any unavailable observations. It does not poll the unrelated token backlog.
+
+| Exit | Outcome | Meaning |
+|---|---|---|
+| `0` | `complete` / `empty` | Every row is `COMPLETED`; an empty ledger is an explicit successful no-op. |
+| `1` | `outstanding` | Local `PENDING` work or receipts still `PENDING`/`PROCESSING`. |
+| `2` | `failed` | `FAILED`, `PARKED`, `AMBIGUOUS` or `CONFLICT` work needs retry/reconciliation. |
+| `3` | `unable_to_verify` | At least one receipt is unavailable/malformed/missing, or a ledger state is unknown. |
+
+For mixed results, `3` takes precedence over `2`, then `1`. Codes `0`/`1`/`2`
+follow the bulk-import convention where applicable. Repeating verification keeps
+reporting unresolved failures and preserves their receipt/error. HTTP 401/403,
+404 (missing or inaccessible under this exact token), 429, 5xx, transport errors,
+and malformed responses have distinct reasons; none changes the receipt's ledger
+state, attempts or diagnostic history. Correct the cause and rerun verification.
+
+For automation, use `verify --json`. Standard output is **JSON Lines**, with one
+`type: "document"` record per ledger row in path order, followed by one
+`type: "summary"` record. Both carry `schema_version: 1`. Document records include
+`rel_path`, final local `status`, `upload_id`, observed `receipt_status` (or null),
+stable `reason`, diagnostic `detail`, and `http_status` (or null). Reasons include
+`not_uploaded`, `receipt_pending`, `receipt_processing`, `failed`, `parked`,
+`ambiguous_upload`, `source_conflict`, `missing_receipt`, `unauthorized`, `forbidden`,
+`not_found`, `rate_limited`, `server_unavailable`, `network_error`, `invalid_request`,
+`http_error`, `invalid_response`, `unknown_ledger_state`, and `completed`.
+The final summary includes `scope: "whole_ledger"`, `outcome`, `exit_code`, `total`,
+final status `counts`, `reason_counts`, `unavailable`, and
+`completion_boundary: "worker_upload_transaction"`. Consumers must require the
+final summary and successful process exit; a truncated stream is not completion.
+Results stream in bounded pages rather than accumulating all documents in memory.
+
+Success means that the worker-upload transaction committed document, annotations,
+relationships, supplied embeddings, structural set and metadata writes. Thumbnail
+generation, independently queued document embedding, indexing and search readiness
+are asynchronous and are **not** established by the receipt or its `document_id`.
 
 ### Bounded traversal and resume
 
@@ -322,6 +363,14 @@ of the configured, storage-supported dimension per annotation with nonblank
 `rawText`. Missing/duplicate/string-colliding IDs, partial batches or malformed
 vectors fail preparation before upload and never commit an embedding checkpoint.
 Only explicit `--no-embeddings` omits the payload for server annotation fallback.
+The remote worker uses the text embedding policy: document content is required;
+annotations with empty/whitespace `rawText` are exempt. Its response normalization
+is shared with `MicroserviceEmbedder`, without importing ORM persistence helpers.
+A single response must be `{"embeddings": [number, ...]}` or
+`{"embeddings": [[number, ...]]}`. Batch responses contain exactly one flat or
+singleton-wrapped vector per nonblank input; missing and extra rows both fail.
+Strings, booleans, nonfinite values and inconsistent dimensions are rejected.
+Failures retain parse/enrichment checkpoints and follow normal retry/parking rules.
 
 `plan` and preparation reconcile actual source bytes. A changed unaccepted source
 resets `PENDING`/`FAILED`/`PARKED` to `PENDING`, clears stale receipts/errors and

@@ -23,11 +23,19 @@ class StatusPollError(Exception):
     """Safe status diagnostic; never include credentials, bodies or request URLs."""
 
     def __init__(
-        self, message: str, *, permanent: bool = False, retry_after: float = 0
+        self,
+        message: str,
+        *,
+        permanent: bool = False,
+        retry_after: float = 0,
+        reason: str = "invalid_response",
+        http_status: int | None = None,
     ):
         super().__init__(message)
         self.permanent = permanent
         self.retry_after = retry_after
+        self.reason = reason
+        self.http_status = http_status
 
 
 def retry_after_seconds(value: str | None) -> float:

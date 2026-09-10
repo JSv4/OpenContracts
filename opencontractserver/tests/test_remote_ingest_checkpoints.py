@@ -460,7 +460,7 @@ class CheckpointTests(SimpleTestCase):
         self.assertEqual(self.counts["upload"], 1)
         self.assertEqual(set(self.cache().manifest["stages"]), set(cp.STAGES))
         with patch.object(cli, "_print_status"), patch.object(cli, "TargetClient"):
-            self.assertEqual(cli.cmd_verify(self.cfg), 1)
+            self.assertEqual(cli.cmd_verify(self.cfg), cli.VERIFY_FAILED)
 
     def test_missing_source_is_retryable_and_never_uploads_cached_payload(self):
         self.assertEqual(self.run_worker(), 0)
@@ -543,6 +543,26 @@ class CheckpointTests(SimpleTestCase):
         self.assertEqual(self.run_worker(), 0)
         self.assertEqual([self.counts[s] for s in cp.STAGES], [1, 1, 2])
         self.assertEqual(self.counts["upload"], 1)
+
+    def test_missing_document_vector_retries_then_parks_without_fallback(self):
+        self.cfg = replace(self.cfg, max_attempts=2)
+        with patch.object(cli.EmbedderClient, "embed_text", return_value=None):
+            for status in (cli.FAILED, cli.PARKED):
+                self.assertEqual(self.run_worker(), 1)
+                self.assertEqual(self.row()["status"], status)
+                self.assertIn("Document embedding", self.row()["last_error"])
+                self.assertEqual(
+                    set(self.cache().manifest["stages"]), {"parse", "enrich"}
+                )
+        self.assertEqual(self.counts["upload"], 0)
+        self.assertFalse(self.payloads)
+
+    def test_unsupported_embedding_dimension_fails_before_preparation(self):
+        self.cfg = replace(self.cfg, embedding_dimension=3)
+        with self.assertRaisesRegex(ValueError, "not supported by server storage"):
+            self.run_worker()
+        self.assertEqual(self.counts["parse"], 0)
+        self.assertFalse(self.payloads)
 
 
 class LedgerPermissionsTests(SimpleTestCase):
@@ -694,6 +714,7 @@ class EmbeddingContractTests(SimpleTestCase):
             [float("nan")] * 384,
             [float("inf")] * 384,
             [float("-inf")] * 384,
+            [10**400] * 384,
         ):
             with self.subTest(response=str(response)[:40]), self.assertRaises(
                 ValueError
@@ -750,6 +771,52 @@ class EmbeddingContractTests(SimpleTestCase):
                 embedder_path="test",
                 content="one",
                 labelled_text=annotations,
+            )
+
+    def test_http_response_envelopes_and_mixed_dimensions_fail(self):
+        client = cli.EmbedderClient("https://embedder", None, 2, dimension=384)
+        body: Any
+        for body in (
+            None,
+            [],
+            {},
+            {"vectors": [0.1] * 384},
+            {"embeddings": [[0.1] * 384, [0.1] * 768]},
+        ):
+            with self.subTest(body=str(body)[:40]), patch.object(
+                client.session, "post", return_value=Mock(json=lambda: body)
+            ):
+                for call in (
+                    lambda: client.embed_text("document"),
+                    lambda: client.embed_batch(["one", "two"]),
+                ):
+                    with self.assertRaises(ValueError):
+                        call()
+
+    def test_partial_missing_and_unmapped_annotation_vectors_fail(self):
+        embedder = Mock(dimension=384)
+        vector = [0.5] * 384
+        embedder.embed_text.return_value = vector
+        annotations = [{"id": "a", "rawText": "one"}, {"id": "b", "rawText": "two"}]
+        for rows in ([vector], [vector, None], [vector, vector, vector]):
+            embedder.embed_batch.return_value = rows
+            with self.assertRaises(ValueError):
+                cli._compute_embeddings(
+                    embedder=embedder,
+                    embedder_path="test",
+                    content="document",
+                    labelled_text=annotations,
+                )
+        with self.assertRaisesRegex(ValueError, "coverage"):
+            cli._validate_embeddings(
+                {
+                    "embedder_path": "test",
+                    "document_embedding": vector,
+                    "annotation_embeddings": {"a": vector, "unmapped": vector},
+                },
+                annotations,
+                384,
+                "test",
             )
 
 

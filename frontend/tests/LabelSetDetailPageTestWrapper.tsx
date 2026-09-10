@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { LabelSetDetailPage } from "../src/components/labelsets/LabelSetDetailPage";
 import { openedLabelset } from "../src/graphql/cache";
 import { InMemoryCache } from "@apollo/client";
+import { ToastContainer } from "react-toastify";
 
 interface LabelSetDetailPageTestWrapperProps {
   mocks: MockedResponse[];
@@ -38,6 +39,7 @@ export const LabelSetDetailPageTestWrapper: React.FC<
   return (
     <MockedProvider mocks={mocks} cache={createTestCache()} addTypename>
       <MemoryRouter initialEntries={["/label_sets"]}>
+        <ToastContainer />
         {ready ? (
           <LabelSetDetailPage />
         ) : (

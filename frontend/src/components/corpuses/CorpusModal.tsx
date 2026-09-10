@@ -13,7 +13,10 @@ import {
   Spinner,
 } from "@os-legal/ui";
 import { Info, Image, Settings, Scale, PlusCircle, Pencil } from "lucide-react";
-import { LabelSetSelector } from "../widgets/CRUD/LabelSetSelector";
+import {
+  LabelSetSelector,
+  LabelSetSelection,
+} from "../widgets/CRUD/LabelSetSelector";
 import { EmbedderSelector } from "../widgets/CRUD/EmbedderSelector";
 import { LicenseSelector } from "../widgets/CRUD/LicenseSelector";
 import { FilePreviewAndUpload } from "../widgets/file-controls/FilePreviewAndUpload";
@@ -580,8 +583,9 @@ export const CorpusModal: React.FC<CorpusModalProps> = ({
     []
   );
 
-  const handleLabelSetChange = useCallback((values: any) => {
+  const handleLabelSetChange = useCallback((values: LabelSetSelection) => {
     setLabelSetId(values.labelSet || null);
+    setLabelSetObj(values.labelSetObj);
   }, []);
 
   const handleEmbedderChange = useCallback((values: any) => {

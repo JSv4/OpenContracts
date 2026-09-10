@@ -1,15 +1,15 @@
 {
-  "total": 433,
+  "total": 431,
   "byArea": {
-    "components_other": 114,
+    "components_other": 113,
     "annotator": 90,
     "utils": 76,
     "graphql": 27,
     "knowledge_base": 27,
     "types": 27,
     "other": 24,
-    "widgets_other": 18,
     "hooks": 17,
+    "widgets_other": 17,
     "routing": 13
   }
 }

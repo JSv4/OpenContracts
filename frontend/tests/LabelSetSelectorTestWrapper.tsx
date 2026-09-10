@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { MockedProvider, MockedResponse } from "@apollo/client/testing";
 import { LabelSetSelector } from "../src/components/widgets/CRUD/LabelSetSelector";
+import type { LabelSetSelection } from "../src/components/widgets/CRUD/LabelSetSelector";
 import { LabelSetType } from "../src/types/graphql-api";
 import { GET_LABELSETS } from "../src/graphql/queries";
 
@@ -62,16 +63,8 @@ export const LabelSetSelectorTestWrapper: React.FC<WrapperProps> = ({
     LabelSetType | undefined
   >(initialLabelSet);
 
-  const handleChange = (values: any) => {
-    if (values.labelSet === null) {
-      setSelectedLabelSet(undefined);
-    } else {
-      // Find the label set from the mock data to simulate a real selection
-      const found = labelsetNodes.find((ls) => ls.id === values.labelSet);
-      if (found) {
-        setSelectedLabelSet(found as unknown as LabelSetType);
-      }
-    }
+  const handleChange = (values: LabelSetSelection) => {
+    setSelectedLabelSet(values.labelSetObj);
   };
 
   const allMocks = mocks ?? [

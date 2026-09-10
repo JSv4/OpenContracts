@@ -253,6 +253,9 @@ values still use backoff. Other HTTP errors, including 401/403 and redirects,
 stop `run` with exit **2** and a credential/configuration diagnostic. Neither
 waiting nor status failure consumes document retry attempts. Ctrl-C wakes all
 waiters and uses the bounded scheduler's graceful drain and exit **130** above.
+If a poll itself aborts (for example, `SystemExit` in its worker), admission stops
+and wakes all waiters before propagating the exception; `run` reports a safe
+diagnostic and exits **2**.
 
 These counts cover only the **exact authenticated token's** outstanding staged
 uploads, including other producers using that token. They are two separate reads,
@@ -264,6 +267,9 @@ Upload status does not establish thumbnail, embedding or search readiness.
 
 `status` displays a measured zero as `0`, and an unavailable/invalid count as
 `unknown` with a safe reason. It does not print response bodies or request secrets.
+Permanent status errors return exit **2**, as in `run`. Otherwise `status` remains
+informational (exit **0**, including transient unknown status or ledger-only output);
+its exit code does not certify availability or worker-upload completion.
 
 ### Durable preparation, identities, and source versions
 

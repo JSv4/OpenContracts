@@ -1149,7 +1149,7 @@ def cmd_run(cfg: Config) -> int:
             for future in finished:
                 exc = future.exception()
                 if exc is not None:
-                    logger.error(f"worker crashed: {exc}")
+                    logger.error("worker crashed: %s", governor.fatal_error or exc)
                     with done_lock:
                         done["fail"] += 1
             finished.clear()
@@ -1238,8 +1238,7 @@ def cmd_status(cfg: Config) -> int:
     client = None
     if cfg.target_url and cfg.worker_token:
         client = TargetClient(cfg)
-    _print_status(ledger, client)
-    return 0
+    return _print_status(ledger, client)
 
 
 def _print_status(ledger: Ledger, client: TargetClient | None) -> int:

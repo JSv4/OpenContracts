@@ -233,6 +233,36 @@ class GovernorTests(unittest.TestCase):
         self.assertFalse(governor.admit())
         poll.assert_called_once()
 
+    def test_poll_abort_propagates_and_wakes_waiters_without_external_stop(self):
+        class PollAbort(BaseException):
+            pass
+
+        for kind in (KeyboardInterrupt, SystemExit, GeneratorExit, PollAbort):
+            with self.subTest(kind=kind):
+                release = threading.Event()
+                failure = kind("private-poll-details")
+
+                def poll():
+                    self.assertTrue(release.wait(3))
+                    raise failure
+
+                measure = Mock(side_effect=poll)
+                governor = admission.AdmissionGovernor(measure, 10, 5)
+                futures = self.start_waiters(governor)
+                self.addCleanup(release.set)
+                release.set()
+                with self.assertRaises(kind) as caught:
+                    futures[0].result(1)
+                self.assertIs(caught.exception, failure)
+                self.assertFalse(governor._polling)
+                self.assertTrue(governor.stopped.is_set())
+                self.assertIsNone(governor._count)
+                self.assertEqual([f.result(1) for f in futures[1:]], [False] * 5)
+                self.assertFalse(governor.admit())
+                self.assertIsNotNone(governor.fatal_error)
+                self.assertNotIn("private-poll-details", str(governor.fatal_error))
+                measure.assert_called_once()
+
     def test_stale_refresh_blocks_every_caller_and_dates_success_at_completion(self):
         now = [100.0]
         release = threading.Event()
@@ -472,6 +502,38 @@ class RunAdmissionTests(unittest.TestCase):
         process.assert_not_called()
         self.assert_untouched()
 
+    def test_poll_abort_stops_run_without_attempts_or_sensitive_diagnostics(self):
+        for kind in (KeyboardInterrupt, SystemExit, GeneratorExit, BaseException):
+            with self.subTest(kind=kind):
+                release = threading.Event()
+                self.addCleanup(release.set)
+
+                def get(*args, **kwargs):
+                    self.assertTrue(release.wait(3))
+                    raise kind("private-poll-details")
+
+                self.target.session.get = Mock(side_effect=get)
+                original_wait = cli.wait
+
+                def wait(*args, **kwargs):
+                    # Exercise the scheduler's worker-exception logging path.
+                    release.set()
+                    return original_wait(*args, **kwargs)
+
+                with patch.object(cli, "wait", wait), patch.object(
+                    cli, "_process_one"
+                ) as process, self.assertLogs(
+                    "oc_remote_ingest", level="ERROR"
+                ) as logs, redirect_stdout(
+                    StringIO()
+                ):
+                    self.assertEqual(cli.cmd_run(self.cfg), 2)
+                process.assert_not_called()
+                self.target.session.get.assert_called_once()
+                self.assertIn("Status polling aborted", str(logs.output))
+                self.assertNotIn("private-poll-details", str(logs.output))
+                self.assert_untouched()
+
     def test_disabled_run_never_polls_even_for_final_status(self):
         self.cfg.queue_high = 0
         self.target.session.get = Mock()
@@ -510,3 +572,21 @@ class RunAdmissionTests(unittest.TestCase):
         with redirect_stdout(StringIO()), patch.object(cli, "_process_one") as process:
             self.assertEqual(cli.cmd_run(self.cfg), 2)
         process.assert_not_called()
+
+    def test_status_command_propagates_permanent_configuration_errors(self):
+        for code in (401, 403, 400, 404, 302, 429, 503, 200):
+            with self.subTest(code=code):
+                self.target.session.get = Mock(
+                    return_value=response(code, body={"count": 0})
+                )
+                with redirect_stdout(StringIO()):
+                    self.assertEqual(
+                        cli.cmd_status(self.cfg),
+                        0 if code in (429, 503, 200) else 2,
+                    )
+
+        self.cfg.worker_token = ""
+        self.target.session.get.reset_mock()
+        with redirect_stdout(StringIO()):
+            self.assertEqual(cli.cmd_status(self.cfg), 0)
+        self.target.session.get.assert_not_called()

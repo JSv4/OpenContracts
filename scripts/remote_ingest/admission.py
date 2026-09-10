@@ -110,6 +110,18 @@ class AdmissionGovernor:
                     "Unexpected status polling failure; check client/configuration",
                     permanent=True,
                 )
+            except BaseException:
+                # Preserve control-flow exceptions, but never strand waiters or
+                # allow another poll to admit work after its owner has aborted.
+                with self._condition:
+                    self._polling = False
+                    self.fatal_error = StatusPollError(
+                        "Status polling aborted; check client/runtime before restarting",
+                        permanent=True,
+                    )
+                    self.stopped.set()
+                    self._condition.notify_all()
+                raise
 
             with self._condition:
                 self._polling = False

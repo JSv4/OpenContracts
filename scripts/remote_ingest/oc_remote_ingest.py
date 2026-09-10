@@ -57,6 +57,16 @@ DEFAULT_QUEUE_LOW = 500
 _HTTP_MAX_RETRIES = 6
 _JITTER_MIN = 0.5
 _GOVERNOR_WAIT_SECONDS = 10
+_GOVERNOR_POLL_INTERVAL_SECONDS = 15
+_HTTP_UPLOAD_TIMEOUT_SECONDS = 300
+_HTTP_STATUS_TIMEOUT_SECONDS = 60
+_HTTP_BACKLOG_TIMEOUT_SECONDS = 30
+_HTTP_EMBED_SINGLE_TIMEOUT_SECONDS = 30
+_HTTP_EMBED_BATCH_TIMEOUT_SECONDS = 120
+_HTTP_INITIAL_BACKOFF_SECONDS = 2
+_HTTP_MAX_BACKOFF_SECONDS = 60
+_HTTP_DEFAULT_RETRY_AFTER_SECONDS = 60
+_HTTP_MAX_RETRY_AFTER_SECONDS = 300
 
 _CLAIMABLE_WHERE = "status IN ('PENDING', 'FAILED')"
 _UNCONFIRMED_WHERE = "status='UPLOADED' AND upload_id IS NOT NULL"
@@ -82,6 +92,18 @@ class Ledger:
     def __init__(self, path: str):
         self.path = path
         self._local = threading.local()
+        # Create privately before SQLite can write; also harden legacy ledgers
+        # and any existing recovery files before opening/recovering the database.
+        fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
+        try:
+            os.fchmod(fd, 0o600)
+        finally:
+            os.close(fd)
+        for suffix in ("-wal", "-shm", "-journal"):
+            try:
+                os.chmod(path + suffix, 0o600)
+            except FileNotFoundError:
+                pass
         with self._conn() as conn:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS docs (
@@ -357,7 +379,10 @@ class TargetClient:
 
     @staticmethod
     def _backoff(attempt: int) -> float:
-        return min(2.0 * (2 ** (attempt - 1)), 60.0) * random.uniform(_JITTER_MIN, 1.0)
+        return min(
+            _HTTP_INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1)),
+            _HTTP_MAX_BACKOFF_SECONDS,
+        ) * random.uniform(_JITTER_MIN, 1.0)
 
     def upload(self, source_bytes: bytes, metadata: dict, *, filename: str) -> str:
         """Send the immutable preparation snapshot; never replay an uncertain POST.
@@ -374,7 +399,7 @@ class TargetClient:
                         url,
                         files={"file": (filename, fh, metadata["file_type"])},
                         data={"metadata": meta_json},
-                        timeout=300,
+                        timeout=_HTTP_UPLOAD_TIMEOUT_SECONDS,
                         verify=self._verify,
                         allow_redirects=False,
                     )
@@ -395,12 +420,16 @@ class TargetClient:
             if resp.status_code == 429:
                 if attempt < _HTTP_MAX_RETRIES:
                     try:
-                        delay = float(resp.headers.get("Retry-After", "60"))
+                        delay = float(
+                            resp.headers.get(
+                                "Retry-After", str(_HTTP_DEFAULT_RETRY_AFTER_SECONDS)
+                            )
+                        )
                         if not math.isfinite(delay) or delay < 0:
                             raise ValueError
                     except (ValueError, TypeError):
                         delay = self._backoff(attempt)
-                    time.sleep(min(delay, 300))
+                    time.sleep(min(delay, _HTTP_MAX_RETRY_AFTER_SECONDS))
                 continue
             if 400 <= resp.status_code < 500:
                 raise PermanentUploadError(f"Upload rejected: HTTP {resp.status_code}")
@@ -411,7 +440,9 @@ class TargetClient:
 
     def upload_status(self, upload_id: str) -> dict | None:
         url = f"{self.base}/api/worker-uploads/documents/{upload_id}/"
-        resp = self.session.get(url, timeout=60, verify=self._verify)
+        resp = self.session.get(
+            url, timeout=_HTTP_STATUS_TIMEOUT_SECONDS, verify=self._verify
+        )
         if resp.status_code == 200:
             return resp.json()
         return None
@@ -422,7 +453,9 @@ class TargetClient:
         for st in ("PENDING", "PROCESSING"):
             url = f"{self.base}/api/worker-uploads/documents/list/?status={st}&page_size=1"
             try:
-                resp = self.session.get(url, timeout=30, verify=self._verify)
+                resp = self.session.get(
+                    url, timeout=_HTTP_BACKLOG_TIMEOUT_SECONDS, verify=self._verify
+                )
                 if resp.status_code == 200:
                     total += int(resp.json().get("count", 0))
             except requests.RequestException:
@@ -473,7 +506,9 @@ class EmbedderClient:
         if not text or not text.strip():
             return None
         resp = self.session.post(
-            f"{self.base}/embeddings", json={"text": text}, timeout=30
+            f"{self.base}/embeddings",
+            json={"text": text},
+            timeout=_HTTP_EMBED_SINGLE_TIMEOUT_SECONDS,
         )
         resp.raise_for_status()
         return self._coerce_vector(resp.json().get("embeddings"))
@@ -496,7 +531,7 @@ class EmbedderClient:
             resp = self.session.post(
                 f"{self.base}/embeddings/batch",
                 json={"texts": chunk_texts},
-                timeout=120,
+                timeout=_HTTP_EMBED_BATCH_TIMEOUT_SECONDS,
             )
             resp.raise_for_status()
             vecs = resp.json().get("embeddings")
@@ -807,7 +842,7 @@ def _process_one(
     enrichers: list | None = None,
     ledger: Ledger | None = None,
 ) -> tuple[str, bool, str]:
-    """Parse + (enrich) + embed + upload one document. Returns (rel_path, ok, message)."""
+    """Prepare/upload and persist the receipt. Return (path, ok, receipt or error)."""
     from scripts.remote_ingest.checkpoints import (
         Checkpoints,
         digest,
@@ -952,7 +987,7 @@ def _process_one(
         upload_id = client.upload(source_bytes, metadata, filename=filename)
         page_count = metadata["page_count"]
         ledger.mark_uploaded(rel_path, upload_id, page_count, time.time())
-        return (rel_path, True, f"{upload_id}|{page_count}")
+        return (rel_path, True, upload_id)
     except (PermanentUploadError, TransientUploadError) as e:
         ledger.mark_rejected(rel_path)
         return (rel_path, False, str(e))
@@ -1031,7 +1066,7 @@ def cmd_run(cfg: Config) -> int:
             return
         with gov_lock:
             now = time.time()
-            if now - governor_state["last_poll"] < 15:
+            if now - governor_state["last_poll"] < _GOVERNOR_POLL_INTERVAL_SECONDS:
                 return
             governor_state["last_poll"] = now
         backlog = client.backlog_count()
@@ -1057,14 +1092,11 @@ def cmd_run(cfg: Config) -> int:
         rel, ok, msg = _process_one(
             cfg, parser, embedder, client, row, enrichers, ledger
         )
-        now = time.time()
         if ok:
-            upload_id, _, page_count = msg.partition("|")
-            ledger.mark_uploaded(rel, upload_id, int(page_count or 0), now)
             with done_lock:
                 done["ok"] += 1
                 n = done["ok"] + done["fail"]
-            logger.info(f"[{n}/{total}] uploaded {rel} -> {upload_id}")
+            logger.info(f"[{n}/{total}] uploaded {rel} -> {msg}")
         else:
             ledger.mark_failed(rel, msg, cfg.max_attempts)
             with done_lock:

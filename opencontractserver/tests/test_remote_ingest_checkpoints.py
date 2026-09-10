@@ -3,6 +3,7 @@
 import json
 import os
 import sqlite3
+import stat
 import sys
 from collections import Counter
 from copy import deepcopy
@@ -218,6 +219,20 @@ class CheckpointTests(SimpleTestCase):
             (self.cache().path / (entry["digest"] + ".json")).read_bytes()
         )["export"]
         self.assertEqual(export["parser_extension"], {"must_survive": True})
+
+    def test_success_persists_one_receipt_with_the_confirmation_timestamp(self):
+        mark_uploaded = cli.Ledger.mark_uploaded
+        confirmations = []
+
+        def record(ledger, rel_path, upload_id, page_count, now):
+            confirmations.append(now)
+            mark_uploaded(ledger, rel_path, upload_id, page_count, now)
+
+        with patch.object(cli.Ledger, "mark_uploaded", record):
+            self.assertEqual(self.run_worker(), 0)
+        self.assertEqual(len(confirmations), 1)
+        self.assertEqual(self.row()["uploaded_at"], confirmations[0])
+        self.assertEqual(self.row()["upload_id"], "receipt-1")
 
     def test_restart_at_each_durable_boundary_reuses_stages_and_exact_payload(self):
         self.assertEqual(self.run_worker(), 0)
@@ -528,6 +543,48 @@ class CheckpointTests(SimpleTestCase):
         self.assertEqual(self.run_worker(), 0)
         self.assertEqual([self.counts[s] for s in cp.STAGES], [1, 1, 2])
         self.assertEqual(self.counts["upload"], 1)
+
+
+class LedgerPermissionsTests(SimpleTestCase):
+    def setUp(self):
+        tmp = TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.path = str(Path(tmp.name) / "ledger.sqlite3")
+
+    def assert_private(self):
+        for suffix in ("", "-wal", "-shm"):
+            self.assertEqual(stat.S_IMODE(os.stat(self.path + suffix).st_mode), 0o600)
+
+    def test_new_ledger_is_private_before_sqlite_opens_under_permissive_umask(self):
+        connect = sqlite3.connect
+
+        def check_before_connect(*args, **kwargs):
+            self.assertEqual(stat.S_IMODE(os.stat(self.path).st_mode), 0o600)
+            return connect(*args, **kwargs)
+
+        previous_umask = os.umask(0)
+        try:
+            with patch.object(cli.sqlite3, "connect", side_effect=check_before_connect):
+                ledger = cli.Ledger(self.path)
+            self.addCleanup(ledger._conn().close)
+            ledger.set_meta("example", "private data")
+            self.assert_private()
+        finally:
+            os.umask(previous_umask)
+
+    def test_existing_ledger_and_recovery_files_are_hardened_without_data_loss(self):
+        legacy = sqlite3.connect(self.path)
+        self.addCleanup(legacy.close)
+        legacy.execute("PRAGMA journal_mode=WAL")
+        legacy.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+        legacy.execute("INSERT INTO meta VALUES('example', 'preserved')")
+        legacy.commit()
+        for suffix in ("", "-wal", "-shm"):
+            os.chmod(self.path + suffix, 0o666)
+        ledger = cli.Ledger(self.path)
+        self.addCleanup(ledger._conn().close)
+        self.assertEqual(ledger.get_meta("example"), "preserved")
+        self.assert_private()
 
 
 class ArtifactStorageTests(SimpleTestCase):

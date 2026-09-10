@@ -18,6 +18,7 @@ from pathlib import Path
 
 STAGES = ("parse", "enrich", "embed")
 VERSION = 1
+DEFAULT_ARTIFACT_RETENTION_SECONDS = 24 * 60 * 60
 
 
 def json_bytes(value) -> bytes:
@@ -142,12 +143,14 @@ class Checkpoints:
         self._publish()
         return value, artifact_digest
 
-    def prune(self, older_than: float = 86400) -> int:
+    def prune(self, older_than: float = DEFAULT_ARTIFACT_RETENTION_SECONDS) -> int:
         """Offline cleanup: keep every referenced artifact, regardless of row state.
 
         An unreadable manifest is not evidence that artifacts are unreferenced;
         leave that directory alone until run repairs it. Traverse one directory
         at a time, never collect a ledger-wide set of hashes or paths.
+        Manifest rechecks are not a lock: concurrent publication/deletion after
+        the check is unsafe. No other command may own this ledger during cleanup.
         """
         if not self.manifest_path.exists() or self._read_manifest() != self.manifest:
             return 0

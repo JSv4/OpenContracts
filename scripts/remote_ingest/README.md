@@ -322,6 +322,8 @@ rotating to another token for the same corpus does not grant access to old recei
 Existing SQLite ledgers gain two nullable conflict columns in place; no export or
 one-time migration is needed. Rows without a manifest run as uncached work after
 the identities above are configured. Back up SQLite and its artifacts together.
+The ledger and its SQLite recovery files are restricted to owner read/write
+(`0600`), including existing ledgers when reopened.
 Do not use an older worker against a ledger containing these new states.
 
 Run `worker cleanup` while no other command owns that ledger. It walks ledger rows
@@ -329,6 +331,8 @@ in bounded pages and one artifact directory at a time, deleting only unreference
 files and interrupted temporary writes older than 24 hours. Referenced artifacts
 are retained for **all** rows, including failed, parked, ambiguous, conflicted and
 completed work. An unreadable manifest is left alone until `run` repairs it.
+Manifest rechecks and the retention grace period do not provide an interprocess
+lock; concurrent `run` and `cleanup` are unsupported and can race during deletion.
 Cleanup does not create caches for legacy rows or remove whole ledgers. After
 archiving a finished ledger, its owner may delete that ledger's entire artifact
 directory; do not manually delete individual active manifests.

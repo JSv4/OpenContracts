@@ -23,6 +23,7 @@ import sqlite3
 import sys
 import threading
 import time
+from collections import Counter
 from collections.abc import Generator, Mapping
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from contextlib import closing
@@ -36,6 +37,12 @@ import requests
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from opencontractserver.utils.embedding_validation import (  # noqa: E402
+    embedding_batch,
+    embedding_values,
+    normalize_embedding_vector,
+    validate_embedding_vector,
+)
 from scripts.remote_ingest.admission import (  # noqa: E402
     AdmissionGovernor,
     StatusPollError,
@@ -55,6 +62,11 @@ DEFAULT_EXTENSIONS = ".pdf"
 DEFAULT_MAX_WORKERS = 4
 DEFAULT_LEDGER_PAGE_SIZE = 256
 FUTURES_PER_WORKER = 2
+VERIFY_COMPLETE = 0
+VERIFY_OUTSTANDING = 1
+VERIFY_FAILED = 2
+VERIFY_UNAVAILABLE = 3
+VERIFY_SCHEMA_VERSION = 1
 DEFAULT_EMBED_BATCH = 100
 DEFAULT_MAX_ATTEMPTS = 5
 # Token-scoped outstanding uploads: pause above HIGH, resume at/below LOW.
@@ -284,6 +296,11 @@ class Ledger:
     ) -> Generator[sqlite3.Row]:
         return self._iter_rows(_CLAIMABLE_WHERE, "idx_docs_claimable_path", page_size)
 
+    def all_docs(
+        self, page_size: int = DEFAULT_LEDGER_PAGE_SIZE
+    ) -> Generator[sqlite3.Row]:
+        return self._iter_rows("1=1", "sqlite_autoindex_docs_1", page_size)
+
     def uploaded_unconfirmed_count(self) -> int:
         return self._count(_UNCONFIRMED_WHERE)
 
@@ -369,6 +386,7 @@ class Config:
     embedding_identity: str | None = None
     embedding_dimension: int = 384
     parser_identity: str | None = None
+    json_output: bool = False
 
 
 class TargetClient:
@@ -442,14 +460,78 @@ class TargetClient:
             )
         raise TransientUploadError("Upload rejected: rate limit retries exhausted")
 
-    def upload_status(self, upload_id: str) -> dict | None:
+    def _status_json(self, url: str, timeout: int) -> dict:
+        """Shared safe HTTP classification; admission and verify choose policy."""
+        try:
+            resp = self.session.get(
+                url, timeout=timeout, verify=self._verify, allow_redirects=False
+            )
+        except (
+            requests.exceptions.InvalidURL,
+            requests.exceptions.InvalidSchema,
+            requests.exceptions.MissingSchema,
+            requests.exceptions.InvalidHeader,
+        ):
+            raise StatusPollError(
+                "Invalid status request; check --target-url and --worker-token configuration",
+                permanent=True,
+                reason="invalid_request",
+            ) from None
+        except requests.RequestException:
+            raise StatusPollError(
+                "Status network error or timeout", reason="network_error"
+            ) from None
+        code = resp.status_code
+        if code != 200:
+            if code == 429 or 500 <= code < 600:
+                raise StatusPollError(
+                    f"Status unavailable: HTTP {code}",
+                    reason="rate_limited" if code == 429 else "server_unavailable",
+                    http_status=code,
+                    retry_after=retry_after_seconds(resp.headers.get("Retry-After")),
+                )
+            hint = (
+                "check --worker-token / OC_WORKER_TOKEN and worker/token permissions"
+                if code in (401, 403)
+                else "check --target-url and worker-upload API configuration"
+            )
+            raise StatusPollError(
+                f"Status HTTP {code}; {hint}",
+                permanent=True,
+                reason={401: "unauthorized", 403: "forbidden", 404: "not_found"}.get(
+                    code, "http_error"
+                ),
+                http_status=code,
+            )
+        try:
+            body = resp.json()
+        except ValueError:
+            raise StatusPollError("Invalid status response: malformed JSON") from None
+        if not isinstance(body, dict):
+            raise StatusPollError("Invalid status response: expected a JSON object")
+        return body
+
+    def upload_status(self, upload_id: str) -> dict:
         url = f"{self.base}/api/worker-uploads/documents/{upload_id}/"
-        resp = self.session.get(
-            url, timeout=_HTTP_STATUS_TIMEOUT_SECONDS, verify=self._verify
-        )
-        if resp.status_code == 200:
-            return resp.json()
-        return None
+        try:
+            body = self._status_json(url, _HTTP_STATUS_TIMEOUT_SECONDS)
+        except StatusPollError as exc:
+            if exc.http_status == 404:
+                raise StatusPollError(
+                    "Receipt missing or inaccessible under the current worker token (HTTP 404)",
+                    reason="not_found",
+                    http_status=404,
+                    permanent=True,
+                ) from None
+            raise
+        if (
+            body.get("upload_id") != upload_id
+            or body.get("status")
+            not in ("PENDING", "PROCESSING", "COMPLETED", "FAILED")
+            or not isinstance(body.get("error_message", ""), str)
+        ):
+            raise StatusPollError("Invalid status response: receipt identity or state")
+        return body
 
     def backlog_count(self) -> int:
         """Complete token-scoped PENDING + PROCESSING count, or StatusPollError.
@@ -460,47 +542,8 @@ class TargetClient:
         total = 0
         for st in ("PENDING", "PROCESSING"):
             url = f"{self.base}/api/worker-uploads/documents/list/?status={st}&page_size=1"
-            try:
-                resp = self.session.get(
-                    url,
-                    timeout=_HTTP_BACKLOG_TIMEOUT_SECONDS,
-                    verify=self._verify,
-                    allow_redirects=False,
-                )
-            except (
-                requests.exceptions.InvalidURL,
-                requests.exceptions.InvalidSchema,
-                requests.exceptions.MissingSchema,
-                requests.exceptions.InvalidHeader,
-            ):
-                raise StatusPollError(
-                    "Invalid status request; check --target-url and --worker-token configuration",
-                    permanent=True,
-                ) from None
-            except requests.RequestException:
-                raise StatusPollError("Status network error or timeout") from None
-            code = resp.status_code
-            if code != 200:
-                if code == 429 or 500 <= code < 600:
-                    raise StatusPollError(
-                        f"Status unavailable: HTTP {code}",
-                        retry_after=retry_after_seconds(
-                            resp.headers.get("Retry-After")
-                        ),
-                    )
-                hint = (
-                    "check --worker-token / OC_WORKER_TOKEN and worker/token permissions"
-                    if code in (401, 403)
-                    else "check --target-url and worker-upload API configuration"
-                )
-                raise StatusPollError(f"Status HTTP {code}; {hint}", permanent=True)
-            try:
-                body = resp.json()
-            except ValueError:
-                raise StatusPollError(
-                    "Invalid status response: malformed JSON"
-                ) from None
-            count = body.get("count") if isinstance(body, dict) else None
+            body = self._status_json(url, _HTTP_BACKLOG_TIMEOUT_SECONDS)
+            count = body.get("count")
             if type(count) is not int or count < 0:
                 raise StatusPollError(
                     "Invalid status response: expected a nonnegative integer count"
@@ -555,14 +598,10 @@ class EmbedderClient:
             timeout=_HTTP_EMBED_SINGLE_TIMEOUT_SECONDS,
         )
         resp.raise_for_status()
-        return self._coerce_vector(resp.json().get("embeddings"))
+        return self._coerce_vector(embedding_values(resp.json()))
 
     def _coerce_vector(self, vec) -> list[float]:
-        """The same flat/singleton-row wire shapes used by MicroserviceEmbedder."""
-        if isinstance(vec, list) and len(vec) == 1 and isinstance(vec[0], list):
-            vec = vec[0]
-        _validate_vector(vec, self.dimension)
-        return vec
+        return normalize_embedding_vector(vec, self.dimension)
 
     def embed_batch(self, texts: list[str]) -> list[list[float] | None]:
         """Embed a list of texts (sub-batched). Empty texts map to None."""
@@ -578,9 +617,7 @@ class EmbedderClient:
                 timeout=_HTTP_EMBED_BATCH_TIMEOUT_SECONDS,
             )
             resp.raise_for_status()
-            vecs = resp.json().get("embeddings")
-            if not isinstance(vecs, list) or len(vecs) != len(chunk_idxs):
-                raise ValueError("Embedding batch cardinality does not match inputs")
+            vecs = embedding_batch(resp.json(), len(chunk_idxs))
             for local_i, vec in enumerate(vecs):
                 # The batch endpoint wraps each row one level deeper than the
                 # single endpoint (per-item shape is ``[[...floats...]]``), so
@@ -757,7 +794,11 @@ def _compute_embeddings(
 ) -> dict:
     """Compute the doc-level + per-annotation embeddings the server would store."""
     ann_ids = _embedding_ids(labelled_text)
-    doc_vec = embedder.embed_text(content)
+    try:
+        doc_vec = embedder.embed_text(content)
+        _validate_vector(doc_vec, embedder.dimension)
+    except ValueError as exc:
+        raise ValueError(f"Document embedding: {exc}") from exc
     vecs = embedder.embed_batch(
         [ann["rawText"] for ann in labelled_text if ann["rawText"].strip()]
     )
@@ -790,12 +831,7 @@ def _embedding_ids(annotations: list) -> list[str]:
 
 
 def _validate_vector(vector, dimension: int) -> None:
-    if (
-        not isinstance(vector, list)
-        or len(vector) != dimension
-        or any(type(v) not in (int, float) or not math.isfinite(v) for v in vector)
-    ):
-        raise ValueError(f"Embedding requires {dimension} finite numeric values")
+    validate_embedding_vector(vector, dimension)
 
 
 def _validate_embeddings(payload, annotations, dimension, embedder_path) -> None:
@@ -807,8 +843,11 @@ def _validate_embeddings(payload, annotations, dimension, embedder_path) -> None
         _embedding_ids(annotations)
     ):
         raise ValueError("Embedding coverage does not match eligible annotation IDs")
-    for vector in vectors.values():
-        _validate_vector(vector, dimension)
+    for annotation_id, vector in vectors.items():
+        try:
+            _validate_vector(vector, dimension)
+        except ValueError as exc:
+            raise ValueError(f"Annotation {annotation_id!r} embedding: {exc}") from exc
 
 
 # ======================================================================
@@ -1185,37 +1224,114 @@ def cmd_run(cfg: Config) -> int:
     return 0 if done["fail"] == 0 and not ledger.blocked_count() else 1
 
 
+def _verification_state(status: str) -> tuple[int, str]:
+    return {
+        COMPLETED: (VERIFY_COMPLETE, "completed"),
+        PENDING: (VERIFY_OUTSTANDING, "not_uploaded"),
+        UPLOADED: (VERIFY_OUTSTANDING, "receipt_outstanding"),
+        FAILED: (VERIFY_FAILED, "failed"),
+        PARKED: (VERIFY_FAILED, "parked"),
+        AMBIGUOUS: (VERIFY_FAILED, "ambiguous_upload"),
+        CONFLICT: (VERIFY_FAILED, "source_conflict"),
+    }.get(status, (VERIFY_UNAVAILABLE, "unknown_ledger_state"))
+
+
 def cmd_verify(cfg: Config) -> int:
+    """Verify the whole ledger, streaming bounded document results before a summary.
+
+    Receipt unavailability is observational: never change state, attempts, receipt,
+    timestamps or last_error without a valid response. Final ledger state governs
+    success, including failures moved out of UPLOADED on an earlier invocation.
+    """
     ledger = Ledger(cfg.ledger_path)
     client = TargetClient(cfg)
-    pending = ledger.uploaded_unconfirmed(cfg.ledger_page_size)
-    total = ledger.uploaded_unconfirmed_count()
-    logger.info(f"verify: polling {total} uploaded docs for terminal status")
-    confirmed = failed = still = 0
-    now = time.time()
-    for row in pending:
-        status = client.upload_status(row["upload_id"])
-        if status is None:
-            still += 1
-            continue
-        st = status.get("status")
-        if st == "COMPLETED":
-            ledger.mark_completed(row["rel_path"], now)
-            confirmed += 1
-        elif st == "FAILED":
-            ledger.mark_failed(
-                row["rel_path"],
-                f"server: {status.get('error_message', 'failed')}",
-                cfg.max_attempts,
-            )
-            failed += 1
-        else:
-            still += 1
-    logger.info(
-        f"verify complete: confirmed={confirmed}, failed={failed}, still-processing={still}"
+    reasons: Counter[str] = Counter()
+    unavailable = 0
+    for row in ledger.all_docs(cfg.ledger_page_size):
+        receipt_status = None
+        poll_error = None
+        if row["status"] == UPLOADED:
+            try:
+                if not row["upload_id"]:
+                    raise StatusPollError(
+                        "Uploaded row has no receipt; reconcile with the server",
+                        reason="missing_receipt",
+                    )
+                receipt = client.upload_status(row["upload_id"])
+                receipt_status = receipt["status"]
+                if receipt_status == COMPLETED:
+                    ledger.mark_completed(row["rel_path"], time.time())
+                elif receipt_status == FAILED:
+                    ledger.mark_failed(
+                        row["rel_path"],
+                        f"server: {receipt.get('error_message') or 'failed'}",
+                        cfg.max_attempts,
+                    )
+                if receipt_status in (COMPLETED, FAILED):
+                    row = ledger.get_doc(row["rel_path"])
+            except StatusPollError as exc:
+                poll_error = exc
+        code, reason = _verification_state(row["status"])
+        detail = row["last_error"]
+        if poll_error is not None:
+            code, reason = VERIFY_UNAVAILABLE, poll_error.reason
+            detail = str(poll_error)
+        elif receipt_status in ("PENDING", "PROCESSING"):
+            reason = f"receipt_{receipt_status.lower()}"
+        unavailable += int(code == VERIFY_UNAVAILABLE)
+        reasons[reason] += 1
+        record = {
+            "type": "document",
+            "schema_version": VERIFY_SCHEMA_VERSION,
+            "rel_path": row["rel_path"],
+            "status": row["status"],
+            "upload_id": row["upload_id"],
+            "receipt_status": receipt_status,
+            "reason": reason,
+            "detail": detail,
+            "http_status": poll_error.http_status if poll_error else None,
+        }
+        if cfg.json_output:
+            print(json.dumps(record, ensure_ascii=True))
+        elif code != VERIFY_COMPLETE:
+            print(f"{row['rel_path']!r}: {reason}" + (f" ({detail})" if detail else ""))
+
+    # Status counts are bounded by ledger states, not document count. A failed
+    # receipt remains a failure on the next pass even though it is no longer polled.
+    counts = ledger.status_counts()
+    code = max(
+        (_verification_state(status)[0] for status in counts),
+        default=VERIFY_COMPLETE,
     )
-    _print_status(ledger, client)
-    return 1 if ledger.blocked_count() else 0
+    if unavailable:
+        code = VERIFY_UNAVAILABLE
+    total = sum(counts.values())
+    outcome = {
+        VERIFY_COMPLETE: "complete" if total else "empty",
+        VERIFY_OUTSTANDING: "outstanding",
+        VERIFY_FAILED: "failed",
+        VERIFY_UNAVAILABLE: "unable_to_verify",
+    }[code]
+    summary = {
+        "type": "summary",
+        "schema_version": VERIFY_SCHEMA_VERSION,
+        "scope": "whole_ledger",
+        "completion_boundary": "worker_upload_transaction",
+        "outcome": outcome,
+        "exit_code": code,
+        "total": total,
+        "counts": counts,
+        "reason_counts": dict(reasons),
+        "unavailable": unavailable,
+    }
+    if cfg.json_output:
+        print(json.dumps(summary, sort_keys=True))
+    else:
+        print(
+            f"verify: {outcome}; {counts.get(COMPLETED, 0)}/{total} worker uploads "
+            f"completed; unavailable={unavailable}; exit={code}"
+        )
+    return code
 
 
 def cmd_cleanup(cfg: Config) -> int:
@@ -1223,9 +1339,7 @@ def cmd_cleanup(cfg: Config) -> int:
 
     ledger = Ledger(cfg.ledger_path)
     removed = 0
-    for row in ledger._iter_rows(
-        "1=1", "sqlite_autoindex_docs_1", cfg.ledger_page_size
-    ):
+    for row in ledger.all_docs(cfg.ledger_page_size):
         removed += Checkpoints(cfg.ledger_path, row["rel_path"], create=False).prune()
     logger.info(
         "cleanup: removed %s unreferenced artifacts older than 24 hours", removed
@@ -1304,6 +1418,7 @@ def _build_config(args: argparse.Namespace) -> Config:
         or os.environ.get("OC_EMBEDDING_IDENTITY"),
         embedding_dimension=args.embedding_dimension,
         parser_identity=args.parser_identity or os.environ.get("OC_PARSER_IDENTITY"),
+        json_output=args.json,
     )
 
 
@@ -1410,6 +1525,11 @@ def main(argv: list[str] | None = None) -> int:
         default=os.environ.get("OC_EMBEDDING_DIMENSION", "384"),
         help="Expected document/annotation vector dimension (default 384)",
     )
+    p.add_argument(
+        "--json",
+        action="store_true",
+        help="Stream verify document results and a final summary as JSON Lines",
+    )
     p.add_argument("-v", "--verbose", action="store_true")
     p.add_argument("command", choices=["plan", "run", "verify", "status", "cleanup"])
     args = p.parse_args(argv)
@@ -1419,6 +1539,8 @@ def main(argv: list[str] | None = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
+    if args.json and args.command != "verify":
+        p.error("--json is supported only by verify")
     cfg = _build_config(args)
 
     if args.command == "run":

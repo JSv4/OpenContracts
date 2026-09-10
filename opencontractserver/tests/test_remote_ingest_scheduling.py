@@ -27,7 +27,8 @@ from scripts.remote_ingest import oc_remote_ingest as cli
 class ObservedCursor(sqlite3.Cursor):
     def execute(self, sql, parameters=()):
         self.sql = sql
-        if sql.startswith("SELECT * FROM docs"):
+        # Receipt transitions may read one row back by its unique primary key.
+        if sql.startswith("SELECT * FROM docs") and "WHERE rel_path=?" not in sql:
             observer = cast(ObservedConnection, self.connection).observer
             observer["test"].assertFalse(observer["interrupted"])
             observer["queries"].append((sql, parameters))
@@ -101,6 +102,7 @@ class SchedulingTests(unittest.TestCase):
         self.patch("scripts.remote_ingest.oc_remote_ingest._print_status", Mock())
         self.patch("scripts.remote_ingest.oc_remote_ingest.logger", Mock())
         self.patch("sys.stderr", StringIO())
+        self.patch("sys.stdout", StringIO())
 
     def patch(self, target, value):
         patcher = patch(target, value)
@@ -233,14 +235,12 @@ class SchedulingTests(unittest.TestCase):
             i = int(receipt.split("-")[1])
             selected.append(i)
             outcome = outcomes[i % len(outcomes)]
-            return (
-                None
-                if outcome is None
-                else {"status": outcome, "error_message": "server error"}
-            )
+            if outcome is None:
+                raise cli.StatusPollError("Status unavailable", reason="network_error")
+            return {"status": outcome, "error_message": "server error"}
 
         self.client.upload_status.side_effect = status
-        self.assertEqual(cli.cmd_verify(self.cfg), 0)
+        self.assertEqual(cli.cmd_verify(self.cfg), cli.VERIFY_UNAVAILABLE)
         self.assertEqual(selected, list(range(1002)))
         self.assert_pages_bounded(7, minimum_pages=100)
         failed = (
@@ -376,7 +376,7 @@ class SchedulingTests(unittest.TestCase):
         with patch.object(cli, "ThreadPoolExecutor") as pool:
             self.assertEqual(cli.cmd_run(self.cfg), 0)
             pool.assert_not_called()
-        self.assertEqual(cli.cmd_verify(self.cfg), 0)
+        self.assertEqual(cli.cmd_verify(self.cfg), cli.VERIFY_COMPLETE)
         self.client.upload_status.assert_not_called()
 
     def synthetic_tree(self, names):

@@ -707,9 +707,49 @@ class TestMicroserviceEmbedderBatch(unittest.TestCase):
         self.assertIsNone(result[1])  # NaN item
         self.assertIsNotNone(result[2])
 
+    @patch("requests.Session.post")
+    def test_shared_contract_rejects_extra_rows_and_marks_invalid_items(
+        self, mock_post
+    ):
+        embedder = self._make_embedder()
+        vector = [0.5] * 384
+        mock_post.return_value = self._mock_response(200, [vector, vector])
+        self.assertIsNone(embedder.embed_texts_batch(["one"]))
+        for invalid in (
+            None,
+            [True] * 384,
+            ["0.5"] * 384,
+            [float("inf")] * 384,
+            [vector, vector],
+        ):
+            with self.subTest(invalid=str(invalid)[:40]):
+                mock_post.return_value = self._mock_response(200, [vector, invalid])
+                self.assertEqual(
+                    embedder.embed_texts_batch(["one", "two"]), [vector, None]
+                )
+
 
 class TestMicroserviceEmbedderSingleText(unittest.TestCase):
     """Test MicroserviceEmbedder._embed_text_impl and _get_service_config."""
+
+    @patch("requests.Session.post")
+    def test_shared_contract_rejects_non_singleton_and_nonfinite_vectors(
+        self, mock_post
+    ):
+        embedder = self._make_embedder()
+        vector = [0.5] * 384
+        for values in (
+            [vector, vector],
+            [True] * 384,
+            ["0.5"] * 384,
+            [float("inf")] * 384,
+            [10**400] * 384,
+        ):
+            with self.subTest(values=str(values)[:40]):
+                mock_post.return_value = MagicMock(
+                    status_code=200, json=lambda: {"embeddings": values}
+                )
+                self.assertIsNone(embedder._embed_text_impl("document"))
 
     def _make_embedder(self, api_key="", use_cloud_run=False):
         embedder = MicroserviceEmbedder()

@@ -3,7 +3,6 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-import numpy as np
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -24,6 +23,11 @@ from opencontractserver.pipeline.base.settings_schema import (
     SettingType,
 )
 from opencontractserver.utils.cloud import maybe_add_cloud_run_auth
+from opencontractserver.utils.embedding_validation import (
+    embedding_batch,
+    embedding_values,
+    normalize_embedding_vector,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -234,24 +238,7 @@ class MicroserviceEmbedder(BaseEmbedder):
             )
 
             if response.status_code == 200:
-                body = response.json()
-                if "embeddings" not in body:
-                    logger.error(
-                        f"Malformed 200 response: missing 'embeddings' key. "
-                        f"Keys received: {list(body.keys())}"
-                    )
-                    return None
-                embeddings_array = np.array(body["embeddings"])
-                if np.isnan(embeddings_array).any():
-                    logger.error("Embedding contains NaN values")
-                    return None
-                # Handle both 1D (single embedding) and 2D (batch) response formats
-                if embeddings_array.ndim == 1:
-                    # Service returns 1D array directly: [0.1, 0.2, ...]
-                    return embeddings_array.tolist()
-                else:
-                    # Service returns 2D batch array: [[0.1, 0.2, ...]]
-                    return embeddings_array[0].tolist()
+                return normalize_embedding_vector(embedding_values(response.json()))
             elif 400 <= response.status_code < 500:
                 # Client errors (4xx) - don't retry, likely invalid input
                 logger.error(
@@ -326,38 +313,15 @@ class MicroserviceEmbedder(BaseEmbedder):
             )
 
             if response.status_code == 200:
-                body = response.json()
-                if "embeddings" not in body:
-                    logger.error(
-                        f"Malformed 200 response: missing 'embeddings' key. "
-                        f"Keys received: {list(body.keys())}"
-                    )
-                    return None
-                embeddings_array = np.array(body["embeddings"])
-                if embeddings_array.ndim == 3:
-                    if embeddings_array.shape[1] != 1:
-                        logger.error(f"Unexpected 3D shape {embeddings_array.shape}")
-                        return None
-                    embeddings_array = embeddings_array.squeeze(axis=1)
-
-                if len(embeddings_array) != len(texts):
-                    logger.error(
-                        f"Vector count mismatch: sent {len(texts)} texts, "
-                        f"received {len(embeddings_array)} vectors"
-                    )
-                    return None
-
-                # Handle NaN values per-item rather than failing the whole batch
+                rows = embedding_batch(response.json(), len(texts))
+                # Preserve explicit per-item failures for _batch_embed_items.
                 results: list[Optional[list[float]]] = []
-                for i, row in enumerate(embeddings_array):
-                    if np.isnan(row).any():
-                        logger.error(
-                            f"Embedding at index {i} contains NaN values, "
-                            f"returning None for this item"
-                        )
+                for i, row in enumerate(rows):
+                    try:
+                        results.append(normalize_embedding_vector(row))
+                    except ValueError as exc:
+                        logger.error("Invalid embedding at index %s: %s", i, exc)
                         results.append(None)
-                    else:
-                        results.append(row.tolist())
                 return results
             elif 400 <= response.status_code < 500:
                 # Client errors (4xx) - not retriable, likely invalid input.

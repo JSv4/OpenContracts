@@ -125,6 +125,9 @@ async def _check_user_permissions(
     except User.DoesNotExist:
         raise PermissionError(f"User {user_id} not found")
 
+    if not user.is_active:
+        raise PermissionError("User is inactive")
+
     if document_id:
         # Use visible_to_user() queryset which properly handles creator
         # access, public status, and guardian permissions.

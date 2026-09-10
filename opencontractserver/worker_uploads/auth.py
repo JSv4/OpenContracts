@@ -71,7 +71,10 @@ class WorkerTokenAuthentication(authentication.BaseAuthentication):
             )
             raise exceptions.AuthenticationFailed("Token has been revoked.")
 
-        if not token.worker_account.is_active:
+        if (
+            not token.worker_account.is_active
+            or not token.worker_account.user.is_active
+        ):
             logger.warning(
                 "WorkerToken auth failed: inactive account %s (prefix=%s)",
                 token.worker_account.name,

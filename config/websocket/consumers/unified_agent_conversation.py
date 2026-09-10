@@ -65,7 +65,6 @@ from opencontractserver.llms.tools.delegation_tools import (
     filter_by_scope,
 )
 from opencontractserver.llms.types import AgentFramework
-from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.ids import from_global_id
 
 logger = logging.getLogger(__name__)
@@ -155,7 +154,7 @@ class UnifiedAgentConsumer(AuthHandshakeMixin, AsyncWebsocketConsumer):
             ):
                 return
 
-            user = self.scope.get("user")
+            user = self.current_user
             is_authenticated = user and user.is_authenticated
 
             if is_authenticated:
@@ -248,36 +247,19 @@ class UnifiedAgentConsumer(AuthHandshakeMixin, AsyncWebsocketConsumer):
         this consumer is currently bound to. Used by AuthHandshakeMixin on
         refresh to detect mid-connection access revocation.
         """
-        is_authenticated = user is not None and user.is_authenticated
+        from opencontractserver.conversations.models import Conversation
+        from opencontractserver.shared.services.base import BaseService
 
-        if self.corpus is not None:
-            if is_authenticated:
-                has_perm = await database_sync_to_async(self.corpus.user_can)(
-                    user, PermissionTypes.READ
+        for model, pk in (
+            (Corpus, self.corpus.pk if self.corpus is not None else None),
+            (Document, self.document.pk if self.document is not None else None),
+            (Conversation, self.conversation_id),
+        ):
+            if pk is not None:
+                visible = await database_sync_to_async(BaseService.get_or_none)(
+                    model, pk, user
                 )
-                if not has_perm:
-                    return False
-            else:
-                # Anonymous fallback: re-fetch is_public from the DB rather
-                # than trusting the in-memory object loaded at connect time.
-                # If the owner flips the corpus to private mid-connection, an
-                # anonymous AUTH refresh would otherwise pass on stale state.
-                fresh_corpus = await Corpus.objects.aget(pk=self.corpus.pk)
-                if not fresh_corpus.is_public:
-                    return False
-
-        if self.document is not None:
-            if is_authenticated:
-                has_perm = await database_sync_to_async(self.document.user_can)(
-                    user, PermissionTypes.READ
-                )
-                if not has_perm:
-                    return False
-            else:
-                # Same anonymous-refresh stale-read concern as the corpus
-                # branch above.
-                fresh_document = await Document.objects.aget(pk=self.document.pk)
-                if not fresh_document.is_public:
+                if visible is None:
                     return False
 
         return True
@@ -349,7 +331,7 @@ class UnifiedAgentConsumer(AuthHandshakeMixin, AsyncWebsocketConsumer):
         """
         # Priority 1: Explicit agent_id (visibility-gated)
         if self.agent_config_id:
-            user = self.scope.get("user")
+            user = self.current_user
 
             def _visible_agent_lookup() -> AgentConfiguration | None:
                 return (
@@ -478,7 +460,7 @@ class UnifiedAgentConsumer(AuthHandshakeMixin, AsyncWebsocketConsumer):
         - Query: {"query": "user question"}
         - Approval: {"approval_decision": true/false, "llm_message_id": 123}
         """
-        logger.debug(f"[Session {self.session_id}] receive(): {text_data[:200]}...")
+        logger.debug("[Session %s] Received WebSocket frame", self.session_id)
 
         try:
             payload: dict[str, Any] = json.loads(text_data)
@@ -936,7 +918,7 @@ class UnifiedAgentConsumer(AuthHandshakeMixin, AsyncWebsocketConsumer):
         if not slugs:
             return []
 
-        user = self.scope.get("user")
+        user = self.current_user
         corpus_id = self.corpus_id
         document_id = self.document_id
 

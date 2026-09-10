@@ -1431,9 +1431,11 @@ class DocumentType(Node):
         kwargs = strip_unset({"corpus_id": corpus_id})
         return _resolve_DocumentType_summary_revisions(self, info, **kwargs)
 
-    memory_for_corpus: None | (
-        Annotated[CorpusType, strawberry.lazy("config.graphql.corpus_types")]
-    ) = strawberry.field(name="memoryForCorpus", default=None)
+    @strawberry.field(name="memoryForCorpus")
+    def memory_for_corpus(
+        self, info: strawberry.Info
+    ) -> None | Annotated[CorpusType, strawberry.lazy("config.graphql.corpus_types")]:
+        return resolve_visible_fk(self, info, "memory_for_corpus_id", "CorpusType")
 
     @strawberry.field(
         name="corpusActionExecutions",
@@ -2784,12 +2786,19 @@ class DocumentAnalysisRowType(Node):
             node_type_name="DatacellType",
         )
 
-    analysis: None | (
-        Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(name="analysis", default=None)
-    extract: None | (
-        Annotated[ExtractType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(name="extract", default=None)
+    @strawberry.field(name="analysis")
+    def analysis(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "analysis_id", "AnalysisType")
+
+    @strawberry.field(name="extract")
+    def extract(
+        self, info: strawberry.Info
+    ) -> None | Annotated[ExtractType, strawberry.lazy("config.graphql.extract_types")]:
+        return resolve_visible_fk(self, info, "extract_id", "ExtractType")
 
     @strawberry.field(name="myPermissions")
     def my_permissions(self, info: strawberry.Info) -> GenericScalar | None:
@@ -2853,9 +2862,13 @@ class DocumentRelationshipType(Node):
             AnnotationLabelType, strawberry.lazy("config.graphql.annotation_types")
         ]
     ) = strawberry.field(name="annotationLabel", default=None)
-    corpus: None | (
-        Annotated[CorpusType, strawberry.lazy("config.graphql.corpus_types")]
-    ) = strawberry.field(name="corpus", default=None)
+
+    @strawberry.field(name="corpus")
+    def corpus(
+        self, info: strawberry.Info
+    ) -> None | Annotated[CorpusType, strawberry.lazy("config.graphql.corpus_types")]:
+        return resolve_visible_fk(self, info, "corpus_id", "CorpusType")
+
     data: GenericScalar | None = strawberry.field(name="data", default=None)
 
     @strawberry.field(name="myPermissions")

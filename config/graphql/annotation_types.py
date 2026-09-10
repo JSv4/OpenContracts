@@ -73,6 +73,7 @@ from opencontractserver.enrichment.services.authority_permissions import (
     is_authority_admin,
 )
 from opencontractserver.shared.services.base import BaseService
+from opencontractserver.shared.services.tree_traversal import TreeTraversalService
 from opencontractserver.utils.permissioning import get_users_permissions_for_obj
 
 
@@ -210,110 +211,48 @@ def _resolve_AnnotationType_feedback_count(root, info):
 
 
 def _resolve_AnnotationType_all_source_node_in_relationship(root, info):
-    return root.source_node_in_relationships.all()
+    return BaseService.filter_visible(
+        Relationship, info.context.user, request=info.context
+    ).filter(source_annotations=root)
 
 
 def _resolve_AnnotationType_all_target_node_in_relationship(root, info):
-    return root.target_node_in_relationships.all()
+    return BaseService.filter_visible(
+        Relationship, info.context.user, request=info.context
+    ).filter(target_annotations=root)
 
 
 def _resolve_AnnotationType_descendants_tree(root, info):
-    """
-    Returns a flat list of descendant annotations,
-    each including only the IDs of its immediate children.
-    """
-    from django_cte import CTE, with_cte
-
-    def get_descendants(cte):
-        base_qs = Annotation.objects.filter(parent_id=root.id).values(
-            "id", "parent_id", "raw_text"
-        )
-        recursive_qs = cte.join(Annotation, parent_id=cte.col.id).values(
-            "id", "parent_id", "raw_text"
-        )
-        return base_qs.union(recursive_qs, all=True)
-
-    cte = CTE.recursive(get_descendants)
-    descendants_qs = with_cte(cte, select=cte.queryset()).order_by("id")
-    descendants_list = list(descendants_qs)
-
-    return build_flat_tree(
-        descendants_list, type_name="AnnotationType", text_key="raw_text"
+    nodes = TreeTraversalService.get_nodes(
+        root,
+        info.context.user,
+        mode="descendants",
+        text_field="raw_text",
+        request=info.context,
     )
+    return build_flat_tree(nodes, type_name="AnnotationType", text_key="raw_text")
 
 
 def _resolve_AnnotationType_full_tree(root, info):
-    """
-    Returns a flat list of annotations from the root ancestor,
-    each including only the IDs of its immediate children.
-    """
-    from django_cte import CTE, with_cte
-
-    # Find the root ancestor
-    tree_root = root
-    while tree_root.parent_id is not None:
-        tree_root = tree_root.parent
-
-    def get_full_tree(cte):
-        base_qs = Annotation.objects.filter(id=tree_root.id).values(
-            "id", "parent_id", "raw_text"
-        )
-        recursive_qs = cte.join(Annotation, parent_id=cte.col.id).values(
-            "id", "parent_id", "raw_text"
-        )
-        return base_qs.union(recursive_qs, all=True)
-
-    cte = CTE.recursive(get_full_tree)
-    full_tree_qs = with_cte(cte, select=cte.queryset()).order_by("id")
-    nodes = list(full_tree_qs)
-    full_tree = build_flat_tree(nodes, type_name="AnnotationType", text_key="raw_text")
-    return full_tree
+    nodes = TreeTraversalService.get_nodes(
+        root,
+        info.context.user,
+        mode="full",
+        text_field="raw_text",
+        request=info.context,
+    )
+    return build_flat_tree(nodes, type_name="AnnotationType", text_key="raw_text")
 
 
 def _resolve_AnnotationType_subtree(root, info):
-    """
-    Returns a combined tree that includes:
-    - The path from the root ancestor to this annotation (ancestors).
-    - This annotation and all its descendants.
-    """
-    from django_cte import CTE, with_cte
-
-    # Find all ancestors up to the root
-    ancestors = []
-    node = root
-    while node.parent_id is not None:
-        ancestors.append(node)
-        node = node.parent
-    ancestors.append(node)  # Include the root ancestor
-    ancestor_ids = [ancestor.id for ancestor in ancestors]
-
-    # Get all descendants of the current node
-    def get_descendants(cte):
-        base_qs = Annotation.objects.filter(parent_id=root.id).values(
-            "id", "parent_id", "raw_text"
-        )
-        recursive_qs = cte.join(Annotation, parent_id=cte.col.id).values(
-            "id", "parent_id", "raw_text"
-        )
-        return base_qs.union(recursive_qs, all=True)
-
-    descendants_cte = CTE.recursive(get_descendants)
-    descendants_qs = with_cte(
-        descendants_cte, select=descendants_cte.queryset()
-    ).values("id", "parent_id", "raw_text")
-
-    # Combine ancestors and descendants
-    combined_qs = (
-        Annotation.objects.filter(id__in=ancestor_ids)
-        .values("id", "parent_id", "raw_text")
-        .union(descendants_qs, all=True)
+    nodes = TreeTraversalService.get_nodes(
+        root,
+        info.context.user,
+        mode="subtree",
+        text_field="raw_text",
+        request=info.context,
     )
-
-    subtree_nodes = list(combined_qs)
-    subtree = build_flat_tree(
-        subtree_nodes, type_name="AnnotationType", text_key="raw_text"
-    )
-    return subtree
+    return build_flat_tree(nodes, type_name="AnnotationType", text_key="raw_text")
 
 
 @strawberry.type(name="AnnotationType")
@@ -336,7 +275,10 @@ class AnnotationType(Node):
         return coerce_str(getattr(self, "long_description", None))
 
     json: GenericScalar | None = strawberry.field(name="json", default=None)
-    parent: AnnotationType | None = strawberry.field(name="parent", default=None)
+
+    @strawberry.field(name="parent")
+    def parent(self, info: strawberry.Info) -> AnnotationType | None:
+        return resolve_visible_fk(self, info, "parent_id", "AnnotationType")
 
     @strawberry.field(
         name="annotationType",
@@ -372,23 +314,34 @@ class AnnotationType(Node):
         # private corpus via its ``corpus_id``.
         return resolve_visible_fk(self, info, "corpus_id", "CorpusType")
 
-    analysis: None | (
-        Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(name="analysis", default=None)
-    created_by_analysis: None | (
-        Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(
+    @strawberry.field(name="analysis")
+    def analysis(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "analysis_id", "AnalysisType")
+
+    @strawberry.field(
         name="createdByAnalysis",
         description="If set, this annotation is private to the analysis that created it",
-        default=None,
     )
-    created_by_extract: None | (
-        Annotated[ExtractType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(
+    def created_by_analysis(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "created_by_analysis_id", "AnalysisType")
+
+    @strawberry.field(
         name="createdByExtract",
         description="If set, this annotation is private to the extract that created it",
-        default=None,
     )
+    def created_by_extract(
+        self, info: strawberry.Info
+    ) -> None | Annotated[ExtractType, strawberry.lazy("config.graphql.extract_types")]:
+        return resolve_visible_fk(self, info, "created_by_extract_id", "ExtractType")
+
     corpus_action: None | (
         Annotated[CorpusActionType, strawberry.lazy("config.graphql.agent_types")]
     ) = strawberry.field(
@@ -1184,9 +1137,14 @@ class AnnotationLabelType(Node):
             getattr(self, "label_type", None),
         )
 
-    analyzer: None | (
-        Annotated[AnalyzerType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(name="analyzer", default=None)
+    @strawberry.field(name="analyzer")
+    def analyzer(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[AnalyzerType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "analyzer_id", "AnalyzerType")
+
     read_only: bool = strawberry.field(name="readOnly", default=None)
 
     @strawberry.field(name="color")
@@ -1618,9 +1576,14 @@ class LabelSetType(Node):
             },
         )
 
-    analyzer: None | (
-        Annotated[AnalyzerType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(name="analyzer", default=None)
+    @strawberry.field(name="analyzer")
+    def analyzer(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[AnalyzerType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "analyzer_id", "AnalyzerType")
+
     is_default: bool = strawberry.field(name="isDefault", default=None)
 
     @strawberry.field(name="usedByCorpuses")
@@ -1983,26 +1946,42 @@ class RelationshipType(Node):
             },
         )
 
-    analyzer: None | (
-        Annotated[AnalyzerType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(name="analyzer", default=None)
-    analysis: None | (
-        Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(name="analysis", default=None)
-    created_by_analysis: None | (
-        Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(
+    @strawberry.field(name="analyzer")
+    def analyzer(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[AnalyzerType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "analyzer_id", "AnalyzerType")
+
+    @strawberry.field(name="analysis")
+    def analysis(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "analysis_id", "AnalysisType")
+
+    @strawberry.field(
         name="createdByAnalysis",
         description="If set, this relationship is private to the analysis that created it",
-        default=None,
     )
-    created_by_extract: None | (
-        Annotated[ExtractType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(
+    def created_by_analysis(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "created_by_analysis_id", "AnalysisType")
+
+    @strawberry.field(
         name="createdByExtract",
         description="If set, this relationship is private to the extract that created it",
-        default=None,
     )
+    def created_by_extract(
+        self, info: strawberry.Info
+    ) -> None | Annotated[ExtractType, strawberry.lazy("config.graphql.extract_types")]:
+        return resolve_visible_fk(self, info, "created_by_extract_id", "ExtractType")
+
     structural: bool = strawberry.field(name="structural", default=None)
     is_public: bool = strawberry.field(name="isPublic", default=None)
     creator: Annotated[UserType, strawberry.lazy("config.graphql.user_types")] = (
@@ -2192,9 +2171,14 @@ class CorpusReferenceType(Node):
             getattr(self, "resolution_status", None),
         )
 
-    created_by_analysis: None | (
-        Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(name="createdByAnalysis", default=None)
+    @strawberry.field(name="createdByAnalysis")
+    def created_by_analysis(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "created_by_analysis_id", "AnalysisType")
+
     is_provisional: bool = strawberry.field(name="isProvisional", default=None)
 
 
@@ -2215,100 +2199,32 @@ def _resolve_NoteType_revisions(root, info):
 
 
 def _resolve_NoteType_descendants_tree(root, info):
-    """
-    Returns a flat list of descendant notes,
-    each including only the IDs of its immediate children.
-    """
-    from django_cte import CTE, with_cte
-
-    def get_descendants(cte):
-        base_qs = Note.objects.filter(parent_id=root.id).values(
-            "id", "parent_id", "content"
-        )
-        recursive_qs = cte.join(Note, parent_id=cte.col.id).values(
-            "id", "parent_id", "content"
-        )
-        return base_qs.union(recursive_qs, all=True)
-
-    cte = CTE.recursive(get_descendants)
-    descendants_qs = with_cte(cte, select=cte.queryset()).order_by("id")
-    descendants_list = list(descendants_qs)
-    descendants_tree = build_flat_tree(
-        descendants_list, type_name="NoteType", text_key="content"
+    nodes = TreeTraversalService.get_nodes(
+        root,
+        info.context.user,
+        mode="descendants",
+        text_field="content",
+        request=info.context,
     )
-    return descendants_tree
+    return build_flat_tree(nodes, type_name="NoteType", text_key="content")
 
 
 def _resolve_NoteType_full_tree(root, info):
-    """
-    Returns a flat list of notes from the root ancestor,
-    each including only the IDs of its immediate children.
-    """
-    from django_cte import CTE, with_cte
-
-    # Find the root ancestor
-    tree_root = root
-    while tree_root.parent_id is not None:
-        tree_root = tree_root.parent
-
-    def get_full_tree(cte):
-        base_qs = Note.objects.filter(id=tree_root.id).values(
-            "id", "parent_id", "content"
-        )
-        recursive_qs = cte.join(Note, parent_id=cte.col.id).values(
-            "id", "parent_id", "content"
-        )
-        return base_qs.union(recursive_qs, all=True)
-
-    cte = CTE.recursive(get_full_tree)
-    full_tree_qs = with_cte(cte, select=cte.queryset()).order_by("id")
-    nodes = list(full_tree_qs)
-    full_tree = build_flat_tree(nodes, type_name="NoteType", text_key="content")
-    return full_tree
+    nodes = TreeTraversalService.get_nodes(
+        root, info.context.user, mode="full", text_field="content", request=info.context
+    )
+    return build_flat_tree(nodes, type_name="NoteType", text_key="content")
 
 
 def _resolve_NoteType_subtree(root, info):
-    """
-    Returns a combined tree that includes:
-    - The path from the root ancestor to this note (ancestors).
-    - This note and all its descendants.
-    """
-    from django_cte import CTE, with_cte
-
-    # Find all ancestors up to the root
-    ancestors = []
-    node = root
-    while node.parent_id is not None:
-        ancestors.append(node)
-        node = node.parent
-    ancestors.append(node)  # Include the root ancestor
-    ancestor_ids = [ancestor.id for ancestor in ancestors]
-
-    # Get all descendants of the current node
-    def get_descendants(cte):
-        base_qs = Note.objects.filter(parent_id=root.id).values(
-            "id", "parent_id", "content"
-        )
-        recursive_qs = cte.join(Note, parent_id=cte.col.id).values(
-            "id", "parent_id", "content"
-        )
-        return base_qs.union(recursive_qs, all=True)
-
-    descendants_cte = CTE.recursive(get_descendants)
-    descendants_qs = with_cte(
-        descendants_cte, select=descendants_cte.queryset()
-    ).values("id", "parent_id", "content")
-
-    # Combine ancestors and descendants
-    combined_qs = (
-        Note.objects.filter(id__in=ancestor_ids)
-        .values("id", "parent_id", "content")
-        .union(descendants_qs, all=True)
+    nodes = TreeTraversalService.get_nodes(
+        root,
+        info.context.user,
+        mode="subtree",
+        text_field="content",
+        request=info.context,
     )
-
-    subtree_nodes = list(combined_qs)
-    subtree = build_flat_tree(subtree_nodes, type_name="NoteType", text_key="content")
-    return subtree
+    return build_flat_tree(nodes, type_name="NoteType", text_key="content")
 
 
 def _resolve_NoteType_current_version(root, info):
@@ -2342,16 +2258,24 @@ class NoteType(Node):
     def content(self, info: strawberry.Info) -> str:
         return coerce_str(getattr(self, "content", None))
 
-    parent: NoteType | None = strawberry.field(name="parent", default=None)
-    corpus: None | (
-        Annotated[CorpusType, strawberry.lazy("config.graphql.corpus_types")]
-    ) = strawberry.field(name="corpus", default=None)
+    @strawberry.field(name="parent")
+    def parent(self, info: strawberry.Info) -> NoteType | None:
+        return resolve_visible_fk(self, info, "parent_id", "NoteType")
+
+    @strawberry.field(name="corpus")
+    def corpus(
+        self, info: strawberry.Info
+    ) -> None | Annotated[CorpusType, strawberry.lazy("config.graphql.corpus_types")]:
+        return resolve_visible_fk(self, info, "corpus_id", "CorpusType")
+
     document: Annotated[
         DocumentType, strawberry.lazy("config.graphql.document_types")
     ] = strawberry.field(name="document", default=None)
-    annotation: AnnotationType | None = strawberry.field(
-        name="annotation", default=None
-    )
+
+    @strawberry.field(name="annotation")
+    def annotation(self, info: strawberry.Info) -> AnnotationType | None:
+        return resolve_visible_fk(self, info, "annotation_id", "AnnotationType")
+
     is_public: bool = strawberry.field(name="isPublic", default=None)
     creator: Annotated[UserType, strawberry.lazy("config.graphql.user_types")] = (
         strawberry.field(name="creator", default=None)
@@ -2767,13 +2691,17 @@ class AuthorityFrontierNode(Node):
         description="Per-corpus demand breakdown: [{corpus_id, mention_count, top_detection_tier}].",
         default=None,
     )
-    ingested_document: None | (
-        Annotated[DocumentType, strawberry.lazy("config.graphql.document_types")]
-    ) = strawberry.field(
+
+    @strawberry.field(
         name="ingestedDocument",
         description="The Document imported for this key once ingested (else null).",
-        default=None,
     )
+    def ingested_document(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[DocumentType, strawberry.lazy("config.graphql.document_types")]
+    ):
+        return resolve_visible_fk(self, info, "ingested_document_id", "DocumentType")
 
     @strawberry.field(
         name="ingestable",

@@ -371,3 +371,79 @@ def test_django_check_returns_empty_when_repo_is_clean() -> None:
     from opencontractserver.shared.checks import check_graphql_service_layer
 
     assert check_graphql_service_layer(app_configs=None) == []
+
+
+def test_nullable_resource_links_do_not_use_default_fk_resolution():
+    """Default Strawberry getattr bypasses target visibility hooks.
+
+    These resources have independent ACLs. Intrinsic objects such as an
+    annotation's label deliberately inherit their parent's presentation.
+    Non-null relations and non-model result DTOs need separate review.
+    """
+    import ast
+    from pathlib import Path
+
+    independent_types = {
+        "AnalysisType",
+        "ExtractType",
+        "AnalyzerType",
+        "AnnotationType",
+        "MessageType",
+        "CorpusType",
+        "DocumentType",
+        "FieldsetType",
+        "AgentConfigurationType",
+        "GremlinEngineType_WRITE",
+        "LabelSetType",
+        "NoteType",
+    }
+    graphql_dir = Path(__file__).resolve().parents[3] / "config" / "graphql"
+    violations = []
+    for path in graphql_dir.glob("*_types.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.AnnAssign) or node.value is None:
+                continue
+            if isinstance(node.value, ast.Call) and any(
+                keyword.arg == "resolver" for keyword in node.value.keywords
+            ):
+                continue
+            annotation = ast.unparse(node.annotation)
+            if "None" not in annotation or "list[" in annotation:
+                continue
+            names = {
+                part.id
+                for part in ast.walk(node.annotation)
+                if isinstance(part, ast.Name)
+            }
+            if names & independent_types:
+                violations.append(
+                    f"{path.name}:{node.lineno}: {ast.unparse(node.target)}"
+                )
+    assert (
+        not violations
+    ), "Use resolve_visible_fk for independently private resources: " + ", ".join(
+        violations
+    )
+
+
+def test_independent_fk_targets_have_permission_hooks():
+    from config.graphql.core.relay import _TYPE_REGISTRY
+    from config.graphql.schema import schema
+
+    assert schema is not None  # Populate the registry using the served schema.
+    for name in (
+        "AnalysisType",
+        "ExtractType",
+        "AnalyzerType",
+        "AnnotationType",
+        "MessageType",
+        "CorpusType",
+        "DocumentType",
+        "FieldsetType",
+        "AgentConfigurationType",
+        "GremlinEngineType_WRITE",
+        "LabelSetType",
+        "NoteType",
+    ):
+        entry = _TYPE_REGISTRY[name]
+        assert entry.get_node is not None or entry.get_queryset is not None, name

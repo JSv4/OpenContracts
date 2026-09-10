@@ -11,6 +11,12 @@ import {
 } from "./rest";
 import { DOCX_CACHE_MAX_ENTRIES } from "../../../assets/configurations/constants";
 
+import {
+  assertDocumentCacheGeneration,
+  getDocumentCacheGeneration,
+  docxBytesCache,
+} from "../../../services/documentCacheState";
+
 /**
  * Get PAWLS layer data with caching
  */
@@ -18,6 +24,7 @@ export async function getPawlsLayer(
   url: string,
   documentId?: string
 ): Promise<PageTokens[]> {
+  const generation = getDocumentCacheGeneration();
   console.log(
     `📄 Loading PAWLS data for document ${documentId || "unknown"}...`
   );
@@ -25,6 +32,7 @@ export async function getPawlsLayer(
   // If we have a document ID, try to get from cache first
   if (documentId) {
     const cached = await documentCacheManager.getCachedPawlsData(documentId);
+    assertDocumentCacheGeneration(generation);
     if (cached) {
       console.log(`✅ Loaded PAWLS data from CACHE for document ${documentId}`);
       return cached;
@@ -33,7 +41,9 @@ export async function getPawlsLayer(
 
   // Fetch from server
   console.log(`🌐 Loading PAWLS data from HTTPS: ${url}`);
+  assertDocumentCacheGeneration(generation);
   const pawlsData = await uncachedGetPawlsLayer(url);
+  assertDocumentCacheGeneration(generation);
 
   // Cache for future use if we have document ID
   if (documentId && pawlsData) {
@@ -49,6 +59,7 @@ export async function getPawlsLayer(
       });
   }
 
+  assertDocumentCacheGeneration(generation);
   return pawlsData;
 }
 
@@ -60,11 +71,13 @@ export async function getDocumentRawText(
   documentId?: string,
   hash?: string
 ): Promise<string> {
+  const generation = getDocumentCacheGeneration();
   console.log(`📄 Loading text document ${documentId || "unknown"}...`);
 
   // If we have a document ID, try to get from cache first
   if (documentId) {
     const cached = await documentCacheManager.getCachedText(documentId, hash);
+    assertDocumentCacheGeneration(generation);
     if (cached) {
       console.log(
         `✅ Loaded text document from CACHE for document ${documentId}`
@@ -75,7 +88,9 @@ export async function getDocumentRawText(
 
   // Fetch from server
   console.log(`🌐 Loading text document from HTTPS: ${url}`);
+  assertDocumentCacheGeneration(generation);
   const text = await uncachedGetDocumentRawText(url);
+  assertDocumentCacheGeneration(generation);
 
   // Cache for future use if we have document ID
   if (documentId && text) {
@@ -91,6 +106,7 @@ export async function getDocumentRawText(
       });
   }
 
+  assertDocumentCacheGeneration(generation);
   return text;
 }
 
@@ -103,11 +119,13 @@ export async function getCachedPDFUrl(
   documentId: string,
   hash: string
 ): Promise<string> {
+  const generation = getDocumentCacheGeneration();
   console.log(`📄 Loading PDF document ${documentId}...`);
 
   // First check if we have a valid cached version
   const cachedBlob = await documentCacheManager.getCachedPDF(documentId, hash);
 
+  assertDocumentCacheGeneration(generation);
   if (cachedBlob) {
     console.log(`✅ Loaded PDF from CACHE for document ${documentId}`);
     // Create a blob URL from the cached blob
@@ -130,6 +148,7 @@ export async function getCachedPDFUrl(
       },
     });
 
+    assertDocumentCacheGeneration(generation);
     const pdfBlob = response.data;
 
     // Cache the PDF for future use
@@ -142,11 +161,13 @@ export async function getCachedPDFUrl(
         console.error("  ⚠️ Failed to cache PDF:", err);
       });
 
+    assertDocumentCacheGeneration(generation);
     // Return blob URL for immediate use
     return URL.createObjectURL(pdfBlob);
   } catch (error) {
     console.error("Error fetching PDF:", error);
     // Fall back to direct URL if caching fails
+    assertDocumentCacheGeneration(generation);
     return pdfUrl;
   }
 }
@@ -157,13 +178,13 @@ export async function getCachedPDFUrl(
  * when the limit is reached. Uses Map insertion-order semantics: a cache hit
  * deletes and re-inserts the entry so it becomes the most recent.
  */
-const docxBytesCache = new Map<string, Uint8Array>();
 
 /**
  * Get DOCX document bytes (as Uint8Array) for WASM rendering.
  * Caches by URL to avoid re-downloading on Apollo query refetches.
  */
 export async function getDocxBytes(url: string): Promise<Uint8Array> {
+  const generation = getDocumentCacheGeneration();
   const cached = docxBytesCache.get(url);
   if (cached) {
     // Promote to most-recently-used by re-inserting
@@ -173,6 +194,7 @@ export async function getDocxBytes(url: string): Promise<Uint8Array> {
   }
 
   const response = await axios.get(url, { responseType: "arraybuffer" });
+  assertDocumentCacheGeneration(generation);
   const bytes = new Uint8Array(response.data);
 
   // Evict least-recently-used entry if cache is at capacity

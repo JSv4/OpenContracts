@@ -51,6 +51,7 @@ from opencontractserver.corpuses.models import CorpusAction, CorpusActionExecuti
 from opencontractserver.extracts.models import Column, Datacell, Extract, Fieldset
 from opencontractserver.notifications.models import Notification
 from opencontractserver.shared.services.base import BaseService
+from opencontractserver.types.enums import PermissionTypes
 from opencontractserver.utils.ids import from_global_id
 
 
@@ -124,9 +125,11 @@ class AnalyzerType(Node):
         kwargs = strip_unset({})
         return _resolve_AnalyzerType_icon(self, info, **kwargs)
 
-    host_gremlin: GremlinEngineType_WRITE | None = strawberry.field(
-        name="hostGremlin", default=None
-    )
+    @strawberry.field(name="hostGremlin")
+    def host_gremlin(self, info: strawberry.Info) -> GremlinEngineType_WRITE | None:
+        return resolve_visible_fk(
+            self, info, "host_gremlin_id", "GremlinEngineType_WRITE"
+        )
 
     @strawberry.field(name="taskName")
     def task_name(self, info: strawberry.Info) -> str | None:
@@ -529,6 +532,11 @@ class GremlinEngineType_WRITE(Node):
 
     @strawberry.field(name="apiKey")
     def api_key(self, info: strawberry.Info) -> str | None:
+        # READ (including publication) never grants access to credentials.
+        if not BaseService.user_has(
+            self, info.context.user, PermissionTypes.UPDATE, request=info.context
+        ):
+            return None
         return coerce_str(getattr(self, "api_key", None))
 
     @strawberry.field(name="myPermissions")
@@ -544,7 +552,18 @@ class GremlinEngineType_WRITE(Node):
         return core_permissions.resolve_object_shared_with(self, info)
 
 
-register_type("GremlinEngineType_WRITE", GremlinEngineType_WRITE, model=GremlinEngine)
+def _get_node_GremlinEngineType_WRITE(info, pk):
+    return BaseService.get_or_none(
+        GremlinEngine, pk, info.context.user, request=info.context
+    )
+
+
+register_type(
+    "GremlinEngineType_WRITE",
+    GremlinEngineType_WRITE,
+    model=GremlinEngine,
+    get_node=_get_node_GremlinEngineType_WRITE,
+)
 
 
 GremlinEngineType_WRITEConnection = make_connection_types(
@@ -737,11 +756,14 @@ class ExtractType(Node):
     corpus_action: None | (
         Annotated[CorpusActionType, strawberry.lazy("config.graphql.agent_types")]
     ) = strawberry.field(name="corpusAction", default=None)
-    parent_extract: ExtractType | None = strawberry.field(
+
+    @strawberry.field(
         name="parentExtract",
         description="Extract this iteration was forked from. Null for the root of an iteration series.",
-        default=None,
     )
+    def parent_extract(self, info: strawberry.Info) -> ExtractType | None:
+        return resolve_visible_fk(self, info, "parent_extract_id", "ExtractType")
+
     model_config: GenericScalar | None = strawberry.field(
         name="modelConfig",
         description="Captured model/run configuration for this iteration.",
@@ -1710,7 +1732,11 @@ class DatacellType(Node):
     )
     created: datetime.datetime = strawberry.field(name="created", default=None)
     modified: datetime.datetime = strawberry.field(name="modified", default=None)
-    extract: ExtractType | None = strawberry.field(name="extract", default=None)
+
+    @strawberry.field(name="extract")
+    def extract(self, info: strawberry.Info) -> ExtractType | None:
+        return resolve_visible_fk(self, info, "extract_id", "ExtractType")
+
     column: ColumnType = strawberry.field(name="column", default=None)
     document: Annotated[
         DocumentType, strawberry.lazy("config.graphql.document_types")

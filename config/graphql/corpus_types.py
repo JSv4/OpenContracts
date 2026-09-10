@@ -119,18 +119,19 @@ def _resolve_CorpusType_label_set(root, info):
     to copy those annotations to the label_set instance so that its
     count resolvers can use them instead of hitting the database.
     """
-    if root.label_set is None:
+    label_set = resolve_visible_fk(root, info, "label_set_id", "LabelSetType")
+    if label_set is None:
         return None
 
-    # Copy annotated counts to the label_set instance
-    if hasattr(root, "_label_doc_count"):
-        root.label_set._doc_label_count = root._label_doc_count
-    if hasattr(root, "_label_span_count"):
-        root.label_set._span_label_count = root._label_span_count
-    if hasattr(root, "_label_token_count"):
-        root.label_set._token_label_count = root._label_token_count
-
-    return root.label_set
+    # Copy annotated counts to the visible label set instance.
+    for source, target in (
+        ("_label_doc_count", "_doc_label_count"),
+        ("_label_span_count", "_span_label_count"),
+        ("_label_token_count", "_token_label_count"),
+    ):
+        if hasattr(root, source):
+            setattr(label_set, target, getattr(root, source))
+    return label_set
 
 
 def _resolve_CorpusType_engagement_metrics(root, info):
@@ -1308,9 +1309,13 @@ class CorpusType(Node):
             node_type_name="AnalysisType",
         )
 
-    metadata_schema: None | (
-        Annotated[FieldsetType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(name="metadataSchema", default=None)
+    @strawberry.field(name="metadataSchema")
+    def metadata_schema(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[FieldsetType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "metadata_schema_id", "FieldsetType")
 
     @strawberry.field(name="extracts")
     def extracts(

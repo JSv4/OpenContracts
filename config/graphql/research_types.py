@@ -351,13 +351,17 @@ class ResearchReportType(Node):
     ):
         return resolve_visible_fk(self, info, "conversation_id", "ConversationType")
 
-    originating_message: None | (
-        Annotated[MessageType, strawberry.lazy("config.graphql.conversation_types")]
-    ) = strawberry.field(
+    @strawberry.field(
         name="originatingMessage",
         description="User chat message that triggered this run, if any",
-        default=None,
     )
+    def originating_message(
+        self, info: strawberry.Info
+    ) -> (
+        None
+        | Annotated[MessageType, strawberry.lazy("config.graphql.conversation_types")]
+    ):
+        return resolve_visible_fk(self, info, "originating_message_id", "MessageType")
 
     @strawberry.field(
         name="workspaceDocument",

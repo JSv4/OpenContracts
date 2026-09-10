@@ -499,6 +499,7 @@ class ChunkedUploadPartView(APIView):
                 upload_id=upload_id,
                 index=index,
                 chunk_file=chunk_file,
+                access_token=_request_access_token(request),
             )
         except ChunkedUploadError as e:
             return _chunked_error_response(e)
@@ -556,7 +557,11 @@ class ChunkedUploadStatusView(APIView):
 
     def get(self, request: Request, upload_id: str) -> Response:
         try:
-            info = get_chunked_session_status(user=request.user, upload_id=upload_id)
+            info = get_chunked_session_status(
+                user=request.user,
+                upload_id=upload_id,
+                access_token=_request_access_token(request),
+            )
         except ChunkedUploadError as e:
             return _chunked_error_response(e)
 

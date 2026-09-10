@@ -78,17 +78,31 @@ class CorpusActionType(Node):
     corpus: Annotated[CorpusType, strawberry.lazy("config.graphql.corpus_types")] = (
         strawberry.field(name="corpus", default=None)
     )
-    fieldset: None | (
-        Annotated[FieldsetType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(name="fieldset", default=None)
-    analyzer: None | (
-        Annotated[AnalyzerType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(name="analyzer", default=None)
-    agent_config: AgentConfigurationType | None = strawberry.field(
+
+    @strawberry.field(name="fieldset")
+    def fieldset(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[FieldsetType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "fieldset_id", "FieldsetType")
+
+    @strawberry.field(name="analyzer")
+    def analyzer(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[AnalyzerType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "analyzer_id", "AnalyzerType")
+
+    @strawberry.field(
         name="agentConfig",
         description="Optional agent configuration for persona/tool defaults. Not required for agent actions — task_instructions alone is sufficient.",
-        default=None,
     )
+    def agent_config(self, info: strawberry.Info) -> AgentConfigurationType | None:
+        return resolve_visible_fk(
+            self, info, "agent_config_id", "AgentConfigurationType"
+        )
 
     @strawberry.field(
         name="taskInstructions",
@@ -576,13 +590,18 @@ class CorpusActionExecutionType(Node):
     ):
         return resolve_visible_fk(self, info, "conversation_id", "ConversationType")
 
-    message: None | (
-        Annotated[MessageType, strawberry.lazy("config.graphql.conversation_types")]
-    ) = strawberry.field(
+    @strawberry.field(
         name="message",
         description="The message that triggered this execution (for NEW_MESSAGE trigger)",
-        default=None,
     )
+    def message(
+        self, info: strawberry.Info
+    ) -> (
+        None
+        | Annotated[MessageType, strawberry.lazy("config.graphql.conversation_types")]
+    ):
+        return resolve_visible_fk(self, info, "message_id", "MessageType")
+
     corpus: Annotated[CorpusType, strawberry.lazy("config.graphql.corpus_types")] = (
         strawberry.field(
             name="corpus",
@@ -644,20 +663,24 @@ class CorpusActionExecutionType(Node):
         description="Detailed agent result (for agent actions only)",
         default=None,
     )
-    extract: None | (
-        Annotated[ExtractType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(
-        name="extract",
-        description="Extract created (for fieldset actions only)",
-        default=None,
+
+    @strawberry.field(
+        name="extract", description="Extract created (for fieldset actions only)"
     )
-    analysis: None | (
-        Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
-    ) = strawberry.field(
-        name="analysis",
-        description="Analysis created (for analyzer actions only)",
-        default=None,
+    def extract(
+        self, info: strawberry.Info
+    ) -> None | Annotated[ExtractType, strawberry.lazy("config.graphql.extract_types")]:
+        return resolve_visible_fk(self, info, "extract_id", "ExtractType")
+
+    @strawberry.field(
+        name="analysis", description="Analysis created (for analyzer actions only)"
     )
+    def analysis(
+        self, info: strawberry.Info
+    ) -> (
+        None | Annotated[AnalysisType, strawberry.lazy("config.graphql.extract_types")]
+    ):
+        return resolve_visible_fk(self, info, "analysis_id", "AnalysisType")
 
     @strawberry.field(
         name="errorMessage", description="Error message if status is FAILED"
@@ -957,13 +980,17 @@ class AgentActionResultType(Node):
             self, info, "triggering_conversation_id", "ConversationType"
         )
 
-    triggering_message: None | (
-        Annotated[MessageType, strawberry.lazy("config.graphql.conversation_types")]
-    ) = strawberry.field(
+    @strawberry.field(
         name="triggeringMessage",
         description="Message that triggered this agent action (for NEW_MESSAGE trigger)",
-        default=None,
     )
+    def triggering_message(
+        self, info: strawberry.Info
+    ) -> (
+        None
+        | Annotated[MessageType, strawberry.lazy("config.graphql.conversation_types")]
+    ):
+        return resolve_visible_fk(self, info, "triggering_message_id", "MessageType")
 
     @strawberry.field(name="status")
     def status(
@@ -1148,11 +1175,14 @@ class CorpusActionTemplateType(Node):
     def description(self, info: strawberry.Info) -> str:
         return coerce_str(getattr(self, "description", None))
 
-    agent_config: AgentConfigurationType | None = strawberry.field(
+    @strawberry.field(
         name="agentConfig",
         description="Optional agent configuration for persona/tool defaults.",
-        default=None,
     )
+    def agent_config(self, info: strawberry.Info) -> AgentConfigurationType | None:
+        return resolve_visible_fk(
+            self, info, "agent_config_id", "AgentConfigurationType"
+        )
 
     @strawberry.field(name="preAuthorizedTools")
     def pre_authorized_tools(self, info: strawberry.Info) -> list[str | None] | None:

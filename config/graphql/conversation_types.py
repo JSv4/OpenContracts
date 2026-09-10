@@ -1180,11 +1180,11 @@ class MessageType(Node):
         kwargs = strip_unset({})
         return _resolve_MessageType_agent_configuration(self, info, **kwargs)
 
-    parent_message: MessageType | None = strawberry.field(
-        name="parentMessage",
-        description="Parent message for threaded replies",
-        default=None,
+    @strawberry.field(
+        name="parentMessage", description="Parent message for threaded replies"
     )
+    def parent_message(self, info: strawberry.Info) -> MessageType | None:
+        return resolve_visible_fk(self, info, "parent_message_id", "MessageType")
 
     @strawberry.field(
         name="content", description="The textual content of the chat message"
@@ -2018,9 +2018,9 @@ class ModerationActionType(Node):
     def conversation(self, info: strawberry.Info) -> ConversationType | None:
         return resolve_visible_fk(self, info, "conversation_id", "ConversationType")
 
-    message: MessageType | None = strawberry.field(
-        name="message", description="The message that was moderated", default=None
-    )
+    @strawberry.field(name="message", description="The message that was moderated")
+    def message(self, info: strawberry.Info) -> MessageType | None:
+        return resolve_visible_fk(self, info, "message_id", "MessageType")
 
     @strawberry.field(name="actionType", description="Type of moderation action taken")
     def action_type(

@@ -33,9 +33,6 @@ class Auth0RemoteUserJSONWebTokenBackend:
         logger.debug(
             f"Auth0RemoteUserJSONWebTokenBackend.authenticate() - Starting with request: {request}"
         )
-        logger.debug(
-            f"Auth0RemoteUserJSONWebTokenBackend.authenticate() - kwargs: {kwargs}"
-        )
 
         if request is None or getattr(request, "_jwt_token_auth", False):
             logger.debug(
@@ -47,10 +44,6 @@ class Auth0RemoteUserJSONWebTokenBackend:
         logger.debug(
             f"Auth0RemoteUserJSONWebTokenBackend.authenticate() - token retrieved: {'Present' if token else 'None'}"
         )
-        if token:
-            logger.debug(
-                f"Auth0RemoteUserJSONWebTokenBackend.authenticate() - token first 10 chars: {token[:10]}"
-            )
 
         if token is not None:
             try:

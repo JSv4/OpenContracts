@@ -11,8 +11,9 @@ from __future__ import annotations
 import logging
 import traceback
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, cast
 
+from django.db.models import Model
 from rest_framework import serializers
 
 from config.graphql.core.auth import PermissionDenied
@@ -95,14 +96,23 @@ def _drf_mutation_body(
     obj_id = None
 
     try:
-        if info.context.user:
-            kwargs["creator"] = info.context.user.id
-        else:
+        if not info.context.user:
             raise ValueError("No user in this request...")
+
+        # Ownership grants management permissions. Editing a shared object
+        # must never turn an UPDATE grantee into its owner.
+        is_update = lookup_field in kwargs
+        if is_update:
+            kwargs.pop("creator", None)
+            kwargs.pop("creator_id", None)
+        else:
+            kwargs["creator"] = info.context.user.id
 
         for pk_field in pk_fields:
             if pk_field in kwargs:
                 raw_value = kwargs[pk_field]
+                if raw_value is None:
+                    continue
                 if isinstance(raw_value, list):
                     kwargs[pk_field] = [
                         from_global_id(global_id)[1] for global_id in raw_value
@@ -110,7 +120,25 @@ def _drf_mutation_body(
                 else:
                     kwargs[pk_field] = from_global_id(raw_value)[1]
 
-        is_update = lookup_field in kwargs
+                # A writable parent is not authority to attach someone else's
+                # private label set or label (and expose its intrinsic fields).
+                # Categories are install-wide vocabulary, not private data.
+                if pk_field in {"label_set", "annotation_label"}:
+                    related_model = (
+                        cast(type[Model], model)._meta.get_field(pk_field).related_model
+                    )
+                    if (
+                        BaseService.get_or_none(
+                            related_model,
+                            kwargs[pk_field],
+                            info.context.user,
+                            request=info.context,
+                        )
+                        is None
+                    ):
+                        raise serializers.ValidationError(
+                            {pk_field: "Resource not found or access denied."}
+                        )
 
         if is_update:
             lookup_pk = from_global_id(kwargs[lookup_field])[1]

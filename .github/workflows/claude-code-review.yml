@@ -2,7 +2,7 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, ready_for_review]
     # Optional: Only run on specific file changes
     # paths:
     #   - "src/**/*.ts"
@@ -33,7 +33,11 @@ jobs:
     # reviewing a PR means checking out untrusted head code. To review a fork
     # PR, comment `@claude` on it instead: .github/workflows/claude.yml runs on
     # issue_comment in base context and gates on the commenter's write access.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # Drafts are still being prepared; publish review feedback when the author
+    # marks the PR ready. Test and lint workflows run independently.
+    if: >-
+      ${{ !github.event.pull_request.draft &&
+          github.event.pull_request.head.repo.full_name == github.repository }}
 
     runs-on: ubuntu-latest
     permissions:

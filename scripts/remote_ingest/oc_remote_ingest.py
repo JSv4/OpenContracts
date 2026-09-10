@@ -36,6 +36,13 @@ import requests
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from scripts.remote_ingest.admission import (  # noqa: E402
+    AdmissionGovernor,
+    StatusPollError,
+    retry_after_seconds,
+    validate_watermarks,
+)
+
 if TYPE_CHECKING:  # avoid importing enrichers (needs Django path) at module load
     from enrichers import MetadataOverlay
 
@@ -50,14 +57,11 @@ DEFAULT_LEDGER_PAGE_SIZE = 256
 FUTURES_PER_WORKER = 2
 DEFAULT_EMBED_BATCH = 100
 DEFAULT_MAX_ATTEMPTS = 5
-# Backpressure: pause submitting when the target has more than HIGH worker
-# uploads still PENDING+PROCESSING, resume once it drains below LOW.
+# Token-scoped outstanding uploads: pause above HIGH, resume at/below LOW.
 DEFAULT_QUEUE_HIGH = 2000
 DEFAULT_QUEUE_LOW = 500
 _HTTP_MAX_RETRIES = 6
 _JITTER_MIN = 0.5
-_GOVERNOR_WAIT_SECONDS = 10
-_GOVERNOR_POLL_INTERVAL_SECONDS = 15
 _HTTP_UPLOAD_TIMEOUT_SECONDS = 300
 _HTTP_STATUS_TIMEOUT_SECONDS = 60
 _HTTP_BACKLOG_TIMEOUT_SECONDS = 30
@@ -448,20 +452,60 @@ class TargetClient:
         return None
 
     def backlog_count(self) -> int:
-        """PENDING + PROCESSING uploads for this token (drives backpressure)."""
+        """Complete token-scoped PENDING + PROCESSING count, or StatusPollError.
+
+        The two requests are not an atomic snapshot or a server-wide queue metric.
+        Neither a partial aggregate nor an unavailable count is usable capacity.
+        """
         total = 0
         for st in ("PENDING", "PROCESSING"):
             url = f"{self.base}/api/worker-uploads/documents/list/?status={st}&page_size=1"
             try:
                 resp = self.session.get(
-                    url, timeout=_HTTP_BACKLOG_TIMEOUT_SECONDS, verify=self._verify
+                    url,
+                    timeout=_HTTP_BACKLOG_TIMEOUT_SECONDS,
+                    verify=self._verify,
+                    allow_redirects=False,
                 )
-                if resp.status_code == 200:
-                    total += int(resp.json().get("count", 0))
+            except (
+                requests.exceptions.InvalidURL,
+                requests.exceptions.InvalidSchema,
+                requests.exceptions.MissingSchema,
+                requests.exceptions.InvalidHeader,
+            ):
+                raise StatusPollError(
+                    "Invalid status request; check --target-url and --worker-token configuration",
+                    permanent=True,
+                ) from None
             except requests.RequestException:
-                # Treat polling failure as "no backpressure signal" — better to
-                # keep moving than to stall the whole run on a flaky status call.
-                return 0
+                raise StatusPollError("Status network error or timeout") from None
+            code = resp.status_code
+            if code != 200:
+                if code == 429 or 500 <= code < 600:
+                    raise StatusPollError(
+                        f"Status unavailable: HTTP {code}",
+                        retry_after=retry_after_seconds(
+                            resp.headers.get("Retry-After")
+                        ),
+                    )
+                hint = (
+                    "check --worker-token / OC_WORKER_TOKEN and worker/token permissions"
+                    if code in (401, 403)
+                    else "check --target-url and worker-upload API configuration"
+                )
+                raise StatusPollError(f"Status HTTP {code}; {hint}", permanent=True)
+            try:
+                body = resp.json()
+            except ValueError:
+                raise StatusPollError(
+                    "Invalid status response: malformed JSON"
+                ) from None
+            count = body.get("count") if isinstance(body, dict) else None
+            if type(count) is not int or count < 0:
+                raise StatusPollError(
+                    "Invalid status response: expected a nonnegative integer count"
+                )
+            total += count
         return total
 
 
@@ -999,6 +1043,11 @@ def _process_one(
 
 
 def cmd_run(cfg: Config) -> int:
+    try:
+        validate_watermarks(cfg.queue_high, cfg.queue_low)
+    except ValueError as watermark_error:
+        logger.error("%s", watermark_error)
+        return 2
     ledger = Ledger(cfg.ledger_path)
     parser = _Parser(cfg.parser_config, cfg.parser_identity)
     # Set up Django + the parser eagerly so config errors (missing service URL,
@@ -1043,7 +1092,8 @@ def cmd_run(cfg: Config) -> int:
     total = ledger.claimable_count()
     if not total:
         logger.info("nothing to do — run `plan` first or everything is done.")
-        _print_status(ledger, client)
+        if _print_status(ledger, client if cfg.queue_high > 0 else None) == 2:
+            return 2
         return 1 if ledger.blocked_count() else 0
 
     window = FUTURES_PER_WORKER * cfg.max_workers
@@ -1054,40 +1104,15 @@ def cmd_run(cfg: Config) -> int:
         f"enrichers={len(enrichers)})"
     )
 
-    # Backpressure gate shared by all workers.
-    pause_event = threading.Event()
-    pause_event.set()  # set == "go"
-    stop_event = threading.Event()
-    governor_state = {"last_poll": 0.0}
-    gov_lock = threading.Lock()
-
-    def maybe_poll_backpressure() -> None:
-        if stop_event.is_set() or cfg.queue_high <= 0:
-            return
-        with gov_lock:
-            now = time.time()
-            if now - governor_state["last_poll"] < _GOVERNOR_POLL_INTERVAL_SECONDS:
-                return
-            governor_state["last_poll"] = now
-        backlog = client.backlog_count()
-        if backlog > cfg.queue_high and pause_event.is_set():
-            logger.info(f"backpressure: backlog={backlog} > {cfg.queue_high}; pausing")
-            pause_event.clear()
-        elif backlog <= cfg.queue_low and not pause_event.is_set():
-            logger.info(f"backpressure: backlog={backlog} <= {cfg.queue_low}; resuming")
-            pause_event.set()
+    governor = AdmissionGovernor(client.backlog_count, cfg.queue_high, cfg.queue_low)
+    stop_event = governor.stopped
 
     done = {"ok": 0, "fail": 0}
     done_lock = threading.Lock()
 
     def worker(row: sqlite3.Row) -> None:
-        # Cancellation wakes paused workers without consuming a document attempt.
-        while not stop_event.is_set():
-            maybe_poll_backpressure()
-            if pause_event.is_set():
-                break
-            stop_event.wait(_GOVERNOR_WAIT_SECONDS)
-        if stop_event.is_set():
+        # A grant is atomic with polling/pausing; only admitted work uses attempts.
+        if not governor.admit() or stop_event.is_set():
             return
         rel, ok, msg = _process_one(
             cfg, parser, embedder, client, row, enrichers, ledger
@@ -1109,14 +1134,16 @@ def cmd_run(cfg: Config) -> int:
     pending: set[Future[None]] = set()
     exhausted = interrupted = False
     try:
-        while pending or not exhausted:
-            while not exhausted and len(pending) < window:
+        while not stop_event.is_set() and (pending or not exhausted):
+            while not stop_event.is_set() and not exhausted and len(pending) < window:
                 row = next(todo, None)
                 if row is None:
                     exhausted = True
                     break
+                if stop_event.is_set():
+                    break
                 pending.add(pool.submit(worker, row))
-            if not pending:
+            if stop_event.is_set() or not pending:
                 break
             finished, pending = wait(pending, return_when=FIRST_COMPLETED)
             for future in finished:
@@ -1130,7 +1157,7 @@ def cmd_run(cfg: Config) -> int:
     except KeyboardInterrupt:
         interrupted = True
     finally:
-        stop_event.set()
+        governor.stop()
         for future in pending:
             future.cancel()
         todo.close()
@@ -1147,8 +1174,14 @@ def cmd_run(cfg: Config) -> int:
         _print_status(ledger, None)
         return 130
 
+    if governor.fatal_error is not None:
+        logger.error("Admission stopped: %s", governor.fatal_error)
+        _print_status(ledger, None)
+        return 2
+
     logger.info(f"run complete: uploaded={done['ok']}, failed={done['fail']}")
-    _print_status(ledger, client)
+    if _print_status(ledger, client if cfg.queue_high > 0 else None) == 2:
+        return 2
     return 0 if done["fail"] == 0 and not ledger.blocked_count() else 1
 
 
@@ -1209,7 +1242,9 @@ def cmd_status(cfg: Config) -> int:
     return 0
 
 
-def _print_status(ledger: Ledger, client: TargetClient | None) -> None:
+def _print_status(ledger: Ledger, client: TargetClient | None) -> int:
+    """Print an informational snapshot; return 2 for fatal status configuration."""
+    result = 0
     counts = ledger.status_counts()
     total = sum(counts.values())
     print("\n── Ledger ──")
@@ -1221,11 +1256,13 @@ def _print_status(ledger: Ledger, client: TargetClient | None) -> None:
             print(f"  {st:<9}: {counts[st]}")
     if client is not None:
         try:
-            print("\n── Target worker-upload backlog ──")
+            print("\n── Token-scoped outstanding uploads ──")
             print(f"  PENDING+PROCESSING : {client.backlog_count()}")
-        except Exception as e:  # noqa: BLE001
-            print(f"  (could not reach target: {e})")
+        except StatusPollError as exc:
+            result = 2 if exc.permanent else 0
+            print(f"  PENDING+PROCESSING : unknown ({exc})")
     print("")
+    return result
 
 
 # ======================================================================
@@ -1314,8 +1351,18 @@ def main(argv: list[str] | None = None) -> int:
         help="Maximum ledger rows fetched per page for run/verify (default 256)",
     )
     p.add_argument("--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
-    p.add_argument("--queue-high", type=int, default=DEFAULT_QUEUE_HIGH)
-    p.add_argument("--queue-low", type=int, default=DEFAULT_QUEUE_LOW)
+    p.add_argument(
+        "--queue-high",
+        type=int,
+        default=DEFAULT_QUEUE_HIGH,
+        help="Pause run admission above this token-scoped outstanding upload count; <= 0 disables polling",
+    )
+    p.add_argument(
+        "--queue-low",
+        type=int,
+        default=DEFAULT_QUEUE_LOW,
+        help="Resume paused admission at/below this token-scoped count (0 <= low <= high when enabled)",
+    )
     p.add_argument(
         "--no-embeddings",
         action="store_true",
@@ -1374,6 +1421,12 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     cfg = _build_config(args)
+
+    if args.command == "run":
+        try:
+            validate_watermarks(cfg.queue_high, cfg.queue_low)
+        except ValueError as exc:
+            p.error(str(exc))
 
     if args.command in ("run", "verify") and (
         not cfg.target_url or not cfg.worker_token

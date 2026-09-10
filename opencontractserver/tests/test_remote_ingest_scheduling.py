@@ -123,6 +123,11 @@ class SchedulingTests(unittest.TestCase):
                 ),
             )
 
+    def uploaded(self, row, ledger, receipt="receipt"):
+        # A successful _process_one now owns receipt persistence before returning.
+        ledger.mark_uploaded(row["rel_path"], receipt, 1, 1)
+        return row["rel_path"], True, receipt
+
     def assert_pages_bounded(self, page_size, minimum_pages=2):
         self.assertGreaterEqual(len(self.observer["fetches"]), minimum_pages)
         for requested, fetched in self.observer["fetches"]:
@@ -178,17 +183,15 @@ class SchedulingTests(unittest.TestCase):
                 test.assertLessEqual(peaks["unfinished"], window)
                 return future
 
-        def process(cfg, parser, embedder, client, row, enrichers):
+        def process(cfg, parser, embedder, client, row, enrichers, ledger):
             self.assertTrue(
                 release.wait(3), "coordinator did not reach its bounded window"
             )
             rel = row["rel_path"]
             attempts.append(rel)
-            return (
-                rel,
-                rel != "00000.pdf",
-                "receipt|1" if rel != "00000.pdf" else "failed",
-            )
+            if rel == "00000.pdf":
+                return rel, False, "failed"
+            return self.uploaded(row, ledger)
 
         real_wait = cli.wait
 
@@ -209,7 +212,9 @@ class SchedulingTests(unittest.TestCase):
         self.assert_pages_bounded(7, minimum_pages=100)
         self.assertEqual(self.ledger.claimable_count(), 1)
         with patch.object(
-            cli, "_process_one", return_value=("00000.pdf", True, "retried|1")
+            cli,
+            "_process_one",
+            side_effect=lambda *args: self.uploaded(args[4], args[6], "retried"),
         ) as process:
             self.assertEqual(cli.cmd_run(self.cfg), 0)
             process.assert_called_once()
@@ -295,7 +300,7 @@ class SchedulingTests(unittest.TestCase):
         with patch.object(
             cli,
             "_process_one",
-            side_effect=lambda *args: (args[4]["rel_path"], True, "receipt|1"),
+            side_effect=lambda *args: self.uploaded(args[4], args[6]),
         ):
             self.assertEqual(cli.cmd_run(self.cfg), 0)
         self.assertEqual(self.ledger.status_counts(), {cli.UPLOADED: 103})
@@ -325,11 +330,9 @@ class SchedulingTests(unittest.TestCase):
             started.wait(timeout=3)
             self.assertTrue(release.wait(3))
             rel = args[4]["rel_path"]
-            return (
-                rel,
-                rel == "00000.pdf",
-                "accepted|1" if rel == "00000.pdf" else "failed",
-            )
+            if rel == "00000.pdf":
+                return self.uploaded(args[4], args[6], "accepted")
+            return rel, False, "failed"
 
         def interrupt(*args, **kwargs):
             started.wait(timeout=3)
@@ -354,7 +357,7 @@ class SchedulingTests(unittest.TestCase):
         def resume(*args):
             rel = args[4]["rel_path"]
             resumed.append(rel)
-            return rel, True, "resumed|1"
+            return self.uploaded(args[4], args[6], "resumed")
 
         with patch.object(cli, "_process_one", resume):
             self.assertEqual(cli.cmd_run(cfg), 0)
@@ -435,13 +438,42 @@ class SchedulingTests(unittest.TestCase):
             self.assertEqual(cli.cmd_plan(replace(self.cfg, limit=1)), 0)
         rows = {row["rel_path"]: row for row in self.ledger.claimable(7)}
         self.assertEqual(set(rows), {"sub/old.PDF", "sub/new.PDF"})
-        self.assertEqual(rows["sub/old.PDF"]["sha256"], "old-hash")
+        self.assertEqual(
+            rows["sub/old.PDF"]["sha256"], hashlib.sha256(b"old.PDF").hexdigest()
+        )
         self.assertEqual(
             rows["sub/new.PDF"]["sha256"], hashlib.sha256(b"new.PDF").hexdigest()
         )
         self.assertEqual(rows["sub/new.PDF"]["size"], 7)
         self.assertEqual([handle.consumed for handle in handles], [1, 2])
         self.assertTrue(all(handle.closed for handle in handles))
+
+    def test_cleanup_traversal_uses_bounded_pages_and_preserves_every_status(self):
+        from scripts.remote_ingest.checkpoints import Checkpoints
+
+        self.populate(
+            75,
+            statuses=(
+                cli.PENDING,
+                cli.FAILED,
+                cli.PARKED,
+                cli.UPLOADED,
+                cli.COMPLETED,
+                cli.AMBIGUOUS,
+                cli.CONFLICT,
+            ),
+        )
+        visited = []
+
+        def prune(cache):
+            visited.append(cache.path.name)
+            self.assertFalse(cache.path.exists())  # no caches created by cleanup
+            return 0
+
+        with patch.object(Checkpoints, "prune", prune):
+            self.assertEqual(cli.cmd_cleanup(self.cfg), 0)
+        self.assertEqual(len(set(visited)), 75)
+        self.assert_pages_bounded(self.cfg.ledger_page_size)
 
     def test_scanner_extensions_links_and_posix_paths(self):
         (self.root / "nested").mkdir()

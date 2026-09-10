@@ -176,6 +176,43 @@ class RemoteParserTests(SimpleTestCase):
         parser.reload_settings()
         self.assertEqual(parser.settings.api_key, "private-key")
 
+    def test_checkpoint_service_identities_and_effective_fingerprints(self):
+        from scripts.remote_ingest.checkpoints import fingerprint
+
+        router = self.router({PDF: WARP}, {WARP: {"api_key": "private-key"}})
+        with self.assertRaisesRegex(ValueError, "Parser service revision is unknown"):
+            router.require_checkpoint_identities()
+        self.config_path.write_text(
+            json.dumps(
+                {
+                    "parsers": {PDF: WARP},
+                    "settings": {
+                        WARP: {"api_key": "private-key", "request_timeout": "90"}
+                    },
+                    "identities": {WARP: "warp-model-v1"},
+                }
+            )
+        )
+        router = LocalParsers(str(self.config_path), identity="deployment-fallback")
+        router.require_checkpoint_identities()
+        first = router.identity(PDF)
+        self.assertEqual(first["operator_identity"], "warp-model-v1")
+        self.assertTrue(first["implementation"])
+        self.assertNotIn("private-key", fingerprint(first))
+        config = json.loads(self.config_path.read_text())
+        config["settings"][WARP]["request_timeout"] = 90
+        self.config_path.write_text(json.dumps(config))
+        self.assertEqual(first, LocalParsers(str(self.config_path)).identity(PDF))
+        config["identities"][WARP] = "warp-model-v2"
+        self.config_path.write_text(json.dumps(config))
+        self.assertNotEqual(
+            fingerprint(first),
+            fingerprint(LocalParsers(str(self.config_path)).identity(PDF)),
+        )
+        self.router(
+            {TEXT: TXT}, {TXT: {"chunkers": ["paragraph"]}}
+        ).require_checkpoint_identities()
+
     def test_invalid_settings_do_not_echo_values(self):
         for setting, value in [
             ("request_timeout", "secret-value"),
@@ -406,6 +443,7 @@ class RemoteParserTests(SimpleTestCase):
         source.write_text("Plain text paragraph.")
         cfg = worker_config(
             embeddings=False,
+            ledger_path=str(Path(self.tmp.name) / "ledger.sqlite3"),
             target_folder_from_tree=True,
             target_url="https://target",
             worker_token="secret",
@@ -424,6 +462,13 @@ class RemoteParserTests(SimpleTestCase):
             )
             return Mock(status_code=202, json=lambda: {"upload_id": "receipt"})
 
+        cli.Ledger(cfg.ledger_path).upsert_doc(
+            "folder/source.pdf",
+            str(source),
+            source.stat().st_size,
+            cli._sha256(str(source)),
+            1,
+        )
         with patch.object(client.session, "post", side_effect=post):
             result = cli._process_one(
                 cfg,
@@ -487,7 +532,7 @@ class RemoteParserTests(SimpleTestCase):
                         status_code=202, json=lambda: {"upload_id": "receipt"}
                     ),
                 ) as post:
-                    client.upload(str(source), metadata)
+                    client.upload(source.read_bytes(), metadata, filename=source.name)
                 self.assertEqual(post.call_args.kwargs["files"]["file"][2], mime)
 
     def test_malformed_export_never_reaches_embedder_or_upload(self):
@@ -495,10 +540,20 @@ class RemoteParserTests(SimpleTestCase):
         export["labelled_text"][1]["parent_id"] = "missing"
         source = Path(self.tmp.name) / "source.docx"
         source.write_bytes(make_minimal_docx())
-        parser = Mock(parse=Mock(return_value=export))
+        parser = Mock(
+            parse=Mock(return_value=export),
+            source_mime=Mock(return_value=DOCX),
+            identity=Mock(return_value={"class_path": DOCXODUS}),
+        )
         embedder, client = Mock(), Mock()
+        cfg = worker_config(
+            embeddings=True, ledger_path=str(Path(self.tmp.name) / "ledger.sqlite3")
+        )
+        cli.Ledger(cfg.ledger_path).upsert_doc(
+            source.name, str(source), source.stat().st_size, cli._sha256(str(source)), 1
+        )
         result = cli._process_one(
-            worker_config(embeddings=True),
+            cfg,
             parser,
             embedder,
             client,

@@ -114,6 +114,8 @@ export OC_DATA_DIR=/data/pdfs            # your directory tree of PDFs
 # (default "abc123"); a mismatch -> HTTP 401 on every embed. Any value works as
 # long as both sides match — which the bundle guarantees from this one var.
 export VECTOR_EMBEDDER_API_KEY=<any-value>
+export OC_PARSER_IDENTITY=docling-deployment-v1   # pin/bump with your service revision
+export OC_EMBEDDING_IDENTITY=embedding-model-v1  # pin/bump with your model revision
 
 # Start the parser + embedder microservices (one-time, ~minutes to pull):
 docker compose -f remote_worker.yml up -d --build docling-parser vector-embedder
@@ -211,8 +213,8 @@ or sorting the tree (including within a large directory). Directory symlinks are
 not traversed; matching file symlinks remain eligible. `--limit` stops discovery
 immediately, but its selected subset is no longer globally sorted or guaranteed
 to repeat after filesystem changes. Relative POSIX paths, case-insensitive
-extension matching and SHA-256 recording are unchanged; replanning skips known
-paths and can add the next limited set.
+extension matching are unchanged. Replanning reconciles known paths by SHA-256
+and can add the next limited set; changed existing paths do not consume `--limit`.
 
 `run` and `verify` visit ledger rows in ascending relative-path order, in bounded
 pages using a keyset cursor. Updating earlier rows cannot skip later rows, and a
@@ -230,11 +232,110 @@ take as long as those operations and their configured timeouts/retries. Run the
 command again to resume unfinished rows.
 
 Use one CLI invocation per ledger at a time, including `plan` and `verify`.
-These cursors do not coordinate ownership across processes. Local resume also
-does not guarantee exactly-once delivery: an upload accepted by the server whose
-response is lost may be repeated. Preparation checkpoints, source-change
-reconciliation, admission error classification, and verification exit outcomes
-are tracked separately in #2318, #2319, and #2320.
+These cursors do not coordinate ownership across processes. Preparation checkpoints
+recover local work; uncertain uploads stop in `AMBIGUOUS` and are never replayed
+automatically. Admission error classification and the broader verification exit
+contract remain separate work in #2319 and #2320.
+
+
+### Durable preparation, identities, and source versions
+
+The worker stores `<ledger>.artifacts/` beside SQLite, inside the existing
+`/ledger` volume in Compose. Each relative path has a small manifest referencing
+three content-digested JSON checkpoints:
+
+| Stage | Durable result | Fingerprint inputs |
+|---|---|---|
+| Parse | Complete normalized export, reconstructed PDF text, original correlation IDs | Source SHA-256, filename, selected parser implementation, effective settings and operator revision |
+| Enrich | Complete enriched export and the existing `MetadataOverlay` | Parse artifact digest, source paths, ordered enricher implementations and configuration identity |
+| Embed | Complete document and eligible annotation vectors | Enriched artifact digest, client implementation, service URL, model identity, expected dimension |
+
+Artifacts and manifests use atomic replacement and file/directory `fsync`. Each
+stage is reusable only after its artifact is durable, its digest matches, and
+its contract validates. Every stage passes through JSON on both fresh and resumed
+runs, preserving annotation IDs, parent links, relationships, and embedding keys.
+Missing, truncated, modified or incompatible artifacts recompute that stage and
+its dependents. Changing only an embedding identity retains parsing/enrichment;
+changing only enrichment retains parsing. Upload rejection or a server-reported
+transaction failure likewise retains valid preparation.
+
+Service revisions cannot be inferred from a mutable URL or the structural-set
+`parser_version="1.0"` convention. Configure these stable, **non-secret** identities:
+
+- `--parser-identity` / `OC_PARSER_IDENTITY`: required for service-backed parsers.
+  Per-component strings in the parser JSON's `identities` object override this
+  shared deployment identity. TXT needs no service identity, but use one when
+  its spaCy model, imported chunker helpers, or other external dependencies change.
+- `--embedding-identity` / `OC_EMBEDDING_IDENTITY`: required unless
+  `--no-embeddings`; identify the deployed model/revision. Set
+  `--embedding-dimension` / `OC_EMBEDDING_DIMENSION` (default 384) to match it.
+- `--enricher-identity` / `OC_ENRICHER_IDENTITY`: required with enrichers; identify
+  the entire chain's effective configuration, environment-dependent behavior,
+  helper/model versions and external data. For pure example functions,
+  `examples-v1` suffices. Enrichers must derive source content from `ctx.export`
+  and `ctx.content`; `ctx.abs_path` is path metadata, not a stable file snapshot.
+
+Keep identities unchanged across restarts of the same deployment; bump the
+relevant identity when an output-affecting dependency changes. Python component
+modules (including parser base classes), normalization and text reconstruction
+implementations are hashed automatically. Arbitrary imported dependencies,
+remote model changes and environment reads by enrichers cannot be discovered
+automatically. Configuration is hashed in memory; manifests contain only opaque
+keys and artifact digests, never credentials or raw settings. Artifacts contain
+source-derived text/metadata and should have the same access controls as the source.
+
+Embedding mode requires a finite numeric document vector and exactly one vector
+of the configured, storage-supported dimension per annotation with nonblank
+`rawText`. Missing/duplicate/string-colliding IDs, partial batches or malformed
+vectors fail preparation before upload and never commit an embedding checkpoint.
+Only explicit `--no-embeddings` omits the payload for server annotation fallback.
+
+`plan` and preparation reconcile actual source bytes. A changed unaccepted source
+resets `PENDING`/`FAILED`/`PARKED` to `PENDING`, clears stale receipts/errors and
+retry exhaustion, and invalidates the old preparation chain on its next run.
+The uploader sends the same immutable in-memory byte snapshot that was hashed
+and parsed, even if the original path changes during preparation or cache reuse.
+The ledger hash therefore describes the uploaded snapshot; replan to detect later
+filesystem changes. A missing source fails before upload, even with cached work.
+
+A change to an `UPLOADED`, `COMPLETED` or `AMBIGUOUS` source produces `CONFLICT`.
+The old source hash, receipt/timestamps, and prior status are retained alongside
+the observed conflict hash. The row is excluded from `run`; restoring the old
+bytes and replanning restores its prior status. Otherwise an operator must
+resolve an explicit server replace/new-document policy. There is no automatic
+replacement or creation of another document for a conflicted path.
+
+Upload state is separate from these checkpoints. Before POST, the worker durably
+records `AMBIGUOUS`; a valid 202 receipt changes it to `UPLOADED`. Only explicit
+429 rejections are retried within the HTTP call. Transport errors, redirects,
+5xx and missing/malformed success receipts remain ambiguous, as does a crash
+between recording intent and receiving the receipt. `run` will not replay them.
+`plan`, `run`, and `verify` return nonzero while any conflict/ambiguous row remains;
+`status` displays the counts. Inspect SQLite `docs` for the path, `prior_status`,
+`sha256`, `conflict_sha256`, receipt and error. Reconcile with the server before
+an operator records a recovered receipt or authorizes another attempt. Local
+artifacts do **not** make POST replay idempotent; server-backed idempotency is a
+separate API change. Receipts also belong to the exact original `CorpusAccessToken`:
+rotating to another token for the same corpus does not grant access to old receipts.
+`COMPLETED` means worker-upload transaction completion, not thumbnail/search readiness.
+
+Existing SQLite ledgers gain two nullable conflict columns in place; no export or
+one-time migration is needed. Rows without a manifest run as uncached work after
+the identities above are configured. Back up SQLite and its artifacts together.
+The ledger and its SQLite recovery files are restricted to owner read/write
+(`0600`), including existing ledgers when reopened.
+Do not use an older worker against a ledger containing these new states.
+
+Run `worker cleanup` while no other command owns that ledger. It walks ledger rows
+in bounded pages and one artifact directory at a time, deleting only unreferenced
+files and interrupted temporary writes older than 24 hours. Referenced artifacts
+are retained for **all** rows, including failed, parked, ambiguous, conflicted and
+completed work. An unreadable manifest is left alone until `run` repairs it.
+Manifest rechecks and the retention grace period do not provide an interprocess
+lock; concurrent `run` and `cleanup` are unsupported and can race during deletion.
+Cleanup does not create caches for legacy rows or remove whole ledgers. After
+archiving a finished ledger, its owner may delete that ledger's entire artifact
+directory; do not manually delete individual active manifests.
 
 ---
 
@@ -278,7 +379,7 @@ def enrich(ctx: EnricherContext) -> Enrichment:
 
 ```bash
 docker compose -f remote_worker.yml run --rm worker run \
-    --enricher my_enrichers:enrich
+    --enricher my_enrichers:enrich --enricher-identity my-config-v1
 ```
 
 What an `Enrichment` can carry (all optional, additive):
@@ -335,7 +436,7 @@ Context helpers (`EnricherContext`):
 
 Three runnable examples ship in `example_enrichers.py` (filename → metadata,
 detected dates → annotations, content → document-type label). Use them directly:
-`--enricher example_enrichers:effective_date_annotations`.
+`--enricher example_enrichers:effective_date_annotations --enricher-identity examples-v1`.
 
 ---
 

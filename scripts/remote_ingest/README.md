@@ -180,7 +180,7 @@ with `compose/accelerated/bench_parse.py`; its speedup is hardware-specific.
 | `plan` | Scan `OC_DATA_DIR` and record every PDF in the SQLite ledger. No network, no parsing. |
 | `run` | Parse + embed + upload all `PENDING`/`FAILED` docs. Resumable, concurrent, back-pressure-aware. |
 | `verify` | Poll the target for each uploaded doc's terminal status; mark `COMPLETED`/`FAILED`. |
-| `status` | Print ledger counts + the target's live worker-upload backlog. |
+| `status` | Print ledger counts + token-scoped outstanding uploads (or `unknown`). |
 
 Useful flags (append after the subcommand):
 
@@ -197,9 +197,8 @@ Useful flags (append after the subcommand):
 - `--limit N` — (on `plan`) stop after recording N **new** documents; existing
   ledger paths do not consume the limit. Zero means no cap.
 - `--flat` — do not mirror the directory tree into corpus folders.
-- `--queue-high / --queue-low` — back-pressure thresholds against the target's
-  worker-upload backlog (pause when `PENDING+PROCESSING` exceeds high, resume
-  below low).
+- `--queue-high / --queue-low` — token-scoped outstanding upload thresholds:
+  pause above high, resume at/below low. See [Admission](#admission).
 - `--enricher MODULE:CALLABLE` — run a pre-processing enricher (repeatable; also
   `OC_ENRICHERS`, comma-separated). See below.
 - `--max-attempts N` — retries per document before it is PARKED (default 5).
@@ -234,9 +233,43 @@ command again to resume unfinished rows.
 Use one CLI invocation per ledger at a time, including `plan` and `verify`.
 These cursors do not coordinate ownership across processes. Preparation checkpoints
 recover local work; uncertain uploads stop in `AMBIGUOUS` and are never replayed
-automatically. Admission error classification and the broader verification exit
-contract remain separate work in #2319 and #2320.
+automatically. The broader verification exit contract remains separate work in
+#2320.
 
+### Admission
+
+With `--queue-high > 0`, no document starts until both `PENDING` and `PROCESSING`
+status requests succeed with nonnegative integer counts. One caller polls while
+the others wait; a complete measurement is shared for 15 seconds after completion.
+Missing, invalid, failed or stale measurements cannot admit work. After a reading
+above high, admission resumes only with a fresh count at/below low. Enabled
+watermarks require `0 <= queue_low <= queue_high`. `--queue-high <= 0` disables
+admission polling, including the `run` summary; explicit `status` still polls.
+
+Network/timeouts, 429, 5xx and malformed responses pause admission and retry with
+exponential backoff (2–60 seconds before 50–100% jitter). Valid `Retry-After`
+seconds or HTTP dates extend that delay, capped at 300 seconds; zero/invalid/past
+values still use backoff. Other HTTP errors, including 401/403 and redirects,
+stop `run` with exit **2** and a credential/configuration diagnostic. Neither
+waiting nor status failure consumes document retry attempts. Ctrl-C wakes all
+waiters and uses the bounded scheduler's graceful drain and exit **130** above.
+If a poll itself aborts (for example, `SystemExit` in its worker), admission stops
+and wakes all waiters before propagating the exception; `run` reports a safe
+diagnostic and exits **2**.
+
+These counts cover only the **exact authenticated token's** outstanding staged
+uploads, including other producers using that token. They are two separate reads,
+not an atomic snapshot, corpus-wide count or install-wide Celery capacity metric.
+Already-admitted local workers (up to `--max-workers`) can still parse/upload after
+a high reading, and other tokens are invisible: this is not a hard queue ceiling.
+The server retains batch draining, row claims and stalled-upload recovery.
+Upload status does not establish thumbnail, embedding or search readiness.
+
+`status` displays a measured zero as `0`, and an unavailable/invalid count as
+`unknown` with a safe reason. It does not print response bodies or request secrets.
+Permanent status errors return exit **2**, as in `run`. Otherwise `status` remains
+informational (exit **0**, including transient unknown status or ledger-only output);
+its exit code does not certify availability or worker-upload completion.
 
 ### Durable preparation, identities, and source versions
 

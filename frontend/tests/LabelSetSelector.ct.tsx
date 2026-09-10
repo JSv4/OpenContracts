@@ -1,6 +1,7 @@
 import React from "react";
 import { test, expect } from "./utils/coverage";
 import { LabelSetSelectorTestWrapper } from "./LabelSetSelectorTestWrapper";
+import { labelsetNodes } from "./LabelSetSelectorTestWrapper";
 import { docScreenshot } from "./utils/docScreenshot";
 import { LabelSetType } from "../src/types/graphql-api";
 
@@ -70,6 +71,39 @@ test.describe("LabelSetSelector", () => {
     await expect(options).toHaveCount(2, { timeout: 10000 });
     await expect(options.first()).toContainText("Contract Labels");
     await expect(options.last()).toContainText("Financial Labels");
+
+    await component.unmount();
+  });
+
+  test("returns the selected label set object to controlled consumers", async ({
+    mount,
+    page,
+  }) => {
+    const component = await mount(
+      <LabelSetSelectorTestWrapper
+        labelSet={labelsetNodes[0] as unknown as LabelSetType}
+      />
+    );
+
+    await expect(page.locator(".oc-dropdown__value")).toContainText(
+      "Contract Labels"
+    );
+    await page.locator(".oc-dropdown__trigger").click();
+    await page
+      .locator(".oc-dropdown__option")
+      .filter({ hasText: "Financial Labels" })
+      .click();
+
+    await expect(component.getByTestId("selected-labelset")).toHaveText("ls-2");
+    await expect(page.locator(".oc-dropdown__value")).toContainText(
+      "Financial Labels"
+    );
+
+    await page.locator(".oc-dropdown__clear").click();
+    await expect(component.getByTestId("selected-labelset")).toHaveText("");
+    await expect(page.locator(".oc-dropdown__placeholder")).toContainText(
+      "Choose a label set"
+    );
 
     await component.unmount();
   });

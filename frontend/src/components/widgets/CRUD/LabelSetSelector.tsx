@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useQuery, useReactiveVar } from "@apollo/client";
 import { Dropdown } from "@os-legal/ui";
 import styled from "styled-components";
-import _ from "lodash";
 import { OS_LEGAL_COLORS } from "../../../assets/configurations/osLegalStyles";
 import { labelsetSearchTerm } from "../../../graphql/cache";
 import { LoadingOverlay } from "../../common/LoadingOverlay";
@@ -25,11 +24,16 @@ const MobileFriendlyWrapper = styled.div`
   }
 `;
 
+export interface LabelSetSelection {
+  labelSet: string | null;
+  labelSetObj?: LabelSetType;
+}
+
 interface LabelSetSelectorProps {
   read_only?: boolean;
   labelSet?: LabelSetType;
   style?: Record<string, any>;
-  onChange?: (values: any) => void;
+  onChange?: (values: LabelSetSelection) => void;
   /** Open dropdown upward (useful when near bottom of container) */
   upward?: boolean;
 }
@@ -46,7 +50,7 @@ export const LabelSetSelector = ({
   upward = false,
 }: LabelSetSelectorProps) => {
   const search_term = useReactiveVar(labelsetSearchTerm);
-  const { refetch, loading, error, data, fetchMore } = useQuery<
+  const { refetch, loading, data } = useQuery<
     GetLabelsetOutputs,
     GetLabelsetInputs
   >(GET_LABELSETS, {
@@ -60,17 +64,24 @@ export const LabelSetSelector = ({
     refetch();
   }, [search_term, refetch]);
 
+  const items = data?.labelsets?.edges ?? [];
+
   const handleChange = (value: string | null) => {
     // If user has not actually changed the labelSet, do nothing:
     if (value === labelSet?.id) return;
 
     // If user explicitly clears, value === null => labelSet null
     // Otherwise labelSet is new value (the new labelSet.id).
-    onChange?.({ labelSet: value ?? null });
+    const selectedLabelSet = value
+      ? items.find((edge) => edge.node.id === value)?.node
+      : undefined;
+    onChange?.({
+      labelSet: value ?? null,
+      labelSetObj: selectedLabelSet,
+    });
   };
 
-  let items = data?.labelsets?.edges ? data.labelsets.edges : [];
-  let options = items.map((labelsetEdge) => {
+  const options = items.map((labelsetEdge) => {
     const node = labelsetEdge.node;
     return {
       value: node.id,

@@ -385,7 +385,7 @@ test.describe("LabelSetDetailPage – coverage", () => {
           updateLabelMock(spanLabel.id, {
             text: "Entity Name Updated",
             description: spanLabel.description,
-            color: spanLabel.color,
+            color: `#${spanLabel.color}`,
           }),
           ...labelsetQueryMocks(updatedLabelset, 2),
         ];
@@ -451,7 +451,7 @@ test.describe("LabelSetDetailPage – coverage", () => {
     test(
       "creates a new span label via CREATE_ANNOTATION_LABEL_FOR_LABELSET",
       { timeout: 25000 },
-      async ({ mount }) => {
+      async ({ mount, page }) => {
         const newLabel = {
           __typename: "AnnotationLabelType" as const,
           id: "label-span-new",
@@ -460,7 +460,7 @@ test.describe("LabelSetDetailPage – coverage", () => {
           readOnly: false,
           text: "Brand New Span",
           description: "",
-          color: "0F766E",
+          color: "#0F766E",
           myPermissions: ["READ", "UPDATE", "DELETE"],
           isPublic: false,
           analyzer: null,
@@ -477,10 +477,13 @@ test.describe("LabelSetDetailPage – coverage", () => {
           createLabelMock(LABELSET_ID, {
             text: "Brand New Span",
             description: "",
-            color: "0F766E",
+            color: "#0F766E",
             labelType: "SPAN_LABEL",
           }),
-          ...labelsetQueryMocks(labelsetAfterCreate, 2),
+          {
+            ...labelsetQueryMocks(labelsetAfterCreate, 1)[0],
+            delay: 1500,
+          },
         ];
 
         const component = await mountPage(mount, mocks);
@@ -501,11 +504,210 @@ test.describe("LabelSetDetailPage – coverage", () => {
 
         await component.getByTitle("Create").click();
 
+        // A resolved mutation must not dismiss the form or enable duplicates
+        // while the label list/count refresh is still in flight.
+        await expect(component.getByTitle("Create")).toBeDisabled();
+        await expect(component.getByTitle("Cancel")).toBeDisabled();
+        await expect(nameInput).toHaveValue("Brand New Span");
+        await expect(page.getByText("Label created successfully")).toHaveCount(
+          0
+        );
+        await expect(
+          page.getByText("Label created successfully")
+        ).toBeVisible();
+        await expect(nameInput).toHaveCount(0);
+        await expect(
+          component.getByRole("button", { name: /Span Labels/i })
+        ).toContainText("2");
         await expect(
           component.getByText("Brand New Span", { exact: true })
         ).toBeVisible({ timeout: 10000 });
       }
     );
+
+    for (const failure of [
+      "rejected",
+      "missing payload",
+      "network error",
+    ] as const) {
+      test(`preserves the form and reports ${failure}`, async ({
+        mount,
+        page,
+      }) => {
+        const mutation = createLabelMock(
+          LABELSET_ID,
+          {
+            text: "Rejected Label",
+            description: "Keep my description",
+            color: "#0F766E",
+            labelType: "SPAN_LABEL",
+          },
+          false
+        );
+        if (failure === "missing payload") {
+          mutation.result = {
+            data: { createAnnotationLabelForLabelset: null },
+          };
+        } else if (failure === "network error") {
+          delete mutation.result;
+          mutation.error = new Error("Connection lost");
+        }
+        const component = await mountPage(mount, [
+          ...labelsetQueryMocks(fullLabelset, 1),
+          mutation,
+        ]);
+        await component.getByRole("button", { name: /Span Labels/i }).click();
+        await component.getByRole("button", { name: /Add Label/i }).click();
+        await component
+          .getByPlaceholder("Enter label name")
+          .fill("Rejected Label");
+        await component
+          .getByPlaceholder("Describe what this label is used for")
+          .fill("Keep my description");
+        await component.getByTitle("Create").click();
+
+        // Wait for the mutation result, so this cannot pass before submission.
+        await expect(page.getByRole("alert")).toContainText(
+          failure === "rejected" ? "Failed to create" : "Failed to create label"
+        );
+        await expect(page.getByText("Label created successfully")).toHaveCount(
+          0
+        );
+        await expect(
+          component.getByPlaceholder("Enter label name")
+        ).toHaveValue("Rejected Label");
+        await expect(
+          component.getByPlaceholder("Describe what this label is used for")
+        ).toHaveValue("Keep my description");
+        await expect(component.getByTitle("Create")).toBeEnabled();
+      });
+    }
+
+    test("distinguishes a refresh failure from a rejected creation", async ({
+      mount,
+      page,
+    }) => {
+      const component = await mountPage(mount, [
+        ...labelsetQueryMocks(fullLabelset, 1),
+        createLabelMock(LABELSET_ID, {
+          text: "Saved Label",
+          description: "",
+          color: "#0F766E",
+          labelType: "SPAN_LABEL",
+        }),
+        {
+          request: {
+            query: GET_LABELSET_WITH_ALL_LABELS,
+            variables: { id: LABELSET_ID },
+          },
+          error: new Error("Refresh unavailable"),
+        },
+      ]);
+      await component.getByRole("button", { name: /Span Labels/i }).click();
+      await component.getByRole("button", { name: /Add Label/i }).click();
+      await component.getByPlaceholder("Enter label name").fill("Saved Label");
+      await component.getByTitle("Create").click();
+      await expect(page.getByRole("alert")).toContainText(
+        "Label created, but failed to refresh labels. Please reload."
+      );
+      await expect(page.getByText("Label created successfully")).toHaveCount(0);
+    });
+
+    test("creates the first text label with a picker color", async ({
+      mount,
+      page,
+    }) => {
+      const empty = {
+        ...fullLabelset,
+        tokenLabelCount: 0,
+        allAnnotationLabels: [],
+      };
+      const newLabel = { ...textLabel, text: "First Text", color: "#123abc" };
+      const component = await mountPage(mount, [
+        ...labelsetQueryMocks(empty, 1),
+        createLabelMock(LABELSET_ID, {
+          text: newLabel.text,
+          description: "",
+          color: newLabel.color,
+          labelType: "TOKEN_LABEL",
+        }),
+        ...labelsetQueryMocks(
+          { ...empty, tokenLabelCount: 1, allAnnotationLabels: [newLabel] },
+          1
+        ),
+      ]);
+      await component.getByRole("button", { name: /Text Labels/i }).click();
+      await component.getByRole("button", { name: /Add First Label/i }).click();
+      await component.getByPlaceholder("Enter label name").fill(newLabel.text);
+      await component.locator('input[type="color"]').fill(newLabel.color);
+      await component.getByTitle("Create").click();
+      await expect(page.getByText("Label created successfully")).toBeVisible();
+      await expect(
+        component.getByText(newLabel.text, { exact: true })
+      ).toBeVisible();
+    });
+  });
+
+  test.describe("Label toolbar and stored colors", () => {
+    for (const tab of [
+      /Text Labels/i,
+      /Doc Labels/i,
+      /Relationships/i,
+      /Span Labels/i,
+    ]) {
+      test(`keeps Add Label beside search in ${tab}`, async ({ mount }) => {
+        const component = await mountPage(
+          mount,
+          labelsetQueryMocks(fullLabelset, 1)
+        );
+        await component.getByRole("button", { name: tab }).click();
+        const search = component.getByPlaceholder(/Search.*labels/);
+        const add = component.getByRole("button", {
+          name: "Add Label",
+          exact: true,
+        });
+        const searchBox = await search.boundingBox();
+        const addBox = await add.boundingBox();
+        expect(searchBox).not.toBeNull();
+        expect(addBox).not.toBeNull();
+        expect(Math.abs(searchBox!.y - addBox!.y)).toBeLessThan(10);
+        expect(addBox!.x).toBeGreaterThanOrEqual(
+          searchBox!.x + searchBox!.width
+        );
+        await search.fill("zzzzzzzzzz");
+        await expect(
+          component.getByText('No labels match "zzzzzzzzzz"')
+        ).toBeVisible();
+        await add.click();
+        await expect(search).toHaveValue("");
+        await expect(
+          component.getByPlaceholder("Enter label name")
+        ).toBeVisible();
+        await expect(add).toHaveCount(0);
+      });
+    }
+
+    for (const color of ["#abc", "abc", "#123abc", "123abc"]) {
+      test(`edits stored color ${color} using a valid native picker value`, async ({
+        mount,
+      }) => {
+        const component = await mountPage(
+          mount,
+          labelsetQueryMocks(
+            {
+              ...fullLabelset,
+              allAnnotationLabels: [{ ...spanLabel, color }],
+            },
+            1
+          )
+        );
+        await component.getByRole("button", { name: /Span Labels/i }).click();
+        await component.getByTitle("Edit").click({ force: true });
+        await expect(component.locator('input[type="color"]')).toHaveValue(
+          color.includes("123") ? "#123abc" : "#aabbcc"
+        );
+      });
+    }
   });
 
   test.describe("Delete label flow", () => {

@@ -1,5 +1,6 @@
 """WebSocket admission and session lifecycle contracts."""
 
+import time
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
@@ -11,12 +12,17 @@ from django.contrib.auth import get_user_model
 from django.test import TransactionTestCase
 
 from config.jwt_auth.shortcuts import get_token
-from config.websocket.consumers.thread_updates import ThreadUpdatesConsumer
+from config.websocket.auth_handshake import _get_user_from_token
+from config.websocket.consumers.thread_updates import (
+    ThreadUpdatesConsumer,
+    get_thread_channel_group,
+)
 from config.websocket.middleware import WS_AUTH_SUBPROTOCOL, JWTAuthMiddleware
 from opencontractserver.conversations.models import (
     Conversation,
     ConversationTypeChoices,
 )
+from opencontractserver.conversations.services import ConversationService
 from opencontractserver.corpuses.models import Corpus
 
 User = get_user_model()
@@ -90,6 +96,152 @@ class WebSocketSessionContractTests(TransactionTestCase):
         await communicator.receive_json_from()
         await communicator.receive_json_from()
         return communicator
+
+    def test_stream_bursts_bound_permission_queries_per_viewer(self):
+        conversation = self.conversation(ConversationTypeChoices.THREAD)
+        token = get_token(self.viewer)
+
+        async def scenario():
+            viewers = [await self.connect_socket(conversation, token) for _ in range(2)]
+
+            async def broadcast_token():
+                await get_channel_layer().group_send(
+                    get_thread_channel_group(conversation.pk),
+                    {"type": "agent_stream_token", "token": "synthetic token"},
+                )
+
+            async def receive_tokens():
+                for viewer in viewers:
+                    event = await viewer.receive_json_from()
+                    self.assertEqual(event["type"], "AGENT_STREAM_TOKEN")
+
+            try:
+                with (
+                    patch("config.websocket.auth_handshake.time", wraps=time) as clock,
+                    patch(
+                        "config.websocket.auth_handshake._get_user_from_token",
+                        wraps=_get_user_from_token,
+                    ) as load_user,
+                    patch.object(
+                        ConversationService,
+                        "get_or_none",
+                        wraps=ConversationService.get_or_none,
+                    ) as load_conversation,
+                ):
+                    # Exercise real JWT and database visibility checks, with two
+                    # subscribers receiving the same 25-token channel burst.
+                    for index in range(25):
+                        clock.monotonic.return_value = 100 + index / 100
+                        await broadcast_token()
+                        await receive_tokens()
+                    self.assertEqual(load_user.await_count, 2)
+                    self.assertEqual(load_conversation.call_count, 2)
+
+                    # Token activity must not extend the one-second window.
+                    clock.monotonic.return_value = 101.01
+                    await broadcast_token()
+                    await receive_tokens()
+                    self.assertEqual(load_user.await_count, 4)
+                    self.assertEqual(load_conversation.call_count, 4)
+
+                    await database_sync_to_async(
+                        Corpus.objects.filter(pk=self.corpus.pk).update
+                    )(is_public=False)
+                    clock.monotonic.return_value = 102.02
+                    await broadcast_token()
+                    for viewer in viewers:
+                        self.assertEqual(
+                            await viewer.receive_json_from(),
+                            {"type": "AUTH_FAILED", "reason": "PERMISSION_REVOKED"},
+                        )
+                        self.assertEqual((await viewer.receive_output())["code"], 4003)
+                    self.assertEqual(load_user.await_count, 6)
+                    self.assertEqual(load_conversation.call_count, 6)
+            finally:
+                for viewer in viewers:
+                    await viewer.disconnect()
+
+        async_to_sync(scenario)()
+
+    def test_stream_window_never_delays_token_expiration(self):
+        conversation = self.conversation(ConversationTypeChoices.THREAD)
+        expiry = int(time.time()) + 30
+        token = get_token(self.viewer, exp=expiry)
+
+        async def scenario():
+            communicator = await self.connect_socket(conversation, token)
+            try:
+                with patch("config.websocket.auth_handshake.time", wraps=time) as clock:
+                    clock.monotonic.return_value = 100
+                    event = {"type": "agent_stream_token", "token": "synthetic token"}
+                    group = get_thread_channel_group(conversation.pk)
+                    await get_channel_layer().group_send(group, event)
+                    self.assertEqual(
+                        (await communicator.receive_json_from())["type"],
+                        "AGENT_STREAM_TOKEN",
+                    )
+                    clock.monotonic.return_value = 100.1
+                    clock.time.return_value = expiry
+                    await get_channel_layer().group_send(group, event)
+                    self.assertEqual(
+                        await communicator.receive_json_from(),
+                        {"type": "AUTH_FAILED", "reason": "EXPIRED"},
+                    )
+                    self.assertEqual(
+                        (await communicator.receive_output())["code"], 4001
+                    )
+            finally:
+                await communicator.disconnect()
+
+        async_to_sync(scenario)()
+
+    def _assert_stream_window_does_not_delay_revocation(self, *, client_frame):
+        conversation = self.conversation(ConversationTypeChoices.THREAD)
+        token = get_token(self.viewer)
+
+        async def scenario():
+            communicator = await self.connect_socket(conversation, token)
+            try:
+                with patch("config.websocket.auth_handshake.time", wraps=time) as clock:
+                    clock.monotonic.return_value = 100
+                    group = get_thread_channel_group(conversation.pk)
+                    await get_channel_layer().group_send(
+                        group,
+                        {"type": "agent_stream_token", "token": "synthetic token"},
+                    )
+                    self.assertEqual(
+                        (await communicator.receive_json_from())["type"],
+                        "AGENT_STREAM_TOKEN",
+                    )
+                    await database_sync_to_async(
+                        Corpus.objects.filter(pk=self.corpus.pk).update
+                    )(is_public=False)
+                    clock.monotonic.return_value = 100.1
+                    if client_frame:
+                        # A client-controlled type must not opt into token caching.
+                        await communicator.send_json_to({"type": "agent_stream_token"})
+                    else:
+                        await get_channel_layer().group_send(
+                            group,
+                            {"type": "agent_stream_complete", "content": "result"},
+                        )
+                    self.assertEqual(
+                        await communicator.receive_json_from(),
+                        {"type": "AUTH_FAILED", "reason": "PERMISSION_REVOKED"},
+                    )
+                    self.assertEqual(
+                        (await communicator.receive_output())["code"], 4003
+                    )
+            finally:
+                await communicator.disconnect()
+
+        async_to_sync(scenario)()
+
+    def test_client_frames_recheck_within_stream_window(self):
+        self._assert_stream_window_does_not_delay_revocation(client_frame=True)
+
+    def test_completion_rechecks_within_stream_window(self):
+        self._assert_stream_window_does_not_delay_revocation(client_frame=False)
 
     def test_broadcast_rechecks_resource_access(self):
         conversation = self.conversation(ConversationTypeChoices.THREAD)

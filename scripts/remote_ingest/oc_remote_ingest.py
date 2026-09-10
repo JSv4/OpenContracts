@@ -1,69 +1,13 @@
 #!/usr/bin/env python3
-"""
-oc_remote_ingest.py — run the OpenContracts ingestion pipeline on a remote host
-and stream FAITHFUL, fully-processed documents into a target OpenContracts
-corpus via the worker-upload REST API.
+"""Parse PDF, DOCX and TXT files remotely and upload prepared artifacts.
 
-WHY THIS EXISTS
----------------
-``scripts/bulk_import/oc_bulk_import.py`` ships *raw* PDFs to the server and lets
-the SERVER parse them (Docling + embeddings). That offloads nothing — the
-expensive work still runs in-cluster. This driver instead does the heavy lifting
-(Docling parse + embedding) on a beefy *remote* worker and ships the finished
-artifacts — PAWLs token layer, text layer, structural annotations, relationships
-and pre-computed embeddings — to the target via ``POST /api/worker-uploads/
-documents/``, which bypasses the server parser entirely. The result is a faithful
-mirror: because the worker runs the SAME Docling microservice and the SAME
-``DoclingParser`` code the server would run, the PAWLs and structural layer are
-identical to an in-cluster ingestion (no tokenizer drift).
+Reuses the application's parser implementations with worker-local settings and
+no target database access. PDF text is reconstructed from PAWLS; DOCX/TXT retain
+parser character spans. Local enrichers run before embedding and worker-upload.
 
-FAITHFUL-BY-CONSTRUCTION
-------------------------
-* PAWLs / structural annotations / relationships: produced by the real
-  ``DoclingParser.parse_pdf_bytes`` (same parser, same docling service).
-* Text layer (``content``): rebuilt from the shipped PAWLs with the same
-  ``plasmapdf.build_translation_layer`` the server's ``save_parsed_data`` uses,
-  so the stored text layer matches byte-for-byte.
-* Embeddings: computed against the same vector-embedder microservice the server
-  uses, over the same inputs (full text for the doc, ``rawText`` per annotation).
-* Structural set + thumbnail: materialised server-side by the worker-upload
-  ingestion path (see opencontractserver/worker_uploads/tasks.py).
-
-DESIGN
-------
-* Resumable: a SQLite ledger records every document's state (PENDING / UPLOADED /
-  COMPLETED / FAILED / PARKED). Re-running ``run`` skips finished work. Each doc
-  is keyed by its path relative to ``--root-dir`` (its corpus folder path).
-* Per-document streaming (NO archive): scales to 100k–1M docs without ever
-  building a ZIP. The slow step is the remote Docling parse, so the driver runs
-  a thread pool of workers and paces itself against the server's worker-upload
-  backlog (the ``documents/list/`` counts) instead of detonating the queue.
-* Secure: auth is a corpus-scoped ``CorpusAccessToken`` sent as
-  ``Authorization: WorkerKey <token>`` over TLS. The corpus is fixed by the
-  token binding — the remote host cannot target another corpus. NO database
-  access to the target is required or possible.
-
-SUBCOMMANDS
------------
-    plan     Scan ``--root-dir`` and record every PDF in the ledger (no network,
-             no parsing).
-    run      Parse + embed + upload PENDING/FAILED docs (resumable, paced,
-             concurrent).
-    verify   Poll the target for each uploaded doc's terminal status and update
-             the ledger (UPLOADED -> COMPLETED / FAILED).
-    status   Print ledger counts + the target's live worker-upload backlog.
-
-ENVIRONMENT / FLAGS (flags override env)
-----------------------------------------
-    OC_TARGET_URL     Base URL of the target OC instance (e.g. https://oc.example.com)
-    OC_WORKER_TOKEN   CorpusAccessToken plaintext (WorkerKey auth)
-    OC_CORPUS_ID      Informational; the bound corpus is enforced by the token
-    DOCLING_PARSER_SERVICE_URL    Docling microservice (default from Django settings)
-    EMBEDDINGS_MICROSERVICE_URL   Vector embedder microservice
-
-This script runs INSIDE the OpenContracts image (it imports the real parser),
-so Django must be importable. Only the ``run`` subcommand needs Django/Docling;
-``plan`` / ``status`` / ``verify`` are pure HTTP + SQLite.
+Commands: plan scans extensions into a SQLite ledger; run prepares/uploads
+pending or failed documents; verify polls receipts; status prints ledger counts.
+Only run boots Django. See README.md for parser configuration and service setup.
 """
 
 from __future__ import annotations
@@ -78,15 +22,18 @@ import sqlite3
 import sys
 import threading
 import time
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import requests
 
 if TYPE_CHECKING:  # avoid importing enrichers (needs Django path) at module load
     from enrichers import MetadataOverlay
+
+    from scripts.remote_ingest.parsers import LocalParsers
 
 logger = logging.getLogger("oc_remote_ingest")
 
@@ -257,6 +204,7 @@ class Config:
     verify_tls: bool
     limit: int
     enrichers: list[str]
+    parser_config: str | None = None
 
 
 class TargetClient:
@@ -273,21 +221,21 @@ class TargetClient:
     def _backoff(attempt: int) -> float:
         return min(2.0 * (2 ** (attempt - 1)), 60.0) * random.uniform(_JITTER_MIN, 1.0)
 
-    def upload(self, pdf_path: str, metadata: dict) -> str:
+    def upload(self, source_path: str, metadata: dict) -> str:
         """POST a document. Returns the server upload_id. Raises on permanent failure."""
         url = f"{self.base}/api/worker-uploads/documents/"
         meta_json = json.dumps(metadata)
         last_error = "unknown"
         for attempt in range(1, _HTTP_MAX_RETRIES + 1):
             try:
-                with open(pdf_path, "rb") as fh:
+                with open(source_path, "rb") as fh:
                     resp = self.session.post(
                         url,
                         files={
                             "file": (
-                                PurePosixPath(pdf_path).name,
+                                PurePosixPath(source_path).name,
                                 fh,
-                                "application/pdf",
+                                metadata["file_type"],
                             )
                         },
                         data={"metadata": meta_json},
@@ -410,135 +358,41 @@ class EmbedderClient:
 
 
 # ======================================================================
-# Parser wrapper (lazy Django + DoclingParser singleton)
+# Parser wrapper (Django imports + worker-local configuration)
 # ======================================================================
 
 
 class _Parser:
-    """Lazily-initialised, thread-safe singleton wrapper around DoclingParser."""
+    """Bootstrap Django imports, then use explicitly configured local parsers."""
 
-    def __init__(self) -> None:
-        self._parser = None
-        self._build_translation_layer = None
-        self._default_embedder_path = None
-        self._lock = threading.Lock()
+    def __init__(self, config_path: str | None = None) -> None:
+        self.config_path = config_path
+        self._parsers: LocalParsers | None = None
 
-    def _ensure(self) -> None:
-        if self._parser is not None:
-            return
-        with self._lock:
-            if self._parser is not None:
-                return
-            # Ensure the OpenContracts repo root is importable. When this file is
-            # run directly (``python .../oc_remote_ingest.py``) sys.path[0] is the
-            # script's own directory, so ``config`` / ``opencontractserver`` are
-            # not importable until we add the repo root (this file lives at
-            # ``<root>/scripts/remote_ingest/oc_remote_ingest.py``).
-            repo_root = str(Path(__file__).resolve().parents[2])
-            if repo_root not in sys.path:
-                sys.path.insert(0, repo_root)
+    def ensure_ready(self) -> LocalParsers:
+        if self._parsers is not None:
+            return self._parsers
+        repo_root = str(Path(__file__).resolve().parents[2])
+        if repo_root not in sys.path:
+            sys.path.insert(0, repo_root)
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.remote_worker")
+        import django
 
-            os.environ.setdefault(
-                "DJANGO_SETTINGS_MODULE", "config.settings.remote_worker"
-            )
-            import django
+        django.setup()
+        from scripts.remote_ingest.parsers import LocalParsers
 
-            django.setup()
-            from plasmapdf.models.PdfDataLayer import build_translation_layer
-
-            from opencontractserver.pipeline.parsers.docling_parser_rest import (
-                DoclingParser,
-            )
-
-            try:
-                from opencontractserver.pipeline.utils import get_default_embedder_path
-
-                self._default_embedder_path = get_default_embedder_path()
-            except Exception:
-                self._default_embedder_path = (
-                    "opencontractserver.pipeline.embedders."
-                    "sent_transformer_microservice.MicroserviceEmbedder"
-                )
-
-            self._build_translation_layer = build_translation_layer
-            self._parser = DoclingParser()
-
-            # Pipeline component settings (incl. the Docling service URL) are
-            # normally sourced from the PipelineSettings DB table — the
-            # ``env_var`` declared on each setting only SEEDS that table via
-            # ``migrate_pipeline_settings``, it is not read at runtime. The
-            # remote worker runs WITHOUT that DB, so the parser comes up with
-            # dataclass defaults (service_url=""). Backfill the Docling knobs
-            # from the environment so the worker is configured purely via env,
-            # mirroring how the in-cluster parser is seeded from the same vars.
-            self._backfill_parser_settings_from_env()
-
-            if not self._parser.service_url:
-                raise RuntimeError(
-                    "DOCLING_PARSER_SERVICE_URL must be set so the remote worker "
-                    "can reach the Docling microservice."
-                )
-            logger.info(
-                f"DoclingParser ready (service={self._parser.service_url!r}, "
-                f"extract_images={self._parser.extract_images}, "
-                f"embedder_path={self._default_embedder_path})"
-            )
-
-    def _backfill_parser_settings_from_env(self) -> None:
-        """Override DoclingParser instance settings from DOCLING_* env vars.
-
-        Only applied when the value is present in the environment, so a worker
-        that sets nothing inherits the same defaults the in-cluster parser uses.
-        """
-
-        def _set(attr: str, env_var: str, cast) -> None:
-            raw = os.environ.get(env_var)
-            if raw is None or raw == "":
-                return
-            try:
-                setattr(self._parser, attr, cast(raw))
-            except (ValueError, TypeError):
-                logger.warning(f"Ignoring invalid {env_var}={raw!r}")
-
-        def _as_bool(v: str) -> bool:
-            return v.strip().lower() in ("1", "true", "yes", "on")
-
-        _set("service_url", "DOCLING_PARSER_SERVICE_URL", str)
-        _set("request_timeout", "DOCLING_PARSER_TIMEOUT", int)
-        _set("extract_images", "DOCLING_EXTRACT_IMAGES", _as_bool)
-        _set("image_format", "DOCLING_IMAGE_FORMAT", str)
-        _set("image_quality", "DOCLING_IMAGE_QUALITY", int)
-        _set("image_dpi", "DOCLING_IMAGE_DPI", int)
-        _set("min_image_width", "DOCLING_MIN_IMAGE_WIDTH", int)
-        _set("min_image_height", "DOCLING_MIN_IMAGE_HEIGHT", int)
-        _set("max_pages_per_chunk", "DOCLING_MAX_PAGES_PER_CHUNK", int)
-        _set("min_pages_for_chunking", "DOCLING_MIN_PAGES_FOR_CHUNKING", int)
-        _set("max_concurrent_chunks", "DOCLING_MAX_CONCURRENT_CHUNKS", int)
-        _set("chunk_overlap", "DOCLING_CHUNK_OVERLAP", int)
-
-    def ensure_ready(self) -> None:
-        """Eagerly set up Django + the parser (used to fail fast on config errors
-        and to make ``config`` / ``opencontractserver`` importable before
-        enrichers are loaded)."""
-        self._ensure()
+        self._parsers = LocalParsers(self.config_path)
+        return self._parsers
 
     @property
     def default_embedder_path(self) -> str:
-        self._ensure()
-        return self._default_embedder_path
+        return self.ensure_ready().default_embedder_path
 
-    def parse(self, pdf_bytes: bytes) -> dict:
-        self._ensure()
-        result = self._parser.parse_pdf_bytes(pdf_bytes, user_id=0, doc_id=0)
-        if result is None:
-            raise RuntimeError("parser returned no result")
-        return result
+    def parse(self, source_bytes: bytes, *, filename: str) -> dict:
+        return self.ensure_ready().parse(source_bytes, filename=filename)
 
-    def text_from_pawls(self, pawls_pages: list) -> str:
-        self._ensure()
-        if not pawls_pages:
-            return ""
-        return self._build_translation_layer(pawls_pages).doc_text
+    def identity(self, mime: str) -> dict:
+        return self.ensure_ready().identity(mime)
 
 
 # ======================================================================
@@ -547,7 +401,6 @@ class _Parser:
 
 # Mirror save_parsed_data's structural-label definitions so the target
 # auto-creates any labels the parser emitted with identical presentation.
-_TOKEN_LABEL = "TOKEN_LABEL"
 _RELATIONSHIP_LABEL = "RELATIONSHIP_LABEL"
 _DOC_TYPE_LABEL = "DOC_TYPE_LABEL"
 
@@ -560,8 +413,16 @@ def _build_metadata(
     embedder_path: str,
     embeddings: dict | None,
     target_folder_path: str | None,
+    parser_name: str,
+    parser_version: str = "1.0",
     overlay: MetadataOverlay | None = None,
 ) -> dict:
+    from django.conf import settings
+
+    from scripts.remote_ingest.parsers import canonical_mime
+
+    file_type = canonical_mime(export.get("file_type"))
+    fallback = settings.ANNOTATION_LABELS.get(file_type, "SPAN_LABEL")
     labelled_text = export.get("labelled_text", []) or []
     relationships = export.get("relationships", []) or []
     doc_label_names = list(export.get("doc_labels", []) or [])
@@ -574,7 +435,7 @@ def _build_metadata(
         name = ann.get("annotationLabel")
         if name and name not in text_labels:
             text_labels[name] = {
-                "label_type": ann.get("annotation_type") or _TOKEN_LABEL,
+                "label_type": ann.get("annotation_type") or fallback,
                 "color": "grey",
                 "description": "Parser Structural Label",
                 "icon": "expand",
@@ -625,15 +486,15 @@ def _build_metadata(
         "content": content,
         "page_count": export.get("page_count")
         or len(export.get("pawls_file_content", [])),
-        "file_type": export.get("file_type", "application/pdf") or "application/pdf",
+        "file_type": file_type,
         "pawls_file_content": export.get("pawls_file_content", []),
         "labelled_text": labelled_text,
         "relationships": relationships,
         "doc_labels": doc_label_names,
         "text_labels": text_labels,
         "doc_labels_definitions": doc_labels_definitions,
-        "parser_name": "Docling Parser (REST)",
-        "parser_version": "1.0",
+        "parser_name": parser_name,
+        "parser_version": parser_version,
     }
     if target_folder_path:
         metadata["target_folder_path"] = target_folder_path
@@ -742,7 +603,7 @@ def _process_one(
     parser: _Parser,
     embedder: EmbedderClient | None,
     client: TargetClient,
-    row: sqlite3.Row,
+    row: sqlite3.Row | Mapping[str, Any],
     enrichers: list | None = None,
 ) -> tuple[str, bool, str]:
     """Parse + (enrich) + embed + upload one document. Returns (rel_path, ok, message)."""
@@ -750,14 +611,10 @@ def _process_one(
     abs_path = row["abs_path"]
     try:
         with open(abs_path, "rb") as fh:
-            pdf_bytes = fh.read()
+            source_bytes = fh.read()
 
-        export = parser.parse(pdf_bytes)
-        pawls = export.get("pawls_file_content", []) or []
-
-        # Rebuild the text layer the same way the server's save_parsed_data does
-        # (PAWLs translation), falling back to the parser-reported content.
-        content = parser.text_from_pawls(pawls) or (export.get("content") or "")
+        export = parser.parse(source_bytes, filename=PurePosixPath(rel_path).name)
+        content = export["content"]
         if not content.strip():
             return (rel_path, False, "empty content/text layer (would be unsearchable)")
 
@@ -787,6 +644,11 @@ def _process_one(
                     )
                 overlay = apply_enrichment(export, enrichment)
 
+        # Check the complete export again after enrichment to catch cross-stage
+        # ID collisions, dangling links and invalid spans before embedding/upload.
+        from scripts.remote_ingest.parsers import normalize_and_validate_export
+
+        normalize_and_validate_export(export)
         embeddings = None
         if cfg.embeddings and embedder is not None:
             # Compute over the (possibly enriched) labelled_text so injected
@@ -804,6 +666,7 @@ def _process_one(
             target_folder_path = None if parent in (".", "") else parent
 
         title = PurePosixPath(rel_path).name
+        identity = parser.identity(export["file_type"])
         metadata = _build_metadata(
             title=title,
             export=export,
@@ -812,6 +675,8 @@ def _process_one(
             embeddings=embeddings,
             target_folder_path=target_folder_path,
             overlay=overlay,
+            parser_name=identity["parser_name"],
+            parser_version=identity["parser_version"],
         )
 
         upload_id = client.upload(abs_path, metadata)
@@ -825,7 +690,7 @@ def _process_one(
 
 def cmd_run(cfg: Config) -> int:
     ledger = Ledger(cfg.ledger_path)
-    parser = _Parser()
+    parser = _Parser(cfg.parser_config)
     # Set up Django + the parser eagerly so config errors (missing service URL,
     # broken enricher import) surface before we start churning documents.
     parser.ensure_ready()
@@ -1013,6 +878,7 @@ def _build_config(args: argparse.Namespace) -> Config:
         verify_tls=not args.insecure,
         limit=args.limit,
         enrichers=enrichers,
+        parser_config=args.parser_config or os.environ.get("OC_PARSER_CONFIG"),
     )
 
 
@@ -1027,8 +893,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--target-url", help="Target OC base URL (env OC_TARGET_URL)")
     p.add_argument("--worker-token", help="WorkerKey token (env OC_WORKER_TOKEN)")
     p.add_argument("--corpus-id", help="Corpus id (informational; env OC_CORPUS_ID)")
-    p.add_argument("--root-dir", help="Root directory of PDFs (for plan/run)")
+    p.add_argument(
+        "--root-dir", help="Root directory of source documents (for plan/run)"
+    )
     p.add_argument("--extensions", help="Comma-separated extensions (default .pdf)")
+    p.add_argument(
+        "--parser-config",
+        help="Local parser mapping/settings JSON file (env OC_PARSER_CONFIG)",
+    )
     p.add_argument("--max-workers", type=int, default=DEFAULT_MAX_WORKERS)
     p.add_argument("--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
     p.add_argument("--queue-high", type=int, default=DEFAULT_QUEUE_HIGH)

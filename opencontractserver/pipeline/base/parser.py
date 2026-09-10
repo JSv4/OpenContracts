@@ -201,21 +201,20 @@ class BaseParser(PipelineComponentBase, ABC):
 
         # Handle PAWLS content if any
         pawls_file_content = open_contracts_data.get("pawls_file_content")
+        document.page_count = open_contracts_data.get("page_count", 1)
         if pawls_file_content:
             compact_data = compact_pawls_pages(pawls_file_content)
             pawls_string = json.dumps(compact_data)
             pawls_file = ContentFile(pawls_string.encode("utf-8"))
             document.pawls_parse_file.save(f"doc_{doc_id}.pawls", pawls_file)
 
-            # Create text layer from PAWLS tokens (use original v1 data)
-            span_translation_layer = build_translation_layer(pawls_file_content)
-            # Optionally overwrite txt_extract_file with text from PAWLS
-            txt_file = ContentFile(span_translation_layer.doc_text.encode("utf-8"))
-            document.txt_extract_file.save(f"doc_{doc_id}.txt", txt_file)
-            document.page_count = len(pawls_file_content)
-        else:
-            # Handle cases without PAWLS content
-            document.page_count = open_contracts_data.get("page_count", 1)
+            # DOCX can also include display PAWLS, but character spans anchor
+            # to parser content. Reconstruct only the PDF text layer.
+            if document.file_type in (FileTypeEnum.PDF, FileTypeEnum.PDF.mimetype):
+                span_translation_layer = build_translation_layer(pawls_file_content)
+                txt_file = ContentFile(span_translation_layer.doc_text.encode("utf-8"))
+                document.txt_extract_file.save(f"doc_{doc_id}.txt", txt_file)
+                document.page_count = len(pawls_file_content)
 
         document.save()
 

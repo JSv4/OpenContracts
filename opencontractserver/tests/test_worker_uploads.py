@@ -1769,6 +1769,61 @@ class TestWorkerUploadFidelity(TestCase):
         parent = on_set.get(raw_text="SECTION 1")
         self.assertEqual(child.parent_id, parent.id)
 
+    def test_span_mime_fallback_preserves_structural_tree_and_relationships(self):
+        from opencontractserver.annotations.models import Relationship
+        from opencontractserver.pipeline.base.file_types import FileTypeEnum
+        from opencontractserver.tests.test_remote_ingest_parsers import span_export
+
+        for mime in (FileTypeEnum.DOCX.mimetype, "text/plain", "application/txt"):
+            with self.subTest(mime=mime):
+                export = span_export()
+                metadata = {
+                    **export,
+                    "title": "Span document",
+                    "file_type": mime,
+                    # Omit annotation_type and label_type, as a normalized
+                    # Docxodus response can do. Both must use the MIME fallback.
+                    "text_labels": {
+                        "Heading": {"text": "Heading", "read_only": True},
+                        "Paragraph": {"text": "Paragraph", "read_only": True},
+                        "contains": {
+                            "text": "contains",
+                            "label_type": "RELATIONSHIP_LABEL",
+                        },
+                    },
+                    "parser_name": "Span parser",
+                    "parser_version": "1.0",
+                }
+                upload = self._stage(metadata)
+                with patch(
+                    "opencontractserver.tasks.embeddings_task.calculate_embeddings_for_annotation_batch.delay"
+                ):
+                    upload, _ = self._process(upload)
+                self.assertEqual(
+                    upload.status, UploadStatus.COMPLETED, upload.error_message
+                )
+                doc = upload.result_document
+                self.assertEqual(doc.file_type, mime)
+                with doc.txt_extract_file.open("r") as source:
+                    self.assertEqual(source.read(), export["content"])
+                structural_set = doc.structural_annotation_set
+                self.assertEqual(structural_set.parser_name, "Span parser")
+                annotations = Annotation.objects.filter(structural_set=structural_set)
+                self.assertEqual(annotations.count(), 2)
+                parent = annotations.get(raw_text="Heading")
+                child = annotations.get(raw_text="Body paragraph.")
+                self.assertEqual(child.parent_id, parent.pk)
+                for ann in annotations:
+                    self.assertEqual(ann.annotation_type, "SPAN_LABEL")
+                    self.assertEqual(ann.annotation_label.label_type, "SPAN_LABEL")
+                rel = Relationship.objects.get(
+                    relationship_label__text="contains", source_annotations=parent
+                )
+                self.assertEqual(
+                    list(rel.target_annotations.values_list("pk", flat=True)),
+                    [child.pk],
+                )
+
     def test_thumbnail_dispatched(self):
         upload = self._stage(_structural_metadata())
         upload, mock_thumb = self._process(upload)

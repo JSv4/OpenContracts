@@ -266,9 +266,9 @@ class DoclingParser(BaseChunkedParser):
             },
         )
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """Initialize the Docling REST parser with settings from PipelineSettings."""
-        super().__init__()  # Loads settings via PipelineComponentBase
+        super().__init__(**kwargs)  # Loads settings via PipelineComponentBase
 
         # Access settings via the settings property (populated from PipelineSettings DB)
         # Use dataclass defaults if settings not yet loaded from database

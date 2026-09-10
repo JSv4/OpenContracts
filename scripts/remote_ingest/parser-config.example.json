@@ -1,0 +1,12 @@
+{
+  "parsers": {
+    "application/pdf": "opencontractserver.pipeline.parsers.docling_parser_rest.DoclingParser",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "opencontractserver.pipeline.parsers.docxodus_parser.DocxodusServiceParser",
+    "text/plain": "opencontractserver.pipeline.parsers.oc_text_parser.TxtParser"
+  },
+  "settings": {
+    "opencontractserver.pipeline.parsers.oc_text_parser.TxtParser": {
+      "chunkers": ["paragraph"]
+    }
+  }
+}

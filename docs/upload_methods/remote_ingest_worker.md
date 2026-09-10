@@ -1,7 +1,7 @@
 # Remote Ingest Worker
 
 The remote ingest worker runs the **full OpenContracts ingestion pipeline**
-(Docling parse + embeddings) on a beefy off-cluster host and streams the
+(PDF/DOCX/TXT parsing + embeddings) on a beefy off-cluster host and streams the
 finished documents -- PAWLs token layer, text layer, structural annotations,
 relationships, embeddings, and any metadata you calculate -- into a corpus via
 the [Worker Uploads](worker_uploads.md) REST API.
@@ -37,10 +37,8 @@ ingest worker when you want to throw your own hardware at ingestion.
 
 ## Faithful by Construction
 
-The worker runs the **same Docling microservice image** and the **same
-`DoclingParser` code** the server runs, and embeds against the **same
-vector-embedder image**. So the result is indistinguishable from an in-cluster
-ingestion:
+The worker uses the same parser adapters as the server. Equivalent local
+settings, service versions and source metadata preserve the parsing result:
 
 - **PAWLs token layer** -- identical tokenization (no drift); the worker-upload
   path trusts these tokens verbatim.
@@ -51,17 +49,17 @@ ingestion:
   relationships exactly as in-cluster ingestion does.
 - **Embeddings** -- same model, same inputs (full text for the document,
   `rawText` per annotation).
-- **Thumbnail** -- regenerated server-side from the uploaded PDF.
+- **Thumbnail** -- regenerated server-side from the uploaded source document (asynchronously).
 
 ## How It Works
 
-A small **docker-compose bundle** runs on the remote host: the Docling parser
-microservice, the vector embedder microservice, and a worker driver. The driver
+A small **docker-compose bundle** runs on the remote host: the selected parser
+services, an optional vector embedder, and a worker driver. The driver
 is a resumable, per-document CLI:
 
-1. `plan` scans the PDF tree into a SQLite ledger.
-2. `run` parses each PDF (real `DoclingParser`), runs your enrichers, computes
-   embeddings, and `POST`s a `multipart/form-data` payload (PDF + metadata JSON)
+1. `plan` scans selected extensions into a SQLite ledger.
+2. `run` detects MIME, selects the configured parser, runs your enrichers, computes
+   embeddings, and `POST`s a `multipart/form-data` payload (source + metadata JSON)
    to `/api/worker-uploads/documents/` with `Authorization: WorkerKey <token>`.
 3. `verify` polls the target for each upload's terminal status.
 
@@ -70,6 +68,82 @@ workers, and paces itself against the target's worker-upload backlog. The ledger
 makes the whole run crash-resumable -- re-running `run` skips finished documents.
 The worker needs **no database access** to the target: it only makes outbound
 HTTPS calls to the worker-upload endpoint.
+
+## Parser selection and local settings
+
+Without a configuration file, the worker selects **Docling for PDF only**.
+To enable PDF, DOCX and TXT, use the bundled
+[`parser-config.example.json`](../../scripts/remote_ingest/parser-config.example.json):
+
+```bash
+export OC_PARSER_CONFIG=/app/scripts/remote_ingest/parser-config.example.json
+# Start the services selected in that file, plus the optional embedder:
+docker compose -f remote_worker.yml up -d docling-parser docxodus-parser vector-embedder
+docker compose -f remote_worker.yml run --rm worker plan --extensions .pdf,.docx,.txt
+docker compose -f remote_worker.yml run --rm worker run
+```
+
+`--parser-config /path/to/config.json` overrides `OC_PARSER_CONFIG`. Paths must
+be visible inside the worker container. The file contains a `parsers` object
+mapping canonical MIME types to component names/class paths, and an optional
+`settings` object keyed by **full selected class path**. The example uses
+paragraph chunking; remove that override to use TXT's normal sentence default.
+A custom mapping replaces the default mapping, so a TXT-only worker needs no
+PDF parser configuration or service.
+
+| Input MIME | Supported component (under `opencontractserver.pipeline.parsers`) | Dependency |
+|---|---|---|
+| `application/pdf` | `docling_parser_rest.DoclingParser` | Docling service; `DOCLING_PARSER_SERVICE_URL` required |
+| `application/pdf` | `warp_ingest_parser.WarpIngestParser` | Warp-Ingest service; `WARP_INGEST_API_KEY` required |
+| `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | `docxodus_parser.DocxodusServiceParser` | Docxodus service matching the frontend library version |
+| `text/plain` (also `application/txt`) | `oc_text_parser.TxtParser` | No service; sentence chunking needs spaCy and its configured model |
+
+To use Warp, replace the PDF mapping with
+`opencontractserver.pipeline.parsers.warp_ingest_parser.WarpIngestParser` and
+start `warp-ingest` instead of `docling-parser`. The bundle wires the same
+`WARP_INGEST_API_KEY` to both service and worker. Docxodus/Warp are optional
+Compose services; `worker` starts no parser services automatically. For
+`--no-embeddings`, the vector embedder can also be omitted.
+
+Settings precedence is **schema defaults < declared environment variables <
+JSON settings**. All selected parsers are resolved through the application
+component lookup, checked against `supported_file_types`, and configured before
+processing documents. Unknown fields, invalid types, missing required values
+(including secrets), invalid chunk recipes, and conflicting Warp OCR flags fail
+startup. Field diagnostics omit values. Use environment variables for credentials;
+never commit them in configuration files. To pass additional schema environment
+variables through Compose, use `docker compose run -e NAME=value ...` or a local
+Compose override; JSON also supports settings without an `env_var`, such as TXT
+`chunkers` and Docling `use_cloud_run_iam_auth`.
+
+These are **local settings**, independent of the target instance's admin/GUI
+`PipelineSettings`. Equivalent source metadata, effective settings and service
+versions use the same server/remote parsing and normalization methods. The
+worker never fetches target settings. The extension list only filters discovery:
+bytes are checked by the application's upload MIME detector, so renaming a PDF
+to `.txt` still selects PDF. Unsupported/undetectable content or an unmapped MIME
+fails before upload; the source MIME supplies both multipart and metadata types.
+
+PDF retains PAWLS/token annotations and rebuilds `content` using the normal
+PAWLS translation layer. Token page references index the PAWLS array; legacy
+Docling page metadata can be one-based and is preserved. DOCX retains parser
+content and character offsets. TXT
+uses UTF-8 text with universal newline handling, matching text-mode storage
+reads. Missing DOCX/TXT annotation types default to `SPAN_LABEL` on both worker
+and target. Docxodus container `rawText` remains its heading (possibly empty); the shared
+normalizer puts the exact covered section text in `annotation_json.text`.
+Spans must match that field (or `rawText` for TXT), token references must resolve, and
+annotation IDs, parents and relationship endpoints are checked before upload.
+TXT emits stable `txt-N` IDs; other parser IDs are preserved.
+
+`parser_name` is the selected component's title. `parser_version="1.0"` preserves
+the normal structural-set provenance convention: it is **not a discovered
+service/model version**. `LocalParsers.identity(mime)` exposes a defensive copy
+of the class path and effective settings for future preparation fingerprints.
+That in-memory snapshot includes secrets: do not log or persist it. Callers may
+supply different title/description envelopes; PDF `content` is reconstructed
+exactly as normal persistence does. Preparation caching, settings synchronization,
+file conversion, and embedding/completion validation are separate work.
 
 ## Setup
 

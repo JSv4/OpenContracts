@@ -1,6 +1,7 @@
 import io
 import json
 import zipfile
+from typing import cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -12,6 +13,7 @@ from requests.exceptions import ConnectionError, Timeout
 from opencontractserver.documents.models import Document
 from opencontractserver.pipeline.base.exceptions import DocumentParsingError
 from opencontractserver.pipeline.parsers.docxodus_parser import DocxodusServiceParser
+from opencontractserver.types.dicts import OpenContractDocExport
 
 User = get_user_model()
 
@@ -113,6 +115,23 @@ class TestDocxodusServiceParser(TestCase):
             ],
             "relationships": [],
         }
+
+    def test_save_preserves_content_when_docx_includes_display_pawls(self):
+        from opencontractserver.tests.test_doc_parser_warp_ingest import _sample_export
+
+        export = DocxodusServiceParser._normalize_response(self.sample_response)
+        export["content"] = "Hello World\n"
+        export["pawls_file_content"] = _sample_export()["pawls_file_content"]
+        parser = DocxodusServiceParser()
+        with patch(
+            "opencontractserver.tasks.embeddings_task.calculate_embeddings_for_annotation_batch.delay"
+        ):
+            parser.save_parsed_data(
+                self.user.pk, self.doc.pk, cast(OpenContractDocExport, export)
+            )
+        self.doc.refresh_from_db()
+        with self.doc.txt_extract_file.open("r") as content:
+            self.assertEqual(content.read(), "Hello World\n")
 
     @patch("opencontractserver.pipeline.parsers.docxodus_parser.requests.post")
     def test_parse_document_success(self, mock_post):

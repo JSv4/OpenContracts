@@ -184,9 +184,9 @@ class WarpIngestParser(BaseParser):
             },
         )
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """Initialize the Warp-Ingest REST parser with settings from PipelineSettings."""
-        super().__init__()  # Loads settings via PipelineComponentBase
+        super().__init__(**kwargs)  # Loads settings via PipelineComponentBase
         s = self.settings if self.settings is not None else self.Settings()
 
         self.service_url = s.service_url
@@ -236,21 +236,6 @@ class WarpIngestParser(BaseParser):
                 is_transient=False,
             )
 
-        # Resolve per-call overrides on top of the component settings.
-        apply_ocr = all_kwargs.get("apply_ocr", self.apply_ocr)
-        disable_ocr = all_kwargs.get("disable_ocr", self.disable_ocr)
-        semantic_units = all_kwargs.get("semantic_units", self.semantic_units)
-        include_images = all_kwargs.get("include_images", self.include_images)
-
-        # Warp-Ingest returns 422 when both are set; fail fast with a clear,
-        # non-transient message instead of round-tripping to the service.
-        if apply_ocr and disable_ocr:
-            raise DocumentParsingError(
-                f"WarpIngestParser misconfigured for document {doc_id}: "
-                "apply_ocr and disable_ocr are mutually exclusive.",
-                is_transient=False,
-            )
-
         # Guard peak worker memory: the whole PDF is buffered in memory and
         # POSTed in one request (no chunking), so reject oversized files using
         # the storage size metadata *before* reading the bytes in — an
@@ -267,9 +252,39 @@ class WarpIngestParser(BaseParser):
         with default_storage.open(document.pdf_file.name, "rb") as f:
             pdf_bytes = f.read()
 
+        return self.parse_pdf_bytes(
+            pdf_bytes, title=document.title or "", doc_id=doc_id, **all_kwargs
+        )
+
+    def parse_pdf_bytes(
+        self, pdf_bytes: bytes, *, title: str = "", doc_id: int = 0, **all_kwargs
+    ) -> OpenContractDocExport:
+        """Parse raw PDF bytes without reading a Document or storage fields."""
+        # Resolve per-call overrides on top of the component settings.
+        apply_ocr = all_kwargs.get("apply_ocr", self.apply_ocr)
+        disable_ocr = all_kwargs.get("disable_ocr", self.disable_ocr)
+        semantic_units = all_kwargs.get("semantic_units", self.semantic_units)
+        include_images = all_kwargs.get("include_images", self.include_images)
+
+        # Warp-Ingest returns 422 when both are set; fail fast with a clear,
+        # non-transient message instead of round-tripping to the service.
+        if apply_ocr and disable_ocr:
+            raise DocumentParsingError(
+                f"WarpIngestParser misconfigured for document {doc_id}: "
+                "apply_ocr and disable_ocr are mutually exclusive.",
+                is_transient=False,
+            )
+
+        if len(pdf_bytes) > self.max_file_size_mb * 1024 * 1024:
+            raise DocumentParsingError(
+                f"PDF exceeds the {self.max_file_size_mb} MB Warp-Ingest limit. "
+                "Adjust WARP_INGEST_MAX_FILE_SIZE_MB to raise it.",
+                is_transient=False,
+            )
+
         # A ``.pdf`` filename + explicit content type satisfy Warp-Ingest's
         # media-type check (it returns 415 for non-PDF uploads).
-        filename = self._safe_pdf_filename(document.title, doc_id)
+        filename = self._safe_pdf_filename(title, doc_id)
 
         params = {
             "render_format": WARP_INGEST_RENDER_FORMAT,

@@ -456,7 +456,7 @@ def apply_enrichment(
 
     n = 0
     for ann in enrichment.annotations:
-        if not ann.get("id"):
+        if ann.get("id") is None:
             new_id = f"{id_prefix}-{n}"
             while new_id in existing_ids:
                 n += 1
@@ -508,7 +508,9 @@ def validate_enrichment(export: dict, enrichment: Enrichment) -> list[str]:
     # collision silently maps two annotations to one row (and drops one
     # embedding). Auto-assigned ids are collision-safe by construction; this
     # guards explicit ids an enricher set by hand.
-    parser_ids = {a.get("id") for a in export.get("labelled_text", []) if a.get("id")}
+    parser_ids = {
+        a.get("id") for a in export.get("labelled_text", []) if a.get("id") is not None
+    }
     seen_injected: set = set()
 
     for i, ann in enumerate(enrichment.annotations):
@@ -604,8 +606,10 @@ def validate_enrichment(export: dict, enrichment: Enrichment) -> list[str]:
     # references an injected annotation (by the explicit id its author set) must
     # still resolve here. (Auto-assigned ids can't be referenced anyway — the
     # author doesn't know them — so only explicit ids matter.)
-    all_ids = {a.get("id") for a in export.get("labelled_text", []) if a.get("id")}
-    all_ids |= {a.get("id") for a in enrichment.annotations if a.get("id")}
+    all_ids = {
+        a.get("id") for a in export.get("labelled_text", []) if a.get("id") is not None
+    }
+    all_ids |= {a.get("id") for a in enrichment.annotations if a.get("id") is not None}
 
     # An injected annotation's parent_id must resolve to a real annotation id
     # (parser or injected) — import_annotations silently skips an unresolvable

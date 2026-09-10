@@ -83,9 +83,9 @@ class DocxodusServiceParser(BaseParser):
             },
         )
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """Initialize the Docxodus REST parser with settings from PipelineSettings."""
-        super().__init__()
+        super().__init__(**kwargs)
         s = self.settings if self.settings is not None else self.Settings()
         self.service_url = s.service_url
         self.request_timeout = s.request_timeout
@@ -126,6 +126,14 @@ class DocxodusServiceParser(BaseParser):
         with default_storage.open(document.pdf_file.name, "rb") as f:
             docx_bytes = f.read()
 
+        return self.parse_docx_bytes(
+            docx_bytes, title=document.title or "", doc_id=doc_id
+        )
+
+    def parse_docx_bytes(
+        self, docx_bytes: bytes, *, title: str = "", doc_id: int = 0
+    ) -> OpenContractDocExport:
+        """Parse raw DOCX bytes using the same service normalization as ingestion."""
         # Reject files exceeding the configured size limit
         file_size_mb = len(docx_bytes) / (1024 * 1024)
         if file_size_mb > self.max_file_size_mb:
@@ -140,7 +148,7 @@ class DocxodusServiceParser(BaseParser):
         docx_base64 = base64.b64encode(docx_bytes).decode("utf-8")
 
         payload: dict[str, Any] = {
-            "filename": document.title or f"doc_{doc_id}.docx",
+            "filename": title or f"doc_{doc_id}.docx",
             "docx_base64": docx_base64,
         }
 
@@ -257,6 +265,26 @@ class DocxodusServiceParser(BaseParser):
                 DocxodusServiceParser._normalize_annotation(ann)
                 for ann in normalized["labelled_text"]
             ]
+            # Container rawText is a heading (or empty for an untitled section),
+            # while its span covers its children too. Keep that service text,
+            # but expose the exact covered text in the documented span field.
+            parent_ids = {
+                ann.get("parent_id")
+                for ann in normalized["labelled_text"]
+                if ann.get("parent_id") is not None
+            }
+            content = normalized["content"]
+            for ann in normalized["labelled_text"]:
+                span = ann.get("annotation_json")
+                if ann.get("id") in parent_ids and isinstance(span, dict):
+                    start, end = span.get("start"), span.get("end")
+                    if (
+                        isinstance(content, str)
+                        and type(start) is int
+                        and type(end) is int
+                        and 0 <= start <= end <= len(content)
+                    ):
+                        ann["annotation_json"] = {**span, "text": content[start:end]}
 
         # Normalize relationship fields
         if "relationships" in normalized:

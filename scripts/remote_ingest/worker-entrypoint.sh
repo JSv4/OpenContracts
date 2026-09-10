@@ -1,7 +1,7 @@
 #!/bin/bash
 # Entrypoint for the remote-ingest worker container.
 #
-# Prepends the fixed in-container paths (ledger + mounted PDF root) to every
+# Prepends the fixed in-container paths (ledger + mounted document root) to every
 # invocation, so the user only types the subcommand + tuning flags, e.g.:
 #
 #   docker compose -f remote_worker.yml run --rm worker plan

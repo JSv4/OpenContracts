@@ -71,7 +71,9 @@ class PipelineComponentBase(ABC):
         {}
     )  # If you want user to provide inputs, define a jsonschema here
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self, *, component_settings: Optional[dict[str, Any]] = None, **kwargs
+    ):
         """
         Initialize the PipelineComponentBase.
 
@@ -79,6 +81,8 @@ class PipelineComponentBase(ABC):
         component has a Settings dataclass defined.
 
         Args:
+            component_settings: Explicit local settings snapshot. When supplied
+                (including an empty dict), never load settings from the database.
             **kwargs: Passed to superclass constructors in MRO.
         """
         super().__init__()  # Ensures MRO is handled correctly
@@ -87,9 +91,12 @@ class PipelineComponentBase(ABC):
         # Full DB settings (including decrypted secrets) are loaded at most once
         # per component instance. ``None`` distinguishes "not loaded" from a
         # successfully loaded empty mapping.
-        self._component_settings_cache: Optional[dict[str, Any]] = None
+        self._local_component_settings = deepcopy(component_settings)
+        self._component_settings_cache = deepcopy(component_settings)
         # Load settings (will be None if no Settings dataclass)
-        self._settings: Optional[Any] = self._load_settings()
+        self._settings: Optional[Any] = self._load_settings(
+            strict=component_settings is not None
+        )
 
     @property
     def settings(self) -> Optional[Any]:
@@ -172,7 +179,7 @@ class PipelineComponentBase(ABC):
         Returns:
             The reloaded Settings dataclass instance.
         """
-        self._component_settings_cache = None
+        self._component_settings_cache = deepcopy(self._local_component_settings)
         self._settings = self._load_settings(strict=strict)
         return self._settings
 

@@ -1,0 +1,1 @@
+- Remote ingest supports Docling or Warp PDF parsing, Docxodus DOCX parsing, and TXT chunking through shared database-independent adapters, with validated local settings, canonical MIME routing, accurate parser provenance, and preserved span annotations and structural links.

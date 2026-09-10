@@ -7,17 +7,16 @@
 # inbound ports, no access to the target's Postgres — just outbound HTTPS to
 # the target's /api/worker-uploads/ endpoint with a corpus-scoped token.
 #
-# This bundle runs the SAME Docling microservice and the SAME embedder image
-# the server uses, and the worker driver imports the SAME DoclingParser code,
-# so the PAWLs token layer, structural annotations and embeddings are identical
-# to an in-cluster ingestion (faithful by construction).
+# The worker reuses the application's Docling/Warp PDF, Docxodus DOCX and TXT
+# parsers with explicit local settings. Start only the selected parser services
+# and (unless --no-embeddings) vector-embedder; worker has no service dependencies.
 #
 # ---------------------------------------------------------------------------
 # Quick start (a remote host with Docker + this repo cloned):
 #
 #   export OC_TARGET_URL=https://opencontracts.example.com
 #   export OC_WORKER_TOKEN=<token from `manage.py mint_worker_token` on the server>
-#   export OC_DATA_DIR=/data/pdfs           # directory tree of PDFs to ingest
+#   export OC_DATA_DIR=/data/pdfs           # directory tree of documents to ingest
 #   export VECTOR_EMBEDDER_API_KEY=change-me # one value, wired to BOTH the
 #                                            # embedder service + the worker below
 #                                            # (mismatch -> HTTP 401 on embedding)
@@ -43,6 +42,19 @@ services:
     image: jscrudato/docsling-local
     restart: unless-stopped
 
+  # Optional parser services: start only those selected in the local mapping.
+  docxodus-parser:
+    image: ghcr.io/open-source-legal/docxodus-service:1.1.0-docxodus5.4.2
+    profiles: [docxodus]
+    restart: unless-stopped
+
+  warp-ingest:
+    image: ghcr.io/open-source-legal/warp-ingest:1.0.0
+    profiles: [warp-ingest]
+    restart: unless-stopped
+    environment:
+      WARP_API_KEY: ${WARP_INGEST_API_KEY:-abc123}
+
   # The exact vector-embedder image the server uses — identical 384-dim
   # embeddings over identical inputs.
   vector-embedder:
@@ -66,12 +78,13 @@ services:
         - type=registry,ref=ghcr.io/open-source-legal/opencontracts/django-local-cache:main
     image: opencontractserver_local_django
     entrypoint: ["/app/scripts/remote_ingest/worker-entrypoint.sh"]
-    depends_on:
-      - docling-parser
-      - vector-embedder
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.remote_worker
-      DOCLING_PARSER_SERVICE_URL: http://docling-parser:8000/parse/
+      OC_PARSER_CONFIG: ${OC_PARSER_CONFIG:-}
+      DOCLING_PARSER_SERVICE_URL: ${DOCLING_PARSER_SERVICE_URL:-http://docling-parser:8000/parse/}
+      DOCXODUS_PARSER_SERVICE_URL: ${DOCXODUS_PARSER_SERVICE_URL:-http://docxodus-parser:8080/parse}
+      WARP_INGEST_PARSER_SERVICE_URL: ${WARP_INGEST_PARSER_SERVICE_URL:-http://warp-ingest:5001/api/parse}
+      WARP_INGEST_API_KEY: ${WARP_INGEST_API_KEY:-abc123}
       EMBEDDINGS_MICROSERVICE_URL: http://vector-embedder:8000
       VECTOR_EMBEDDER_API_KEY: ${VECTOR_EMBEDDER_API_KEY:-abc123}
       # Target instance + corpus-scoped token (set on the host before running).
@@ -82,6 +95,6 @@ services:
       DOCLING_MAX_CONCURRENT_CHUNKS: ${DOCLING_MAX_CONCURRENT_CHUNKS:-3}
     volumes:
       - ../..:/app
-      - ${OC_DATA_DIR:?set OC_DATA_DIR to the directory tree of PDFs to ingest}:/data:ro
+      - ${OC_DATA_DIR:?set OC_DATA_DIR to the directory tree of documents to ingest}:/data:ro
       - oc_remote_ledger:/ledger
     working_dir: /app

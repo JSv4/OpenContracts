@@ -269,7 +269,12 @@ def _process_single_upload(upload_id: UUID) -> None:
             doc_filename.strip().lstrip(".")[:_MAX_FILENAME_LENGTH] or "document"
         )
         if "." not in doc_filename:
-            doc_filename += ".pdf"
+            from opencontractserver.pipeline.base.file_types import FileTypeEnum
+
+            file_type = FileTypeEnum.from_mimetype(
+                metadata.get("file_type", "application/pdf")
+            )
+            doc_filename += f".{file_type.value if file_type else 'pdf'}"
 
         pawls_content = metadata.get("pawls_file_content", [])
         text_content = metadata.get("content", "")
@@ -362,6 +367,9 @@ def _process_single_upload(upload_id: UUID) -> None:
             corpus_obj=corpus,
             annotations_data=metadata.get("labelled_text", []),
             label_lookup=label_lookup,
+            label_type=settings.ANNOTATION_LABELS.get(
+                corpus_doc.file_type, "SPAN_LABEL"
+            ),
             dispatch_embeddings=not bool(embeddings_data),
         )
 
@@ -475,7 +483,13 @@ def _prepare_labels(
     Load or create text and document labels from the upload metadata.
     Returns (label_lookup, doc_label_lookup).
     """
-    text_labels = metadata.get("text_labels", {})
+    fallback = settings.ANNOTATION_LABELS.get(
+        metadata.get("file_type", "application/pdf"), "SPAN_LABEL"
+    )
+    text_labels = {
+        name: {**definition, "label_type": definition.get("label_type") or fallback}
+        for name, definition in metadata.get("text_labels", {}).items()
+    }
     doc_labels_defs = metadata.get("doc_labels_definitions", {})
 
     existing_text = load_or_create_labels(

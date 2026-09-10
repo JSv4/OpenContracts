@@ -87,9 +87,9 @@ class TxtParser(BaseParser):
             },
         )
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
         """Initialise the parser. Chunker instantiation is deferred to parse time."""
-        super().__init__()
+        super().__init__(**kwargs)
 
     def _resolve_chunkers(
         self, override: Optional[list[ChunkerSpec]] = None
@@ -148,6 +148,24 @@ class TxtParser(BaseParser):
         with default_storage.open(txt_path, mode="r") as txt_file:
             text_content = txt_file.read()
 
+        return self.parse_text(
+            text_content,
+            title=document.title or "",
+            description=document.description or "",
+            doc_id=doc_id,
+            **all_kwargs,
+        )
+
+    def parse_text(
+        self,
+        text_content: str,
+        *,
+        title: str = "",
+        description: str = "",
+        doc_id: int = 0,
+        **all_kwargs,
+    ) -> OpenContractDocExport:
+        """Parse decoded text without storage or database access; preserve offsets."""
         chunker_override = all_kwargs.get("chunkers")
         if chunker_override is not None and not isinstance(chunker_override, list):
             raise TypeError(
@@ -163,9 +181,9 @@ class TxtParser(BaseParser):
         # Base envelope shared across strategies. Labels and annotations
         # are filled in as we iterate the chunkers.
         open_contracts_data: OpenContractDocExport = {
-            "title": document.title or "",
+            "title": title or "",
             "content": text_content,
-            "description": document.description or "",
+            "description": description or "",
             "pawls_file_content": [],  # No PAWLS data for plain text
             "page_count": 1,  # Single page
             "doc_labels": [],
@@ -182,7 +200,9 @@ class TxtParser(BaseParser):
                 if label_name not in text_labels:
                     text_labels[label_name] = _make_label(label_name)
 
-                labelled_text.append(_annotation_for_chunk(chunk, label_name))
+                annotation = _annotation_for_chunk(chunk, label_name)
+                annotation["id"] = f"txt-{len(labelled_text)}"
+                labelled_text.append(annotation)
                 chunks_produced += 1
 
             logger.debug(

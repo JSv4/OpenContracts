@@ -1,6 +1,6 @@
 # Remote Ingest Worker
 
-Run the OpenContracts ingestion pipeline (Docling parse + embeddings) on a
+Run the OpenContracts ingestion pipeline (PDF/DOCX/TXT parsing + embeddings) on a
 beefy **off-cluster** host and stream **fully-processed, faithfully-mirrored**
 documents into a target OpenContracts corpus — without giving the remote host
 any access to the target's database.
@@ -26,9 +26,8 @@ cheap.
 
 ## Faithful by construction
 
-The worker runs the **same Docling microservice image** and the **same
-`DoclingParser` code** the server runs, and embeds against the **same
-vector-embedder image**. So:
+The worker uses the same parser adapters as the server, with explicit local
+settings. With equivalent settings, service versions and source metadata:
 
 - **PAWLs token layer** — identical tokenisation (no drift; the worker-upload
   path trusts these tokens verbatim, and they *are* what the server would
@@ -40,12 +39,39 @@ vector-embedder image**. So:
   subtree-group relationships exactly as in-cluster ingestion does.
 - **Embeddings** — same 384-dim model, same inputs (full text for the document,
   `rawText` per annotation).
-- **Thumbnail** — regenerated server-side from the uploaded PDF.
-
-The net result: a document ingested through this worker is indistinguishable
-from one ingested in-cluster.
+- **Thumbnail** — regenerated server-side from the uploaded source document (asynchronously).
 
 ---
+
+## Parser selection and local settings
+
+Docling PDF remains the default. To enable PDF, DOCX and TXT:
+
+```bash
+export OC_PARSER_CONFIG=/app/scripts/remote_ingest/parser-config.example.json
+docker compose -f remote_worker.yml up -d docling-parser docxodus-parser vector-embedder
+docker compose -f remote_worker.yml run --rm worker plan --extensions .pdf,.docx,.txt
+docker compose -f remote_worker.yml run --rm worker run
+```
+
+The [example config](parser-config.example.json) maps canonical MIME types to
+parser class paths and supplies optional settings by full class path.
+`--parser-config` overrides `OC_PARSER_CONFIG`; the file must be mounted inside
+the worker. Settings precedence is schema defaults, declared environment
+variables, then JSON. All selected parsers are validated before processing.
+Target admin/GUI settings are independent and are never fetched.
+
+For Warp PDF, change the PDF mapping to
+`opencontractserver.pipeline.parsers.warp_ingest_parser.WarpIngestParser` and
+start `warp-ingest`. `WARP_INGEST_API_KEY` configures both worker and service.
+TXT paragraph/window chunking needs no service; the sentence default needs
+spaCy and its model. The worker starts no services automatically, and
+`--no-embeddings` also removes the need for the vector embedder.
+
+See the public [parser configuration reference](../../docs/upload_methods/remote_ingest_worker.md#parser-selection-and-local-settings)
+for settings, dependencies, MIME detection, annotation parity and provenance.
+`parser_version="1.0"` follows structural-set convention, not a discovered
+service version. Keep credentials in environment variables, outside config files.
 
 ## Setup
 
@@ -296,13 +322,12 @@ rate limiting (the per-token limit is best-effort).
 
 ## How it works (per document)
 
-1. Read the PDF bytes.
-2. `DoclingParser.parse_pdf_bytes(bytes)` → `OpenContractDocExport` (PAWLs,
-   structural annotations, relationships) — the real parser, no database.
-3. Rebuild the text layer from the PAWLs (`build_translation_layer`).
+1. Read source bytes and detect the canonical MIME type.
+2. Call the selected parser’s shared bytes/text method → `OpenContractDocExport`.
+3. Rebuild PDF text from PAWLS; preserve DOCX/TXT content and validate anchors.
 4. Embed the document text + each annotation's `rawText` against the
    vector-embedder.
-5. POST `multipart/form-data` (the PDF + a metadata JSON) to
+5. POST `multipart/form-data` (the source file + metadata JSON) to
    `/api/worker-uploads/documents/`.
 6. The server stages the upload and a Celery worker ingests it: creates the
    document, imports annotations/relationships, stores the embeddings,
@@ -324,8 +349,8 @@ state so the whole run is crash-resumable.
   CPU. On a GPU, VRAM is the constraint instead.
 
 The driver itself runs inside the OpenContracts image and uses
-`config.settings.remote_worker`, which points Django at a throwaway SQLite file
-so the worker needs **no Postgres and no Redis**.
+`config.settings.remote_worker`, which disables the Django database backend. Explicit local component settings mean
+the worker needs **no Postgres and no Redis**.
 
 ---
 

@@ -63,9 +63,13 @@ is a resumable, per-document CLI:
    to `/api/worker-uploads/documents/` with `Authorization: WorkerKey <token>`.
 3. `verify` polls the target for each upload's terminal status.
 
-It streams per document (no archive is ever built), runs a thread pool of
-workers, and paces itself against the target's worker-upload backlog. The ledger
-makes the whole run crash-resumable -- re-running `run` skips finished documents.
+Discovery streams in filesystem order; ledger reads use bounded keyset pages,
+and submitted unfinished work is capped at twice `--max-workers`. The worker
+paces itself against the target's worker-upload backlog. Re-running `run` skips
+uploaded documents and retries unfinished work. Ctrl-C cancels queued work and
+drains already-started calls; use one invocation per ledger at a time. See
+[bounded traversal and resume](../../scripts/remote_ingest/README.md#bounded-traversal-and-resume)
+for ordering, memory bounds, and upload replay limitations.
 The worker needs **no database access** to the target: it only makes outbound
 HTTPS calls to the worker-upload endpoint.
 

@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
+  "engines": {
+    "node": ">=22.15.0"
+  },
   "dependencies": {
     "@apollo/client": "^3.13.8",
     "@auth0/auth0-react": "^2.3.0",

@@ -1,165 +1,36 @@
-"""Log calls must not format raw kwargs / settings mappings — pytest enforcement.
+"""Log calls must not format raw kwargs / settings mappings — test enforcement.
 
-Pipeline component kwargs are merged from ``PipelineSettings``, which carries
-decrypted component secrets (API keys for parser and embedder services), and
-the same mappings flow on into tasks, LLM tooling and MCP code. Interpolating
-such a mapping into a log message writes the secret to the log stream, so a
-log call may only format it through
-``opencontractserver.utils.logging.redact_sensitive_kwargs``.
-
-Scope: every ``*.py`` under ``opencontractserver/`` and ``config/``, tests
-included. A file is parsed only when its text could hold a hit (a
-``kwargs``/``settings`` name plus a logging-method call), which is lossless
-and keeps the scan to ~200 files.
-
-What the scanner catches: an expression that *names* a kwargs/settings
-mapping — a bare name (``all_kwargs``), an attribute (``self._settings``) or
-a call (``self.get_component_settings()``) — formatted into a log call via an
-f-string, a ``%``-style positional argument, ``str.format`` or the ``%``
-operator, optionally wrapped in ``str``/``repr``/``dict``/``json.dumps``/
-``pprint.pformat``.
-
-Known limits, by design — widen when a real case shows up:
-
-* Detection is name-based. A secret-bearing dict under an unrelated name
-  (``opts``, ``headers``, ``payload``) is not flagged.
-* Transformed expressions (``all_kwargs.get("height")``,
-  ``list(all_kwargs)``, ``len(all_kwargs)``) are not flagged, so a scalar
-  lookup or key listing can be logged without redaction.
-* ``redact_sensitive_kwargs`` itself matches *key names*
-  (``SENSITIVE_KEY_PATTERNS``); a secret stored under an unusual key such as
-  ``{"auth": ("user", "pass")}`` passes through un-redacted.
-* Only ``logging``-style method calls (``logger.info`` …) are inspected;
-  ``print`` and ``warnings.warn`` are not.
+The scanner, its scope and its known limits live in
+``opencontractserver/shared/log_redaction_audit.py``; this module pins its
+behaviour and runs it over the tree. Written as ``SimpleTestCase`` classes so
+both ``pytest`` (CI) and ``manage.py test`` collect them. There is no Django
+system check for this invariant — see the audit module's docstring.
 """
 
 from __future__ import annotations
 
-import ast
-import logging
-import re
-from collections.abc import Iterator
-from pathlib import Path
+import dataclasses
+from dataclasses import dataclass, field
 from unittest import mock
 
-import pytest
+from django.test import SimpleTestCase
 
-import config as config_pkg
-import opencontractserver as backend_pkg
-
-SCAN_ROOTS = (
-    Path(backend_pkg.__file__).resolve().parent,
-    Path(config_pkg.__file__).resolve().parent,
+from opencontractserver.pipeline.base.settings_schema import (
+    PipelineSetting,
+    SettingType,
+    get_pipeline_setting,
 )
-REPO_ROOT = SCAN_ROOTS[0].parent
-
-LOG_METHODS = {"debug", "info", "warning", "error", "exception", "critical", "log"}
-REDACTOR = "redact_sensitive_kwargs"
-SENSITIVE_NAME_SUFFIXES = ("kwargs", "settings")
-# Wrappers that render the mapping as-is, so the secret still reaches the log.
-TRANSPARENT_WRAPPERS = {"str", "repr", "dict", "pformat", "dumps"}
-
-_LOG_CALL_RE = re.compile(r"\.(" + "|".join(LOG_METHODS) + r")\(")
+from opencontractserver.shared.log_redaction_audit import (
+    SAFE_MARKER,
+    audit_log_calls,
+    format_violation,
+    may_contain_hit,
+    scan_log_calls,
+)
 
 EMBEDDER_MODULE = "opencontractserver.pipeline.embedders.sent_transformer_microservice"
 
-
-def _expr_name(node: ast.AST) -> str | None:
-    """The identifier an expression is named by: ``x``, ``a.x`` or ``x(...)``."""
-    if isinstance(node, ast.Name):
-        return node.id
-    if isinstance(node, ast.Attribute):
-        return node.attr
-    if isinstance(node, ast.Call):
-        return _expr_name(node.func)
-    return None
-
-
-def _unwrap_transparent(node: ast.expr) -> ast.expr:
-    while (
-        isinstance(node, ast.Call)
-        and len(node.args) == 1
-        and _expr_name(node.func) in TRANSPARENT_WRAPPERS
-    ):
-        node = node.args[0]
-    return node
-
-
-def _raw_sensitive_name(node: ast.expr) -> str | None:
-    """Return the offending name if ``node`` formats an unredacted mapping."""
-    node = _unwrap_transparent(node)
-    if isinstance(node, ast.Call) and _expr_name(node.func) == REDACTOR:
-        return None
-    name = _expr_name(node)
-    if name and name.lower().endswith(SENSITIVE_NAME_SUFFIXES):
-        return name
-    return None
-
-
-def _formatted_exprs(call: ast.Call) -> Iterator[ast.expr]:
-    """Every expression whose value ends up in the logged message."""
-    for index, arg in enumerate(call.args):
-        if index > 0:  # %-style positional: logger.info("... %s", x)
-            yield arg
-        for part in ast.walk(arg):
-            if isinstance(part, ast.FormattedValue):  # f"{x}"
-                yield part.value
-            elif (
-                isinstance(part, ast.Call)
-                and isinstance(part.func, ast.Attribute)
-                and part.func.attr == "format"
-            ):  # "{}".format(x) / "{k}".format(k=x)
-                yield from part.args
-                yield from (kw.value for kw in part.keywords)
-            elif isinstance(part, ast.BinOp) and isinstance(part.op, ast.Mod):
-                right = part.right  # "%s" % x / "%s %s" % (a, x)
-                yield from right.elts if isinstance(right, ast.Tuple) else (right,)
-
-
-def scan_log_calls(source: str) -> list[tuple[int, str]]:
-    """Return ``(line, name)`` for each raw kwargs/settings mapping in a log call."""
-    hits: list[tuple[int, str]] = []
-    for node in ast.walk(ast.parse(source)):
-        if not (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and node.func.attr in LOG_METHODS
-        ):
-            continue
-        for expr in _formatted_exprs(node):
-            name = _raw_sensitive_name(expr)
-            if name:
-                hits.append((expr.lineno, name))
-    return hits
-
-
-def _may_contain_hit(source: str) -> bool:
-    """Lossless text pre-filter: a hit needs a sensitive name and a log call."""
-    return any(s in source for s in SENSITIVE_NAME_SUFFIXES) and bool(
-        _LOG_CALL_RE.search(source)
-    )
-
-
-def iter_candidate_modules() -> Iterator[tuple[Path, str]]:
-    for root in SCAN_ROOTS:
-        for path in sorted(root.rglob("*.py")):
-            source = path.read_text(encoding="utf-8")
-            if _may_contain_hit(source):
-                yield path, source
-
-
-def test_no_backend_log_call_formats_raw_kwargs_or_settings() -> None:
-    offenders = [
-        f"{path.relative_to(REPO_ROOT)}:{line} {name}"
-        for path, source in iter_candidate_modules()
-        for line, name in scan_log_calls(source)
-    ]
-    assert offenders == [], (
-        "Wrap these in redact_sensitive_kwargs() before logging "
-        "(or log a scalar / the key list instead):\n  " + "\n  ".join(offenders)
-    )
-
-
+# (snippet, offending name) — each must produce exactly one hit on line 1.
 FLAGGED = {
     "f-string": ('logger.debug(f"kwargs: {all_kwargs}")', "all_kwargs"),
     "percent-positional": ('logger.info("kwargs: %s", all_kwargs)', "all_kwargs"),
@@ -167,6 +38,7 @@ FLAGGED = {
         'logger.info("a %s b %s" % (x, merged_kwargs))',
         "merged_kwargs",
     ),
+    "percent-dict": ('logger.info("%(k)s" % {"k": all_kwargs})', "all_kwargs"),
     "str.format": (
         'logger.info("s: {}".format(component_settings))',
         "component_settings",
@@ -180,8 +52,20 @@ FLAGGED = {
         "get_component_settings",
     ),
     "attribute": ('logger.warning(f"s: {self._settings}")', "_settings"),
+    "message-is-mapping": ("logger.debug(all_kwargs)", "all_kwargs"),
+    "message-is-str-mapping": ("logger.debug(str(all_kwargs))", "all_kwargs"),
+    "concatenation": ('logger.info("kwargs: " + str(all_kwargs))', "all_kwargs"),
+    "repr-concatenation": ('logger.info("s: " + repr(self._settings))', "_settings"),
+    "dict-unpack": ('logger.info(f"{ {**all_kwargs} }")', "all_kwargs"),
+    "dict-double-star": ('logger.info(f"{dict(**all_kwargs)}")', "all_kwargs"),
+    "keyword-msg": ('logger.info(msg=f"{all_kwargs}")', "all_kwargs"),
+    "extra-dict": ('logger.info("x", extra={"kwargs": all_kwargs})', "all_kwargs"),
+    "uppercase-constant": ('logger.info("%s", DEFAULT_KWARGS)', "DEFAULT_KWARGS"),
+    "space-before-paren": ('logger.info ("%s", all_kwargs)', "all_kwargs"),
     "str-wrapped": ('logger.info("s: %s", str(all_kwargs))', "all_kwargs"),
     "json.dumps-wrapped": ('logger.info(f"s: {json.dumps(all_kwargs)}")', "all_kwargs"),
+    "asdict-wrapped": ('logger.info(f"{asdict(self.settings)}")', "settings"),
+    "vars-wrapped": ('logger.info("%s", vars(self.settings))', "settings"),
     "logger.log": ('logger.log(logging.INFO, "k: %s", all_kwargs)', "all_kwargs"),
     "nested-f-string": ('logger.info(" ".join([f"{all_kwargs}"]))', "all_kwargs"),
 }
@@ -189,61 +73,182 @@ FLAGGED = {
 ALLOWED = {
     "redacted-f-string": 'logger.debug(f"kwargs: {redact_sensitive_kwargs(all_kwargs)}")',
     "redacted-percent": 'logger.info("k: %s", redact_sensitive_kwargs(all_kwargs))',
+    "redacted-dataclass": 'logger.info("%s", redact_sensitive_kwargs(self.settings))',
+    "redacted-then-dumped": (
+        'logger.info("%s", json.dumps(redact_sensitive_kwargs(all_kwargs)))'
+    ),
     "scalar-lookup": """logger.info(f"h: {all_kwargs.get('height')}")""",
+    "subscript": """logger.info(f"h: {all_kwargs['height']}")""",
     "keys-only": 'logger.info(f"h: {list(all_kwargs.keys())}")',
+    "sorted-keys": 'logger.info(f"h: {sorted(all_kwargs)}")',
+    "length": 'logger.info("n=%d", len(all_kwargs))',
+    "settings-attribute": 'logger.info(f"url: {self.settings.api_url}")',
     "django-settings-attr": 'logger.info(f"x: {settings.DEBUG}")',
     "exception-variable": 'logger.debug(f"Could not load settings: {e}")',
     "not-a-log-call": "print(all_kwargs)",
 }
 
 
-@pytest.mark.parametrize("snippet,name", FLAGGED.values(), ids=FLAGGED.keys())
-def test_scanner_flags_raw_mapping(snippet: str, name: str) -> None:
-    assert scan_log_calls(snippet) == [(1, name)]
+class LogRedactionInvariantTests(SimpleTestCase):
+    def test_no_backend_log_call_formats_raw_kwargs_or_settings(self) -> None:
+        offenders = [format_violation(*hit) for hit in audit_log_calls()]
+        self.assertEqual(
+            offenders, [], "Raw mappings in log calls:\n  " + "\n  ".join(offenders)
+        )
 
 
-@pytest.mark.parametrize("snippet", ALLOWED.values(), ids=ALLOWED.keys())
-def test_scanner_allows_safe_formatting(snippet: str) -> None:
-    assert scan_log_calls(snippet) == []
+class LogRedactionScannerTests(SimpleTestCase):
+    def test_flags_raw_mapping(self) -> None:
+        for key, (snippet, name) in FLAGGED.items():
+            with self.subTest(key):
+                self.assertEqual(scan_log_calls(snippet), [(1, name)])
+
+    def test_allows_safe_formatting(self) -> None:
+        for key, snippet in ALLOWED.items():
+            with self.subTest(key):
+                self.assertEqual(scan_log_calls(snippet), [])
+
+    def test_prefilter_keeps_every_flagged_snippet(self) -> None:
+        """The text pre-filter must never skip a file the AST scan would flag."""
+        for key, (snippet, _) in FLAGGED.items():
+            with self.subTest(key):
+                self.assertTrue(may_contain_hit(snippet))
+
+    def test_redactor_import_alias_is_recognised(self) -> None:
+        source = (
+            "from opencontractserver.utils.logging import "
+            "redact_sensitive_kwargs as redact\n"
+            'logger.info("k: %s", redact(all_kwargs))\n'
+        )
+        self.assertEqual(scan_log_calls(source), [])
+
+    def test_safe_marker_accepts_only_the_marked_call(self) -> None:
+        call = 'logger.info("k: %s", public_settings(self.settings))'
+        self.assertEqual(scan_log_calls(call), [(1, "public_settings")])
+        marked = f"{call}  # {SAFE_MARKER}: returns the non-secret subset"
+        self.assertEqual(scan_log_calls(marked), [])
+        # The marker covers one call, not the file.
+        self.assertEqual(scan_log_calls(f"{marked}\n{call}"), [(2, "public_settings")])
 
 
-def test_prefilter_keeps_every_flagged_snippet() -> None:
-    """The text pre-filter must never skip a file the AST scan would flag."""
-    assert all(_may_contain_hit(snippet) for snippet, _ in FLAGGED.values())
-
-
-def test_microservice_embedder_does_not_log_api_key(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    from opencontractserver.pipeline.embedders.sent_transformer_microservice import (  # noqa: E501
-        MicroserviceEmbedder,
+def _secret_field(**setting_kwargs: object) -> object:
+    """A SECRET setting declared the plain way — without ``repr=False``."""
+    return field(
+        default="",
+        metadata={
+            "pipeline_setting": PipelineSetting(
+                setting_type=SettingType.SECRET, **setting_kwargs  # type: ignore[arg-type]
+            )
+        },
     )
 
-    secret = "test-secret-value-1234567890"
-    service_settings = {
-        "embeddings_microservice_url": "http://embedder.invalid",
-        "vector_embedder_api_key": secret,
-    }
-    # Explicit component_settings is the documented no-database construction
-    # path; without it the constructor only stays off the DB because
-    # get_component_settings() swallows the test runner's access error.
-    embedder = MicroserviceEmbedder(component_settings=service_settings)
-    with mock.patch(
-        f"{EMBEDDER_MODULE}._get_session",
-        side_effect=RuntimeError("no network in tests"),
-    ), caplog.at_level(logging.DEBUG, logger=EMBEDDER_MODULE):
-        embedder._embed_text_impl("hello", **service_settings)
 
-    joined = "\n".join(record.getMessage() for record in caplog.records)
-    assert "Effective kwargs" in joined
-    assert secret not in joined
+class SecretSettingsReprTests(SimpleTestCase):
+    """``SECRET`` settings never appear in a Settings repr, however declared."""
+
+    def test_pipeline_component_hides_secret_from_repr(self) -> None:
+        from opencontractserver.pipeline.base.base_component import (
+            PipelineComponentBase,
+        )
+
+        class Component(PipelineComponentBase):
+            @dataclass
+            class Settings:
+                api_key: str = _secret_field(description="k")  # type: ignore[assignment]
+                timeout: int = 30
+
+        instance = Component.Settings(api_key="sk-live-123", timeout=5)
+        # Same shape as the generated dataclass repr (qualname + fields),
+        # minus the secret.
+        self.assertTrue(repr(instance).endswith(".Settings(timeout=5)"), repr(instance))
+        self.assertEqual(instance.api_key, "sk-live-123")
+        self.assertFalse(dataclasses.fields(instance)[0].repr)
+
+    def test_tool_hides_secret_from_repr(self) -> None:
+        from opencontractserver.llms.tools.base_tool import BaseTool
+
+        class Tool(BaseTool):
+            tool_key = "repr_probe"
+
+            @dataclass
+            class Settings:
+                api_key: str = _secret_field(required=True)  # type: ignore[assignment]
+                provider: str = "brave"
+
+        self.assertNotIn("sk-live-123", repr(Tool.Settings(api_key="sk-live-123")))
+
+    def test_hand_written_repr_is_left_alone(self) -> None:
+        from opencontractserver.pipeline.base.base_component import (
+            PipelineComponentBase,
+        )
+
+        class Component(PipelineComponentBase):
+            @dataclass(repr=False)
+            class Settings:
+                api_key: str = _secret_field()  # type: ignore[assignment]
+
+                def __repr__(self) -> str:
+                    return "custom"
+
+        self.assertEqual(repr(Component.Settings(api_key="x")), "custom")
+
+    def test_every_registered_component_hides_its_secrets(self) -> None:
+        from opencontractserver.llms.tools.web_search_tools import WebSearchTool
+        from opencontractserver.pipeline.registry import get_all_components_cached
+
+        classes = [WebSearchTool] + [
+            definition.component_class
+            for definitions in get_all_components_cached().values()
+            for definition in definitions
+            if definition.component_class is not None
+        ]
+        checked = 0
+        for cls in classes:
+            settings_cls = getattr(cls, "Settings", None)
+            if not dataclasses.is_dataclass(settings_cls):
+                continue
+            for field_obj in dataclasses.fields(settings_cls):
+                setting = get_pipeline_setting(field_obj)
+                if setting is None or setting.setting_type is not SettingType.SECRET:
+                    continue
+                checked += 1
+                with self.subTest(component=cls.__name__, field=field_obj.name):
+                    self.assertFalse(field_obj.repr)
+        self.assertGreater(checked, 0, "no SECRET settings found — discovery broke")
 
 
-def test_agent_config_repr_hides_api_key() -> None:
-    """``AgentConfig`` is logged whole at DEBUG; its key must stay out of repr."""
-    from opencontractserver.llms.agents.core_agents import AgentConfig
+class ComponentLogOutputTests(SimpleTestCase):
+    def test_microservice_embedder_does_not_log_api_key(self) -> None:
+        from opencontractserver.pipeline.embedders.sent_transformer_microservice import (  # noqa: E501
+            MicroserviceEmbedder,
+        )
 
-    secret = "sk-test-1234567890"
-    config = AgentConfig(api_key=secret)
-    assert config.api_key == secret
-    assert secret not in repr(config)
+        secret = "test-secret-value-1234567890"
+        service_settings = {
+            "embeddings_microservice_url": "http://embedder.invalid",
+            "vector_embedder_api_key": secret,
+        }
+        # Explicit component_settings is the documented no-database construction
+        # path; without it the constructor only stays off the DB because
+        # get_component_settings() swallows the test runner's access error.
+        embedder = MicroserviceEmbedder(component_settings=service_settings)
+        with mock.patch(
+            f"{EMBEDDER_MODULE}._get_session",
+            side_effect=RuntimeError("no network in tests"),
+        ), self.assertLogs(EMBEDDER_MODULE, level="DEBUG") as captured:
+            embedder._embed_text_impl("hello", **service_settings)
+
+        joined = "\n".join(captured.output)
+        self.assertIn("Effective kwargs", joined)
+        self.assertNotIn(secret, joined)
+        self.assertNotIn(secret, repr(embedder.settings))
+
+    def test_agent_config_repr_hides_api_key(self) -> None:
+        """Defence in depth: the config is no longer logged whole, but
+        ``get_default_config`` still populates the key, so keep it out of repr."""
+        from opencontractserver.llms.agents.core_agents import AgentConfig
+
+        secret = "sk-test-1234567890"
+        config = AgentConfig(api_key=secret)
+        self.assertEqual(config.api_key, secret)
+        self.assertNotIn(secret, repr(config))

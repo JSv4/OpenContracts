@@ -10,6 +10,7 @@ import {
   Tag,
   Activity,
   Scale,
+  KeyRound,
   LucideIcon,
 } from "lucide-react";
 
@@ -222,6 +223,15 @@ interface SettingItem {
 }
 
 const settingsItems: SettingItem[] = [
+  {
+    id: "automation-credentials",
+    title: "Automation Credentials",
+    description:
+      "Create credentials for your account and oversee credential revocation.",
+    icon: KeyRound,
+    gradient: `linear-gradient(135deg, ${OS_LEGAL_COLORS.accent} 0%, ${OS_LEGAL_COLORS.accentHover} 100%)`,
+    route: "/automation-credentials",
+  },
   {
     id: "badges",
     title: "Badge Management",

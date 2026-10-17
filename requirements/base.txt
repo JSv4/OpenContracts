@@ -1,11 +1,11 @@
 Pillow>=12.3.0  # https://github.com/python-pillow/Pillow
 argon2-cffi==25.1.0  # https://github.com/hynek/argon2_cffi
-hiredis==3.4.1  # https://github.com/redis/hiredis-py
+hiredis==3.4.2  # https://github.com/redis/hiredis-py
 redis==8.1.0  # https://github.com/redis/redis-py
 celery==5.6.3  # pyup: < 6.0  # https://github.com/celery/celery
 flower==2.1.0  # https://github.com/mher/flower
 django-celery-beat==2.9.0  # https://github.com/celery/django-celery-beat
-pyjwt==2.13.0  # https://github.com/jpadilla/pyjwt
+pyjwt==2.14.0  # https://github.com/jpadilla/pyjwt
 cryptography==50.0.1  # https://github.com/pyca/cryptography
 pydantic==2.*
 typing-extensions==4.*  # https://github.com/python/typing_extensions
@@ -15,7 +15,7 @@ brotli>=1.2.0  # decoder for httpx Content-Encoding: br responses (e.g. OpenAI A
 
 # Django
 # ------------------------------------------------------------------------------
-django==5.2.16  # https://www.djangoproject.com/
+django==5.2.17  # https://www.djangoproject.com/
 django-environ==0.14.0  # https://github.com/joke2k/django-environ
 django-redis==7.0.0  # https://github.com/jazzband/django-redis
 django-filter==26.1  # https://github.com/carltongibson/django-filter
@@ -31,16 +31,16 @@ Twisted[tls,http2]>=26.4.0
 
 # Django REST Framework
 # ------------------------------------------------------------------------------
-djangorestframework==3.18.0  # https://github.com/encode/django-rest-framework
+djangorestframework==3.18.1  # https://github.com/encode/django-rest-framework
 django-cors-headers==4.9.0  # https://github.com/adamchainz/django-cors-headers
 drf-extra-fields==3.7.0  # https://github.com/Hipo/drf-extra-fields
 
 # Doc Analysis (NLP dependencies, placeholder) - WARNING, these are all in same environment... not ideal.
 # ------------------------------------------------------------------------------
-pypdf>=6.16.2,<7  # https://github.com/py-pdf/pypdf
+pypdf>=6.20.1,<7  # https://github.com/py-pdf/pypdf
 plasmapdf==0.1.3  # https://github.com/Jsv4/plasmapdf
 pdf2image>=1.17.0
-openai>=3.8.0,<4  # https://github.com/openai/openai-python (pydantic-ai 1.x requires >=2.11.0)
+openai>=3.24.0,<4  # https://github.com/openai/openai-python (pydantic-ai 1.x requires >=2.11.0)
 # Bumping pydantic-ai is a deliberate decision: this codebase relies on the
 # precedence rule that ``instructions=`` (not ``system_prompt=``) is the only
 # way to deliver a system instruction when ``message_history`` is non-empty
@@ -72,16 +72,17 @@ django-guardian
 
 # GraphQL
 # ------------------------------------------------------------------------------
-strawberry-graphql==0.327.3  # code-first GraphQL; replaced graphene-django (schema parity pinned by config/graphql/schema.graphql)
+strawberry-graphql==0.327.7  # code-first GraphQL; replaced graphene-django (schema parity pinned by config/graphql/schema.graphql)
+graphql-core>=3.2,<3.3  # strawberry allows <3.4, but 3.3 reworked execution.collect_fields (config/graphql/automation.py::_check) and ListValueNode typing; upgrade deliberately
 
 # Telemetry
 # ------------------------------------------------------------------------------
-posthog==7.47.1  # https://github.com/posthog/posthog-python
+posthog==7.58.0  # https://github.com/posthog/posthog-python
 
 # Model Context Protocol
 # ------------------------------------------------------------------------------
-mcp>=2.2.0,<3  # https://github.com/modelcontextprotocol/python-sdk
-jsonschema>=4.20.0,<5  # https://github.com/python-jsonschema/jsonschema - MCP tool-argument validation (server.py); also an mcp dependency, pinned explicitly so it cannot vanish under us
+mcp>=2.3.0,<3  # https://github.com/modelcontextprotocol/python-sdk
+jsonschema>=4.26.0,<5  # https://github.com/python-jsonschema/jsonschema - MCP tool-argument validation (server.py); also an mcp dependency, pinned explicitly so it cannot vanish under us
 # ^ python-sdk 2.x: request handlers are registered as on_*= constructor
 # kwargs on mcp.server.Server and return typed result models; the 1.x
 # decorator API (@server.list_tools() etc.) is gone. opencontractserver/mcp/
@@ -97,7 +98,7 @@ twisted>=24.7.0rc1 # not directly required, pinned by Snyk to avoid a vulnerabil
 ipython>=9.17.1 # not directly required, pinned by Snyk to avoid a vulnerability
 setuptools>=84.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
 sqlparse>=0.6.0 # not directly required, pinned by Snyk to avoid a vulnerability
-tornado>=6.5.8 # not directly required, pinned by Snyk to avoid a vulnerability
-urllib3>=2.7.0 # not directly required, pinned by Snyk to avoid a vulnerability
-zipp>=4.1.0 # not directly required, pinned by Snyk to avoid a vulnerability
+tornado>=6.5.10 # not directly required, pinned by Snyk to avoid a vulnerability
+urllib3>=2.8.0 # not directly required, pinned by Snyk to avoid a vulnerability
+zipp>=4.1.1 # not directly required, pinned by Snyk to avoid a vulnerability
 pillow>=10.3.0 # not directly required, pinned by Snyk to avoid a vulnerability

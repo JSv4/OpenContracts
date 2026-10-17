@@ -1,4 +1,5 @@
 import logging
+import re
 import threading
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -11,6 +12,11 @@ from opencontractserver.constants.document_processing import (
     EMBEDDER_BATCH_REQUEST_TIMEOUT_SECONDS,
     EMBEDDER_SINGLE_REQUEST_TIMEOUT_SECONDS,
     MICROSERVICE_EMBEDDER_MAX_BATCH_SIZE,
+    OPENAI_EMBEDDER_MAX_INPUT_CHARS,
+)
+from opencontractserver.constants.embeddings import (
+    MICROSERVICE_ACCOUNTED_EMBEDDING_VERSION,
+    MICROSERVICE_MODEL_REVISION_PATTERN,
 )
 from opencontractserver.pipeline.base.embedder import BaseEmbedder
 from opencontractserver.pipeline.base.exceptions import (
@@ -28,6 +34,7 @@ from opencontractserver.utils.embedding_validation import (
     embedding_values,
     normalize_embedding_vector,
 )
+from opencontractserver.utils.logging import redact_sensitive_kwargs
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -116,6 +123,7 @@ class MicroserviceEmbedder(BaseEmbedder):
     description = "Generates embeddings using a vector embeddings microservice."
     author = "OpenContracts Team"
     dependencies = ["numpy", "requests"]
+    accounting_version = MICROSERVICE_ACCOUNTED_EMBEDDING_VERSION
     vector_size = 384  # Default embedding size
     supported_file_types = [
         FileTypeEnum.PDF,
@@ -152,6 +160,20 @@ class MicroserviceEmbedder(BaseEmbedder):
                 )
             },
         )
+        embeddings_microservice_url_bulk: str = field(
+            default="",
+            metadata={
+                "pipeline_setting": PipelineSetting(
+                    setting_type=SettingType.OPTIONAL,
+                    required=False,
+                    description=(
+                        "Optional pool for ingest embedding (same model); search "
+                        "queries stay on embeddings_microservice_url."
+                    ),
+                    env_var="EMBEDDINGS_MICROSERVICE_URL_BULK",
+                )
+            },
+        )
         vector_embedder_api_key: str = field(
             default="",
             metadata={
@@ -169,6 +191,37 @@ class MicroserviceEmbedder(BaseEmbedder):
                 "pipeline_setting": PipelineSetting(
                     setting_type=SettingType.OPTIONAL,
                     description="Force Google Cloud Run IAM authentication",
+                )
+            },
+        )
+        embedding_model_revision: str = field(
+            default="",
+            metadata={
+                "pipeline_setting": PipelineSetting(
+                    setting_type=SettingType.OPTIONAL,
+                    description=(
+                        "Deployed model and immutable revision (model@revision). "
+                        "Required for policy-bound ingestion; update when the model changes."
+                    ),
+                    validation=lambda value: isinstance(value, str)
+                    and (
+                        not value
+                        or re.fullmatch(MICROSERVICE_MODEL_REVISION_PATTERN, value)
+                        is not None
+                    ),
+                )
+            },
+        )
+        no_external_provider_fees: bool = field(
+            default=False,
+            metadata={
+                "pipeline_setting": PipelineSetting(
+                    setting_type=SettingType.OPTIONAL,
+                    description=(
+                        "Operator confirms this self-hosted service has no external "
+                        "provider fees. Infrastructure costs are excluded from run budgets."
+                    ),
+                    validation=lambda value: type(value) is bool,
                 )
             },
         )
@@ -198,6 +251,12 @@ class MicroserviceEmbedder(BaseEmbedder):
         service_url = all_kwargs.get(
             "embeddings_microservice_url", s.embeddings_microservice_url
         )
+        # Ingest tags calls ``use_bulk_pool=True``; queries never do.
+        bulk_url = all_kwargs.get(
+            "embeddings_microservice_url_bulk", s.embeddings_microservice_url_bulk
+        )
+        if all_kwargs.get("use_bulk_pool") and bulk_url:
+            service_url = bulk_url
         api_key = all_kwargs.get("vector_embedder_api_key", s.vector_embedder_api_key)
         use_cloud_run_iam_auth = bool(
             all_kwargs.get("use_cloud_run_iam_auth", s.use_cloud_run_iam_auth)
@@ -213,6 +272,30 @@ class MicroserviceEmbedder(BaseEmbedder):
 
         return service_url, headers
 
+    def embed_text_accounted(self, text: str) -> tuple[list[float], int]:
+        """One bounded request for an explicitly approved self-hosted run.
+
+        Zero denotes billable provider tokens, not measured inference usage.
+        Infrastructure is outside the run budget. The run owns every retry;
+        neither the ordinary retrying session nor redirects may repeat a POST.
+        """
+        service_url, headers = self._get_service_config(self.get_component_settings())
+        with requests.Session() as session:
+            session.mount("http://", HTTPAdapter(max_retries=0))
+            session.mount("https://", HTTPAdapter(max_retries=0))
+            response = session.post(
+                f"{service_url.rstrip('/')}/embeddings",
+                json={"text": text[:OPENAI_EMBEDDER_MAX_INPUT_CHARS]},
+                headers=headers,
+                timeout=EMBEDDER_SINGLE_REQUEST_TIMEOUT_SECONDS,
+                allow_redirects=False,
+            )
+            if response.status_code != 200:
+                # Never expose a provider response, endpoint or credential.
+                raise ValueError("embedding_request_failed")
+            vector = normalize_embedding_vector(embedding_values(response.json()))
+        return vector, 0
+
     def _embed_text_impl(self, text: str, **all_kwargs) -> Optional[list[float]]:
         """
         Generate embeddings from text using the microservice.
@@ -225,7 +308,8 @@ class MicroserviceEmbedder(BaseEmbedder):
             Embedding as a list of floats, or None if an error occurs.
         """
         logger.debug(
-            f"MicroserviceEmbedder received text for embedding. Effective kwargs: {all_kwargs}"
+            "MicroserviceEmbedder received text for embedding. Effective kwargs: "
+            f"{redact_sensitive_kwargs(all_kwargs)}"
         )
         try:
             service_url, headers = self._get_service_config(all_kwargs)

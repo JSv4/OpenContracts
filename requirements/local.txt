@@ -30,8 +30,8 @@ django-silk==5.6.0
 # ------------------------------------------------------------------------------
 flake8==7.3.0 # https://github.com/PyCQA/flake8
 flake8-isort==7.0.0  # https://github.com/gforcada/flake8-isort
-coverage==7.16.1  # https://github.com/nedbat/coveragepy
-black==26.5.1  # https://github.com/psf/black
+coverage==7.16.2  # https://github.com/nedbat/coveragepy
+black==26.10.1  # https://github.com/psf/black
 pre-commit==4.6.2  # https://github.com/pre-commit/pre-commit
 
 # Django
@@ -65,6 +65,6 @@ requests>=2.34.2,<3 # not directly required, pinned by Snyk to avoid a vulnerabi
 setuptools>=84.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
 sqlparse>=0.6.0 # not directly required, pinned by Snyk to avoid a vulnerability
 tornado>=6.5.10 # not directly required, pinned by Snyk to avoid a vulnerability
-urllib3>=2.7.0 # not directly required, pinned by Snyk to avoid a vulnerability
-zipp>=4.1.0 # not directly required, pinned by Snyk to avoid a vulnerability
+urllib3>=2.8.0 # not directly required, pinned by Snyk to avoid a vulnerability
+zipp>=4.1.1 # not directly required, pinned by Snyk to avoid a vulnerability
 pillow>=12.3.0 # not directly required, pinned by Snyk to avoid a vulnerability

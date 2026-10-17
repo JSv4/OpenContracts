@@ -206,6 +206,35 @@ def _check(
             )
 
 
+def _check_operation(user, schema, document, operation, variables):
+    """Check the whole selected operation; raise PermissionDenied on denial."""
+    fragments = {
+        node.name.value: FragmentDetails(node)
+        for node in document.definitions
+        if isinstance(node, FragmentDefinitionNode)
+    }
+    # Fragment variables are experimental syntax; their values are not
+    # coerced here, so deny rather than check arguments against the wrong
+    # variables.
+    if any(details.definition.variable_definitions for details in fragments.values()):
+        raise PermissionDenied(DENIED)
+    parent = schema.get_root_type(operation.operation)
+    if parent is None:
+        raise PermissionDenied(DENIED)
+    _check(
+        user,
+        schema,
+        operation,
+        parent,
+        collect_fields(
+            schema, fragments, variables, parent, operation
+        ).grouped_field_set,
+        fragments,
+        variables,
+        root=True,
+    )
+
+
 class AutomationScopeExtension(SchemaExtension):
     def on_execute(self):
         context = self.execution_context
@@ -229,35 +258,8 @@ class AutomationScopeExtension(SchemaExtension):
                 if isinstance(variables, list):
                     context.result = ExecutionResult(data=None, errors=variables)
                 else:
-                    fragments = {
-                        node.name.value: FragmentDetails(node)
-                        for node in document.definitions
-                        if isinstance(node, FragmentDefinitionNode)
-                    }
                     try:
-                        # Fragment variables are experimental syntax; their
-                        # values are not coerced here, so deny rather than
-                        # check arguments against the wrong variables.
-                        if any(
-                            details.definition.variable_definitions
-                            for details in fragments.values()
-                        ):
-                            raise PermissionDenied(DENIED)
-                        parent = schema.get_root_type(operation.operation)
-                        if parent is None:
-                            raise PermissionDenied(DENIED)
-                        _check(
-                            user,
-                            schema,
-                            operation,
-                            parent,
-                            collect_fields(
-                                schema, fragments, variables, parent, operation
-                            ).grouped_field_set,
-                            fragments,
-                            variables,
-                            root=True,
-                        )
+                        _check_operation(user, schema, document, operation, variables)
                     except PermissionDenied:
                         context.result = ExecutionResult(
                             data=None, errors=[GraphQLError(DENIED)]

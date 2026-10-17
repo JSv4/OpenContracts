@@ -308,7 +308,8 @@ class MicroserviceEmbedder(BaseEmbedder):
             Embedding as a list of floats, or None if an error occurs.
         """
         logger.debug(
-            f"MicroserviceEmbedder received text for embedding. Effective kwargs: {redact_sensitive_kwargs(all_kwargs)}"
+            "MicroserviceEmbedder received text for embedding. Effective kwargs: "
+            f"{redact_sensitive_kwargs(all_kwargs)}"
         )
         try:
             service_url, headers = self._get_service_config(all_kwargs)

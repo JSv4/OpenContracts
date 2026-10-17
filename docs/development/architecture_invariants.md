@@ -3,9 +3,10 @@
 OpenContracts enforces a small number of cross-cutting rules at the
 codebase level — they're the "this MUST stay true" claims that hold the
 permissioning, service-layer, and security model together. Each
-invariant is enforced by **both** a pytest test (CI) **and** a Django
-system check (`manage.py` startup), pointing at the same scanner, so a
-violation cannot slip through one and reach `main`.
+invariant is enforced by a pytest test (CI) and, where the scan is cheap
+enough to run at `manage.py` startup, **also** by a Django system check
+pointing at the same scanner, so a violation cannot slip through one and
+reach `main`.
 
 This page is the index. Per-invariant detail (recipes, rationale, full
 service catalogue) lives in the doc each invariant links to.
@@ -71,6 +72,29 @@ remaining references to forbidden identifiers are inside comments
 (which the AST scanner already ignores). If you think you need a new
 entry, write the justification in the comment and expect reviewer
 pushback asking whether a per-app service method would suffice instead.
+
+### No raw kwargs / settings mappings in log calls (pytest only)
+
+**Rule.** A log call may not format a kwargs or settings mapping — a
+name, attribute or call ending in `kwargs`/`settings`, through an
+f-string, a `%`-style argument, `str.format` or the `%` operator —
+except via `opencontractserver/utils/logging.py::redact_sensitive_kwargs`.
+Component kwargs are merged from `PipelineSettings` and carry decrypted
+secrets; the same mappings flow into tasks, LLM tooling and MCP code.
+
+**Scope.** Every module under `opencontractserver/` and `config/`, tests
+included. A lossless text pre-filter keeps the parse to ~200 files.
+
+**Where it fires.** Pytest only —
+`opencontractserver/tests/architecture/test_log_redaction.py`. There is
+no Django system check: parsing the whole tree costs seconds, too much
+for every `manage.py` start. The scanner's deliberate limits (name-based
+detection, transformed expressions such as `.get(...)` ignored, key-name
+redaction) are listed in that module's docstring.
+
+**How to fix a violation.** Wrap the mapping —
+`redact_sensitive_kwargs(all_kwargs)` — or log the scalar you actually
+need (`all_kwargs.get("height")`) or the key list instead of the dict.
 
 ## Adding a new architecture invariant
 

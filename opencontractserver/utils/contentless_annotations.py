@@ -1,10 +1,16 @@
 """Drop parser structural annotations that carry no content.
 
 PDF text layers yield structural elements whose text is only whitespace (for
-example NBSP runs) or symbol-font glyphs (bullets in the Unicode private-use
-area). Such an annotation is not searchable, cannot be meaningfully embedded,
-and clutters the annotation layer. The characters remain in the document's
-text layer; only the overlay is dropped.
+example NBSP runs), fill-in underscores, stray punctuation, or symbol-font
+glyphs (bullets in the Unicode private-use area). Such an annotation is not
+searchable, cannot be meaningfully embedded, and clutters the annotation
+layer. The characters remain in the document's text layer; only the overlay
+is dropped.
+
+Only leaves are dropped: an annotation with children is structure, whatever
+its own text. Pruning repeats until stable, so a container whose children
+were all contentless is dropped too. Because nothing dropped ever has a kept
+child, no re-parenting is needed.
 
 Only parser output is filtered (see ``BaseParser.save_parsed_data``). Imported
 and user-created annotations are kept as given.
@@ -12,9 +18,9 @@ and user-created annotations are kept as given.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Any
+from collections.abc import Hashable, Iterable, Mapping
 
+from opencontractserver.constants.annotations import CONTENT_REGION_LABELS
 from opencontractserver.types.dicts import (
     OpenContractsAnnotationPythonType,
     OpenContractsRelationshipPythonType,
@@ -27,18 +33,32 @@ def has_word_characters(text: str | None) -> bool:
     return any(ch.isalnum() for ch in text or "")
 
 
-def is_contentless_structural(annotation: OpenContractsAnnotationPythonType) -> bool:
-    """A structural, text-only annotation with no letters or digits.
-
-    Image annotations (figures) legitimately carry little or no text, so any
-    annotation that references image content is kept.
-    """
-    modalities = annotation.get("content_modalities") or []
+def is_contentless(
+    text: str | None, label: str | None, modalities: Iterable[str] | None
+) -> bool:
+    """No letters or digits, no image content, and not a content-region label."""
     return (
-        bool(annotation.get("structural"))
-        and ContentModality.IMAGE.value not in modalities
-        and not has_word_characters(annotation.get("rawText"))
+        ContentModality.IMAGE.value not in (modalities or [])
+        and (label or "").lower() not in CONTENT_REGION_LABELS
+        and not has_word_characters(text)
     )
+
+
+def prunable_leaves(
+    candidates: Iterable[Hashable],
+    children_of: Mapping[Hashable, Iterable[Hashable]],
+) -> set[Hashable]:
+    """Candidates that are, or become, leaves once prunable children go."""
+    candidates = set(candidates)
+    pruned: set[Hashable] = set()
+    changed = True
+    while changed:
+        changed = False
+        for node in candidates - pruned:
+            if all(child in pruned for child in children_of.get(node, ())):
+                pruned.add(node)
+                changed = True
+    return pruned
 
 
 def contentless_structural_filter(
@@ -49,51 +69,45 @@ def contentless_structural_filter(
     list[OpenContractsRelationshipPythonType],
     int,
 ]:
-    """Remove contentless structural annotations from a parser export.
+    """Remove contentless structural leaves from a parser export.
 
-    Children of a dropped annotation are re-parented to its nearest kept
-    ancestor so the hierarchy survives. Relationships lose dropped endpoints,
-    and a relationship left without a source or a target is removed.
-
-    Returns ``(annotations, relationships, dropped_count)``; inputs are not
-    mutated. IDs are compared as strings because exports mix ``int`` and
-    ``str`` IDs (see ``import_annotations``).
+    Relationships lose dropped endpoints, and a relationship left without a
+    source or a target is removed. Returns ``(annotations, relationships,
+    dropped_count)``; inputs are not mutated. IDs are compared as strings
+    because exports mix ``int`` and ``str`` IDs (see ``import_annotations``).
     """
     annotations = list(annotations)
-    dropped = [a for a in annotations if is_contentless_structural(a)]
-    if not dropped:
-        return annotations, list(relationships), 0
+    relationships = list(relationships)
 
-    dropped_ids = {str(a["id"]) for a in dropped if a.get("id") is not None}
-    parent_of = {
-        str(a["id"]): a.get("parent_id") for a in annotations if a.get("id") is not None
-    }
+    def key(index: int) -> str:
+        annotation_id = annotations[index].get("id")
+        return f"#{index}" if annotation_id is None else str(annotation_id)
 
-    def nearest_kept(parent_id: Any) -> Any:
-        seen: set[str] = set()
-        while parent_id is not None and str(parent_id) in dropped_ids:
-            if str(parent_id) in seen:  # malformed cyclic export
-                return None
-            seen.add(str(parent_id))
-            parent_id = parent_of.get(str(parent_id))
-        return parent_id
-
-    kept = []
-    for annotation in annotations:
-        if is_contentless_structural(annotation):
-            continue
+    index_of = {key(i): i for i in range(len(annotations))}
+    children_of: dict[Hashable, list[Hashable]] = {}
+    for i, annotation in enumerate(annotations):
         parent_id = annotation.get("parent_id")
-        if parent_id is not None and str(parent_id) in dropped_ids:
-            annotation = annotation.copy()
-            annotation["parent_id"] = nearest_kept(parent_id)
-        kept.append(annotation)
+        if parent_id is not None and str(parent_id) in index_of:
+            children_of.setdefault(str(parent_id), []).append(key(i))
+    candidates = [
+        key(i)
+        for i, a in enumerate(annotations)
+        if a.get("structural")
+        and is_contentless(
+            a.get("rawText"), a.get("annotationLabel"), a.get("content_modalities")
+        )
+    ]
+    dropped = prunable_leaves(candidates, children_of)
+    if not dropped:
+        return annotations, relationships, 0
 
+    kept = [a for i, a in enumerate(annotations) if key(i) not in dropped]
     kept_relationships = []
     for relationship in relationships:
         sources = relationship.get("source_annotation_ids", [])
         targets = relationship.get("target_annotation_ids", [])
-        kept_sources = [i for i in sources if str(i) not in dropped_ids]
-        kept_targets = [i for i in targets if str(i) not in dropped_ids]
+        kept_sources = [i for i in sources if str(i) not in dropped]
+        kept_targets = [i for i in targets if str(i) not in dropped]
         if (sources and not kept_sources) or (targets and not kept_targets):
             continue
         if len(kept_sources) != len(sources) or len(kept_targets) != len(targets):

@@ -1,29 +1,32 @@
-"""Delete structural annotations that carry no letters or digits.
+"""Delete contentless structural annotations stored before the parse-time filter.
 
-Parsers no longer create these (``utils/contentless_annotations.py``); this
-removes the ones stored before that filter existed. The rule is the parser's:
-structural, no image content, and no letter or digit in any script.
-
-Children are re-parented to the nearest kept ancestor first, because
-``Annotation.parent`` cascades. Relationships left without a source or a
+Uses the parser's rule (``utils/contentless_annotations.py``): structural, no
+letter or digit in any script, no image content, not a content-region label
+(tables, formulas, figures, checkboxes), and a leaf once its contentless
+children are gone. Nothing deleted has a kept child, so ``Annotation.parent``'s
+cascade never removes content. Relationships left without a source or a
 target are deleted. Idempotent.
 """
 
 from __future__ import annotations
+
+from collections import Counter
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Count, Q
 
 from opencontractserver.annotations.models import Annotation, Relationship
-from opencontractserver.types.enums import ContentModality
-from opencontractserver.utils.contentless_annotations import has_word_characters
+from opencontractserver.utils.contentless_annotations import (
+    is_contentless,
+    prunable_leaves,
+)
 
 
 class Command(BaseCommand):
     help = (
-        "Delete structural annotations whose text has no letters or digits "
-        "(whitespace or symbol glyphs only), keeping their children."
+        "Delete structural leaf annotations whose text has no letters or digits "
+        "(whitespace, fill-in lines, stray punctuation or symbol glyphs)."
     )
 
     def add_arguments(self, parser):
@@ -37,57 +40,52 @@ class Command(BaseCommand):
         dry_run: bool = options["dry_run"]
 
         # ASCII prefilter is locale-independent and keeps the scan small; the
-        # Unicode-aware check below decides (it keeps non-Latin scripts).
-        candidates = (
+        # Unicode-aware check decides (it keeps non-Latin scripts).
+        rows = (
             Annotation.objects.filter(structural=True)
-            .exclude(content_modalities__contains=[ContentModality.IMAGE.value])
             .exclude(raw_text__regex=r"[A-Za-z0-9]")
-            .values_list("pk", "parent_id", "raw_text")
+            .values_list(
+                "pk", "raw_text", "annotation_label__text", "content_modalities"
+            )
         )
-        parent_of = {
-            pk: parent_id
-            for pk, parent_id, raw_text in candidates.iterator()
-            if not has_word_characters(raw_text)
+        kind_of = {
+            pk: (label, tuple(modalities or []))
+            for pk, raw_text, label, modalities in rows.iterator()
+            if is_contentless(raw_text, label, modalities)
         }
-        if not parent_of:
+        children_of: dict = {}
+        for parent_id, pk in Annotation.objects.filter(
+            parent_id__in=list(kind_of)
+        ).values_list("parent_id", "pk"):
+            children_of.setdefault(parent_id, []).append(pk)
+        doomed = prunable_leaves(kind_of, children_of)
+        if not doomed:
             self.stdout.write(
                 self.style.SUCCESS("No contentless structural annotations.")
             )
             return
 
-        dropped = set(parent_of)
-        children = Annotation.objects.filter(parent_id__in=dropped).exclude(
-            pk__in=dropped
-        )
         relationships = Relationship.objects.filter(
-            Q(source_annotations__in=dropped) | Q(target_annotations__in=dropped)
+            Q(source_annotations__in=doomed) | Q(target_annotations__in=doomed)
         ).distinct()
 
         if dry_run:
+            # Show what kinds match, so a parser whose meaningful regions fall
+            # under this rule is noticed before anything is deleted.
+            by_kind = Counter(kind_of[pk] for pk in doomed)
+            for (label, modalities), count in by_kind.most_common():
+                self.stdout.write(f"  {count:>8}  {label} {list(modalities)}")
             self.stdout.write(
                 self.style.WARNING(
-                    f"[dry-run] would delete {len(dropped)} contentless structural "
-                    f"annotations, re-parent {children.count()} children and "
-                    f"update {relationships.count()} relationships"
+                    f"[dry-run] would delete {len(doomed)} contentless structural "
+                    f"annotations and update {relationships.count()} relationships"
                 )
             )
             return
 
-        def nearest_kept(parent_id):
-            seen = set()
-            while parent_id in dropped and parent_id not in seen:
-                seen.add(parent_id)
-                parent_id = parent_of[parent_id]
-            return None if parent_id in dropped else parent_id
-
         with transaction.atomic():
-            reparented = 0
-            for child in children.only("pk", "parent_id"):
-                child.parent_id = nearest_kept(child.parent_id)
-                child.save(update_fields=["parent_id"])
-                reparented += 1
             relationship_ids = list(relationships.values_list("pk", flat=True))
-            deleted, _ = Annotation.objects.filter(pk__in=dropped).delete()
+            deleted, _ = Annotation.objects.filter(pk__in=doomed).delete()
             emptied, _ = (
                 Relationship.objects.filter(pk__in=relationship_ids)
                 .annotate(
@@ -100,8 +98,8 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Deleted {len(dropped)} contentless structural annotations "
-                f"({deleted} rows incl. embeddings), re-parented {reparented} "
-                f"children, removed {emptied} emptied relationship rows"
+                f"Deleted {len(doomed)} contentless structural annotations "
+                f"({deleted} rows incl. embeddings), removed {emptied} emptied "
+                f"relationship rows"
             )
         )

@@ -392,8 +392,8 @@ class DoclingParser(BaseChunkedParser):
             f"chunk {chunk_index + 1}/{total_chunks}" if total_chunks > 1 else "full"
         )
         logger.info(
-            f"DoclingParser - Parsing doc {doc_id} ({chunk_label}) "
-            f"for user {user_id} with effective kwargs: {redact_sensitive_kwargs(all_kwargs)}"
+            f"DoclingParser - Parsing doc {doc_id} ({chunk_label}) for user {user_id} "
+            f"with effective kwargs: {redact_sensitive_kwargs(all_kwargs)}"
         )
 
         # Get settings from all_kwargs (which includes component_settings and

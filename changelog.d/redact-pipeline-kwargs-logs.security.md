@@ -9,7 +9,9 @@
   `pipeline/parsers/docling_parser_rest.py`, `pipeline/parsers/oc_text_parser.py`,
   `pipeline/thumbnailers/pdf_thumbnailer.py` and
   `pipeline/thumbnailers/text_thumbnailer.py`.
-  `opencontractserver/tests/test_pipeline_log_redaction.py` scans
-  `opencontractserver/pipeline/` and fails on any log call that formats a raw
-  `*kwargs` name. Operators who ran an affected version should rotate keys
-  stored in pipeline component settings.
+  A test scan over `opencontractserver/pipeline/` fails on any log call that
+  formats a raw `*kwargs` name (since widened and moved to
+  `opencontractserver/shared/log_redaction_audit.py`, run by
+  `opencontractserver/tests/architecture/test_log_redaction.py`). Operators who
+  ran an affected version should rotate keys stored in pipeline component
+  settings.

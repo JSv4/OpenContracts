@@ -87,7 +87,8 @@ class BaseThumbnailGenerator(PipelineComponentBase, ABC):
             merged_kwargs = {**default_dimensions, **component_settings, **kwargs}
 
             logger.info(
-                f"Calling _generate_thumbnail_impl with merged kwargs: {redact_sensitive_kwargs(merged_kwargs)}"
+                "Calling _generate_thumbnail_impl with merged kwargs: "
+                f"{redact_sensitive_kwargs(merged_kwargs)}"
             )
             result = self._generate_thumbnail_impl(
                 txt_content, pdf_bytes, **merged_kwargs

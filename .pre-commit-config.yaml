@@ -144,7 +144,7 @@ repos:
           # provider extras and break this hook the moment any one of those
           # provider SDKs disappears from PyPI (see the mistralai 404 on
           # 2026-05-12). Keep this extras list in lockstep with base.txt.
-          - pydantic-ai-slim[openai,anthropic,google,mcp]>=1.56.0,<2
+          - pydantic-ai-slim[openai,anthropic,google]>=1.107.7,<2
           # NOT from base.txt: anthropic is a direct requirement of
           # requirements/analyzers/claude_highlighter.txt, which both
           # Dockerfiles glob into the image. Mirrored here so mypy checks the

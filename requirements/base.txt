@@ -56,7 +56,13 @@ openai>=3.24.0,<4  # https://github.com/openai/openai-python (pydantic-ai 1.x re
 # one of those provider SDKs disappearing from PyPI — as ``mistralai`` did
 # on 2026-05-12, where ``pypi.org/pypi/mistralai/json`` started 404ing —
 # breaks the entire install chain. Narrow extras = stable resolves.
-pydantic-ai-slim[openai,anthropic,google,mcp]>=1.107.5,<2  # see issue #1451 before bumping the upper bound
+#
+# No ``mcp`` extra: nothing imports ``pydantic_ai.mcp`` (our MCP surface is a
+# server built on the ``mcp`` SDK directly, pinned below). From 1.107.6 the
+# extra caps ``fastmcp-slim<4``, and every fastmcp-slim 3.x requires
+# ``mcp<2`` -- against our ``mcp>=2.3`` pin that is unsatisfiable, and pip
+# reports it as ``resolution-too-deep`` rather than a conflict.
+pydantic-ai-slim[openai,anthropic,google]>=1.107.7,<2  # see issue #1451 before bumping the upper bound
 spacy
 pdfplumber>=0.11.10  # https://github.com/jsvine/pdfplumber - PDF token extraction
 shapely>=2.1.2  # https://github.com/shapely/shapely - spatial operations for bbox intersection
@@ -89,8 +95,7 @@ jsonschema>=4.26.0,<5  # https://github.com/python-jsonschema/jsonschema - MCP t
 # server.py targets the 2.x shape (see its "MCP SDK HANDLER ADAPTERS"
 # section). The <3 cap is deliberate: 3.0 is slated to flip auth defaults
 # (AuthSettings.validate_token_resource, mandatory issuer=) — re-audit
-# server.py before widening. fastmcp-slim (via pydantic-ai-slim[mcp])
-# resolves against mcp 2.x; `pip check` on the resolved tree stays clean.
+# server.py before widening.
 
 # Not directly required, pinned by Snyk to avoid a vulnerability
 # ------------------------------------------------------------------------------

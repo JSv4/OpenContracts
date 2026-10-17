@@ -34,6 +34,7 @@ from opencontractserver.utils.embedding_validation import (
     embedding_values,
     normalize_embedding_vector,
 )
+from opencontractserver.utils.logging import redact_sensitive_kwargs
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -307,7 +308,7 @@ class MicroserviceEmbedder(BaseEmbedder):
             Embedding as a list of floats, or None if an error occurs.
         """
         logger.debug(
-            f"MicroserviceEmbedder received text for embedding. Effective kwargs: {all_kwargs}"
+            f"MicroserviceEmbedder received text for embedding. Effective kwargs: {redact_sensitive_kwargs(all_kwargs)}"
         )
         try:
             service_url, headers = self._get_service_config(all_kwargs)
